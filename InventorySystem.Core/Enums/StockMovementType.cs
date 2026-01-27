@@ -9,6 +9,7 @@ namespace InventorySystem.Core.Enums
     public enum StockMovementType
     {
         In = 1,
-        Out = 2
+        Out = 2,
+        Adjustment = 3
     }
 }

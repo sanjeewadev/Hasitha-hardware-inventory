@@ -15,6 +15,7 @@ namespace InventorySystem.Data.Context
         public DbSet<Category> Categories => Set<Category>();
         public DbSet<Product> Products => Set<Product>();
         public DbSet<StockMovement> StockMovements => Set<StockMovement>();
+        public DbSet<StockBatch> StockBatches => Set<StockBatch>();
 
         // Relationships & configurations
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -36,6 +37,13 @@ namespace InventorySystem.Data.Context
             modelBuilder.Entity<Product>()
                 .Property(p => p.SellingPrice)
                 .HasPrecision(18, 2);
+
+            // Configure StockBatch Relationship
+            modelBuilder.Entity<StockBatch>()
+                .HasOne(b => b.Product)
+                .WithMany(p => p.Batches)
+                .HasForeignKey(b => b.ProductId)
+                .OnDelete(DeleteBehavior.Cascade); // If Product deleted, batches go too
         }
     }
 }
