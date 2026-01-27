@@ -1,0 +1,30 @@
+﻿<UserControl x:Class="InventorySystem.UI.Views.AddProductView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <StackPanel Margin="15">
+
+        <TextBlock Text="Add Product" FontSize="18" Margin="0,0,0,10"/>
+
+        <TextBlock Text="Name"/>
+        <TextBox Text="{Binding Name}" />
+
+        <TextBlock Text="Buying Price"/>
+        <TextBox Text="{Binding BuyingPrice}" />
+
+        <TextBlock Text="Selling Price"/>
+        <TextBox Text="{Binding SellingPrice}" />
+
+        <TextBlock Text="Quantity"/>
+        <TextBox Text="{Binding Quantity}" />
+
+        <TextBlock Text="Category"/>
+        <ComboBox ItemsSource="{Binding Categories}"
+          SelectedItem="{Binding SelectedCategory}"
+          DisplayMemberPath="Name"/>
+
+        <Button Content="Save"
+                Command="{Binding SaveCommand}"
+                Margin="0,10,0,0"/>
+    </StackPanel>
+</UserControl>
