@@ -5,59 +5,48 @@
              xmlns:vm="clr-namespace:InventorySystem.UI.ViewModels"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
+
         <Geometry x:Key="Icon_Dashboard">M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z</Geometry>
         <Geometry x:Key="Icon_Products">M20,6H16V4A2,2 0 0,0 14,2H10A2,2 0 0,0 8,4V6H4A2,2 0 0,0 2,8V20A2,2 0 0,0 4,22H20A2,2 0 0,0 22,20V8A2,2 0 0,0 20,6M10,4H14V6H10V4M20,20H4V8H8V10H10V8H14V10H16V8H20V20Z</Geometry>
         <Geometry x:Key="Icon_Categories">M5.5,7A1.5,1.5 0 0,1 4,5.5A1.5,1.5 0 0,1 5.5,4A1.5,1.5 0 0,1 7,5.5A1.5,1.5 0 0,1 5.5,7M21.41,11.58L12.41,2.58C12.05,2.22 11.55,2 11,2H4C2.9,2 2,2.9 2,4V11C2,11.55 2.22,12.05 2.59,12.42L11.59,21.42C11.95,21.78 12.45,22 13,22C13.55,22 14.05,21.78 14.41,21.41L21.41,14.41C21.78,14.05 22,13.55 22,13C22,12.45 21.77,11.94 21.41,11.58Z</Geometry>
         <Geometry x:Key="Icon_Stock">M9,3L5,7H8V14H10V7H13M16,17V10H14V17H11L15,21L19,17H16Z</Geometry>
         <Geometry x:Key="Icon_POS">M12,18H6V14H12M21,14V12L20,7H4L3,12V14H4V20H14V14H18V20H20V14M20,4H4V6H20V4Z</Geometry>
-        <Geometry x:Key="Icon_Reports">M19,3H5C3.9,3 3,3.9 3,5V19C3,20.1 3.9,21 5,21H19C20.1,21 21,20.1 21,19V5C21,3.9 20.1,3 19,3M9,17H7V10H9V17M13,17H11V7H13V17M17,17H15V13H17V17Z</Geometry>
+        <Geometry x:Key="Icon_Today">M12,2A10,10 0 1,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 1,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 1,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 1,1 8,12A4,4 0 0,1 12,8Z</Geometry>
+        <Geometry x:Key="Icon_History">M13.5,8H12V13L16.28,15.54L17,14.33L13.5,12.25V8M13,3A9,9 0 1,1 4,12A9,9 0 0,1 13,3M13,21A10,10 0 1,0 3,12A10,10 0 0,0 13,21Z</Geometry>
+        <Geometry x:Key="Icon_Settings">M19.14,12.94C19.16,12.78 19.16,12.61 19.16,12.44C19.16,12.27 19.16,12.11 19.14,11.94L21.41,10.18C21.61,10.02 21.67,9.73 21.54,9.5L19.38,5.77C19.26,5.54 18.97,5.45 18.73,5.55L16.06,6.62C15.5,6.18 14.9,5.83 14.25,5.56L13.84,2.71C13.8,2.46 13.59,2.27 13.33,2.27H9.04C8.79,2.27 8.57,2.46 8.53,2.71L8.12,5.56C7.47,5.83 6.87,6.18 6.31,6.62L3.64,5.55C3.4,5.45 3.11,5.54 2.99,5.77L0.83,9.5C0.7,9.73 0.76,10.02 0.96,10.18L3.23,11.94C3.21,12.11 3.2,12.27 3.2,12.44C3.2,12.61 3.21,12.78 3.23,12.94L0.96,14.71C0.76,14.86 0.7,15.15 0.83,15.38L2.99,19.12C3.11,19.35 3.4,19.43 3.64,19.34L6.31,18.26C6.87,18.7 7.47,19.05 8.12,19.32L8.53,22.17C8.57,22.42 8.79,22.61 9.04,22.61H13.33C13.58,22.61 13.8,22.42 13.84,22.17L14.25,19.32C14.9,19.05 15.5,18.7 16.06,18.26L18.73,19.34C18.97,19.43 19.26,19.35 19.38,19.12L21.54,15.38C21.67,15.15 21.61,14.86 21.41,14.71L19.14,12.94M12.4,15.67C10.61,15.67 9.17,14.22 9.17,12.44C9.17,10.65 10.61,9.21 12.4,9.21C14.19,9.21 15.63,10.65 15.63,12.44C15.63,14.22 14.19,15.67 12.4,15.67Z</Geometry>
 
-        <SolidColorBrush x:Key="SidebarBrush" Color="#2B3649"/>
-        <SolidColorBrush x:Key="SidebarHoverBrush" Color="#3E4C63"/>
+            <SolidColorBrush x:Key="SidebarBrush" Color="#1E293B"/>
+        <SolidColorBrush x:Key="SidebarHoverBrush" Color="#334155"/>
         <SolidColorBrush x:Key="PrimaryBrush" Color="#009688"/>
-        <SolidColorBrush x:Key="BackgroundBrush" Color="#F2F4F7"/>
-        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#333333"/>
+        <SolidColorBrush x:Key="PrimaryDarkBrush" Color="#00796B"/>
+        <SolidColorBrush x:Key="BackgroundBrush" Color="#F8FAFC"/>
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#334155"/>
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#64748B"/>
         <SolidColorBrush x:Key="TextLightBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="DangerBrush" Color="#EF4444"/>
 
-        <DataTemplate DataType="{x:Type vm:ProductViewModel}">
-            <views:ProductView />
-        </DataTemplate>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
-        <DataTemplate DataType="{x:Type vm:CategoryViewModel}">
-            <views:CategoryView />
-        </DataTemplate>
-        
-        <DataTemplate DataType="{x:Type vm:StockViewModel}">
-            <views:StockView />
-        </DataTemplate>
-
-        <DataTemplate DataType="{x:Type vm:POSViewModel}">
-            <views:POSView />
-        </DataTemplate>
-
-        <DataTemplate DataType="{x:Type vm:ReportsViewModel}">
-            <views:ReportsView />
-        </DataTemplate>
-
-        <Style x:Key="NavButtonStyle" TargetType="RadioButton">
-            <Setter Property="Foreground" Value="{StaticResource TextLightBrush}"/>
-            <Setter Property="Background" Value="Transparent"/>
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Padding" Value="20,15"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="RadioButton">
-                        <Border Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="Left"/>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{StaticResource SidebarHoverBrush}"/>
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource PrimaryDarkBrush}"/>
                             </Trigger>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
-                                <Setter Property="FontWeight" Value="Bold"/>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Opacity" Value="0.6"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -65,25 +54,40 @@
             </Setter>
         </Style>
 
-        <Style TargetType="Button">
-            <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Cursor" Value="Hand"/>
+        <Style TargetType="TextBox">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Padding" Value="10"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Background" Value="White"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#E2E8F0"/>
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="4">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
+                    <ControlTemplate TargetType="TextBox">
+                        <Grid>
+                            <Border Background="{TemplateBinding Background}" 
+                                    BorderBrush="{TemplateBinding BorderBrush}" 
+                                    BorderThickness="{TemplateBinding BorderThickness}" 
+                                    CornerRadius="6">
+                                <Grid>
+                                    <ScrollViewer x:Name="PART_ContentHost" Margin="0" />
+                                    <TextBlock x:Name="Placeholder" 
+                                               Text="{TemplateBinding Tag}" 
+                                               Foreground="#94A3B8" 
+                                               VerticalAlignment="Center" 
+                                               Margin="12,0,0,0"
+                                               IsHitTestVisible="False"
+                                               Visibility="Collapsed"/>
+                                </Grid>
+                            </Border>
+                        </Grid>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Opacity" Value="0.9"/>
+                            <Trigger Property="Text" Value="">
+                                <Setter TargetName="Placeholder" Property="Visibility" Value="Visible"/>
                             </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter Property="Opacity" Value="0.5"/>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
+                                <Setter Property="BorderThickness" Value="1.5"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -94,39 +98,33 @@
         <Style TargetType="DataGrid">
             <Setter Property="Background" Value="White"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="RowHeight" Value="40"/>
-            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
-            <Setter Property="HorizontalGridLinesBrush" Value="#E0E0E0"/>
+            <Setter Property="RowHeight" Value="50"/>
+            <Setter Property="GridLinesVisibility" Value="None"/>
             <Setter Property="HeadersVisibility" Value="Column"/>
-            <Setter Property="AlternatingRowBackground" Value="#FAFAFA"/>
             <Setter Property="AutoGenerateColumns" Value="False"/>
             <Setter Property="CanUserAddRows" Value="False"/>
-
             <Setter Property="ColumnHeaderStyle">
                 <Setter.Value>
                     <Style TargetType="DataGridColumnHeader">
                         <Setter Property="Background" Value="White"/>
-                        <Setter Property="Foreground" Value="#757575"/>
-                        <Setter Property="FontWeight" Value="SemiBold"/>
-                        <Setter Property="Padding" Value="10,0"/>
-                        <Setter Property="Height" Value="40"/>
+                        <Setter Property="Foreground" Value="#64748B"/>
+                        <Setter Property="FontWeight" Value="Bold"/>
+                        <Setter Property="Padding" Value="15,0"/>
+                        <Setter Property="Height" Value="50"/>
                         <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                        <Setter Property="BorderBrush" Value="#E0E0E0"/>
+                        <Setter Property="BorderBrush" Value="#F1F5F9"/>
                     </Style>
                 </Setter.Value>
             </Setter>
-
             <Setter Property="CellStyle">
                 <Setter.Value>
                     <Style TargetType="DataGridCell">
-                        <Setter Property="Padding" Value="10,0"/>
+                        <Setter Property="Padding" Value="15,0"/>
+                        <Setter Property="VerticalAlignment" Value="Center"/>
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="DataGridCell">
-                                    <Border Padding="{TemplateBinding Padding}" 
-                                            Background="{TemplateBinding Background}"
-                                            BorderBrush="{TemplateBinding BorderBrush}"
-                                            BorderThickness="{TemplateBinding BorderThickness}">
+                                    <Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}" BorderThickness="0,0,0,1" BorderBrush="#F8FAFC">
                                         <ContentPresenter VerticalAlignment="Center"/>
                                     </Border>
                                 </ControlTemplate>
@@ -134,14 +132,72 @@
                         </Setter>
                         <Style.Triggers>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
-                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="Background" Value="#F1F5F9"/>
+                                <Setter Property="Foreground" Value="#0F172A"/>
+                                <Setter Property="BorderThickness" Value="0"/>
                             </Trigger>
                         </Style.Triggers>
                     </Style>
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <Style x:Key="NavButtonStyle" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="#C7C7C7"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="Padding" Value="25,16"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Grid>
+                            <Border x:Name="back" Background="{TemplateBinding Background}"/>
+                            <Border x:Name="indicator" Width="4" HorizontalAlignment="Left" Background="Transparent" CornerRadius="0,4,4,0"/>
+                            <ContentPresenter VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="White"/>
+                                <Setter TargetName="back" Property="Background" Value="{StaticResource SidebarHoverBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                                <Setter Property="FontWeight" Value="Bold"/>
+                                <Setter TargetName="back" Property="Background" Value="#0F172A"/>
+                                <Setter TargetName="indicator" Property="Background" Value="{StaticResource PrimaryBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <DataTemplate DataType="{x:Type vm:ProductViewModel}">
+            <views:ProductView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:InventoryViewModel}">
+            <views:InventoryView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:StockViewModel}">
+            <views:StockView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:POSViewModel}">
+            <views:POSView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:DashboardViewModel}">
+            <views:DashboardView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:SalesHistoryViewModel}">
+            <views:SalesHistoryView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:TodaySalesViewModel}">
+            <views:TodaySalesView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
+            <views:SettingsView />
+        </DataTemplate>
 
     </Application.Resources>
 </Application>

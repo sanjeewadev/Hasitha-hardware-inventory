@@ -4,19 +4,48 @@ using InventorySystem.Data.Repositories;
 using InventorySystem.UI.Commands;
 using System;
 using System.Collections.ObjectModel;
-using System.Linq;
+using System.Linq; // Needed for Sum()
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 
 namespace InventorySystem.UI.ViewModels
 {
-    // Helper class for the Cart
+    // 1. Smart Cart Item (Handles its own math)
     public class CartItem : ViewModelBase
     {
-        public Product Product { get; set; }
-        public int Quantity { get; set; }
-        public decimal TotalPrice => Product.SellingPrice * Quantity;
+        public Product Product { get; set; } = null!;
+
+        private int _quantity;
+        public int Quantity
+        {
+            get => _quantity;
+            set
+            {
+                _quantity = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(TotalPrice)); // Recalculate if Qty changes
+                ParentViewModel?.CalculateTotal();     // Tell Main VM to update Grand Total
+            }
+        }
+
+        private decimal _unitPrice;
+        public decimal UnitPrice
+        {
+            get => _unitPrice;
+            set
+            {
+                _unitPrice = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(TotalPrice)); // Recalculate if Price changes
+                ParentViewModel?.CalculateTotal();     // Tell Main VM to update Grand Total
+            }
+        }
+
+        public decimal TotalPrice => Quantity * UnitPrice;
+
+        // Reference to parent so we can trigger updates
+        public POSViewModel? ParentViewModel { get; set; }
     }
 
     public class POSViewModel : ViewModelBase
@@ -24,13 +53,20 @@ namespace InventorySystem.UI.ViewModels
         private readonly IProductRepository _productRepo;
         private readonly IStockRepository _stockRepo;
 
-        // The list of products to choose from
-        public ObservableCollection<Product> AvailableProducts { get; } = new();
-
-        // The Receipt/Cart
+        // --- DATA ---
+        private System.Collections.Generic.List<Product> _allProductsCache = new();
+        public ObservableCollection<Product> FilteredProducts { get; } = new();
         public ObservableCollection<CartItem> Cart { get; } = new();
 
-        // Total Bill Amount
+        // --- SEARCH ---
+        private string _searchText = "";
+        public string SearchText
+        {
+            get => _searchText;
+            set { _searchText = value; OnPropertyChanged(); FilterList(); }
+        }
+
+        // --- TOTALS ---
         private decimal _grandTotal;
         public decimal GrandTotal
         {
@@ -38,7 +74,7 @@ namespace InventorySystem.UI.ViewModels
             set { _grandTotal = value; OnPropertyChanged(); }
         }
 
-        // Commands
+        // --- COMMANDS ---
         public ICommand AddToCartCommand { get; }
         public ICommand RemoveFromCartCommand { get; }
         public ICommand CheckoutCommand { get; }
@@ -48,79 +84,100 @@ namespace InventorySystem.UI.ViewModels
             _productRepo = productRepo;
             _stockRepo = stockRepo;
 
+            AddToCartCommand = new RelayCommand<Product>(AddToCart);
+            RemoveFromCartCommand = new RelayCommand<CartItem>(RemoveFromCart);
+            CheckoutCommand = new RelayCommand(async () => await CheckoutAsync());
+
             LoadProducts();
-
-            // Logic: Click a product -> Add to Cart
-            AddToCartCommand = new RelayCommand<Product>(product =>
-            {
-                if (product == null) return;
-
-                var existingItem = Cart.FirstOrDefault(c => c.Product.Id == product.Id);
-                if (existingItem != null)
-                {
-                    existingItem.Quantity++;
-                    // Trigger update for TotalPrice in UI
-                    var index = Cart.IndexOf(existingItem);
-                    Cart.RemoveAt(index);
-                    Cart.Insert(index, existingItem);
-                }
-                else
-                {
-                    Cart.Add(new CartItem { Product = product, Quantity = 1 });
-                }
-                CalculateTotal();
-            });
-
-            // Logic: Remove item
-            RemoveFromCartCommand = new RelayCommand<CartItem>(item =>
-            {
-                Cart.Remove(item);
-                CalculateTotal();
-            });
-
-            // Logic: PAY button
-            CheckoutCommand = new RelayCommand(async () => await ProcessCheckout());
         }
 
-        private void LoadProducts()
+        private async void LoadProducts()
         {
-            AvailableProducts.Clear();
-            var list = _productRepo.GetAllAsync().Result;
-            foreach (var p in list) AvailableProducts.Add(p);
+            var list = await _productRepo.GetAllAsync();
+            _allProductsCache = list.ToList();
+            FilterList();
         }
 
-        private void CalculateTotal()
+        private void FilterList()
+        {
+            FilteredProducts.Clear();
+            if (string.IsNullOrWhiteSpace(SearchText))
+            {
+                foreach (var p in _allProductsCache) FilteredProducts.Add(p);
+            }
+            else
+            {
+                var lower = SearchText.ToLower();
+                foreach (var p in _allProductsCache.Where(p => p.Name.ToLower().Contains(lower)))
+                    FilteredProducts.Add(p);
+            }
+        }
+
+        private void AddToCart(Product product)
+        {
+            if (product == null) return;
+
+            // Check if already in cart
+            var existing = Cart.FirstOrDefault(c => c.Product.Id == product.Id);
+            if (existing != null)
+            {
+                existing.Quantity++;
+            }
+            else
+            {
+                // Create new item
+                var item = new CartItem
+                {
+                    Product = product,
+                    Quantity = 1,
+                    UnitPrice = product.SellingPrice, // Default to Selling Price
+                    ParentViewModel = this
+                };
+                Cart.Add(item);
+            }
+            CalculateTotal();
+        }
+
+        private void RemoveFromCart(CartItem item)
+        {
+            Cart.Remove(item);
+            CalculateTotal();
+        }
+
+        public void CalculateTotal()
         {
             GrandTotal = Cart.Sum(c => c.TotalPrice);
         }
 
-        private async Task ProcessCheckout()
+        private async Task CheckoutAsync()
         {
-            if (Cart.Count == 0) return;
+            if (Cart.Count == 0) { MessageBox.Show("Cart is empty!"); return; }
 
-            try
+            // 1. Process Sales in Database
+            foreach (var item in Cart)
             {
-                foreach (var item in Cart)
+                var sale = new StockMovement
                 {
-                    var movement = new StockMovement
-                    {
-                        ProductId = item.Product.Id,
-                        Quantity = item.Quantity,
-                        Type = StockMovementType.Out, // Sale
-                        Date = DateTime.UtcNow
-                    };
-                    await _stockRepo.SellStockAsync(movement);
-                }
+                    ProductId = item.Product.Id,
+                    Quantity = item.Quantity,
+                    Type = StockMovementType.Out,
+                    Date = DateTime.UtcNow,
+                    Note = $"Sale @ {item.UnitPrice:N2}", // Record the price sold at
+                    // --- NEW: SAVE THE FINANCIALS ---
+                    UnitPrice = item.UnitPrice,           // What the customer paid
+                    UnitCost = item.Product.BuyingPrice   // What it cost you
+                };
+                await _stockRepo.SellStockAsync(sale);
+            }
 
-                MessageBox.Show($"Sale Complete! Total: {GrandTotal:C}");
-                Cart.Clear();
-                CalculateTotal();
-                LoadProducts(); // Refresh stock counts
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error: {ex.Message}");
-            }
+            MessageBox.Show($"Payment Successful!\nTotal: {GrandTotal:N2}");
+
+            // 2. Clear Cart
+            Cart.Clear();
+            CalculateTotal();
+
+            // 3. Refresh Stock Levels (Reload products to see new quantities)
+            LoadProducts();
         }
     }
 }

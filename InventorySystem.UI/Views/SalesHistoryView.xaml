@@ -1,0 +1,60 @@
+﻿<UserControl x:Class="InventorySystem.UI.Views.SalesHistoryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Sales History &amp; Logs" FontSize="26" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,25"/>
+
+        <Border Grid.Row="1" Background="White" Padding="20" CornerRadius="8" Margin="0,0,0,25" BorderBrush="#E2E8F0" BorderThickness="1">
+            <StackPanel Orientation="Horizontal">
+                <StackPanel Margin="0,0,20,0">
+                    <TextBlock Text="From Date" FontSize="12" Foreground="#64748B" Margin="0,0,0,5"/>
+                    <DatePicker SelectedDate="{Binding StartDate}" Width="150" Height="40" VerticalContentAlignment="Center"/>
+                </StackPanel>
+
+                <StackPanel Margin="0,0,20,0">
+                    <TextBlock Text="To Date" FontSize="12" Foreground="#64748B" Margin="0,0,0,5"/>
+                    <DatePicker SelectedDate="{Binding EndDate}" Width="150" Height="40" VerticalContentAlignment="Center"/>
+                </StackPanel>
+
+                <Button Content="SEARCH RECORDS" Command="{Binding FilterCommand}" 
+                        Height="40" Padding="20,0" VerticalAlignment="Bottom"
+                        Background="#1E293B" FontSize="12"/>
+            </StackPanel>
+        </Border>
+
+        <DataGrid Grid.Row="2" ItemsSource="{Binding HistoryList}" AutoGenerateColumns="False" IsReadOnly="True" 
+                  BorderThickness="0" Background="White">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat='dd MMM yyyy HH:mm'}" Width="180"/>
+                <DataGridTextColumn Header="Item Name" Binding="{Binding Product.Name}" Width="*"/>
+                <DataGridTextColumn Header="Quantity" Binding="{Binding Quantity}" Width="100" FontWeight="Bold"/>
+                <DataGridTextColumn Header="Notes / Reason" Binding="{Binding Note}" Width="1.5*"/>
+
+                <DataGridTextColumn Header="Status" Binding="{Binding IsVoided}" Width="120">
+                    <DataGridTextColumn.ElementStyle>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="VerticalAlignment" Value="Center"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsVoided}" Value="True">
+                                    <Setter Property="Text" Value="VOIDED"/>
+                                    <Setter Property="Foreground" Value="#EF4444"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsVoided}" Value="False">
+                                    <Setter Property="Text" Value="Completed"/>
+                                    <Setter Property="Foreground" Value="#10B981"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGridTextColumn.ElementStyle>
+                </DataGridTextColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</UserControl>

@@ -11,12 +11,15 @@ namespace InventorySystem.UI.Views
         {
             InitializeComponent();
 
-            // Create DB context + repository
             var db = DatabaseService.CreateDbContext();
-            var repo = new ProductRepository(db);
 
-            // Set DataContext
-            DataContext = new ProductViewModel(repo);
+            // Create ALL Repositories needed
+            var productRepo = new ProductRepository(db);
+            var categoryRepo = new CategoryRepository(db);
+            var stockRepo = new StockRepository(db); // <--- NEW
+
+            // Pass all 3 to the ViewModel
+            DataContext = new ProductViewModel(productRepo, categoryRepo, stockRepo);
         }
     }
 }

@@ -1,35 +1,27 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using InventorySystem.Data.Context;
+﻿using InventorySystem.Data.Context;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.IO; // Needed for Path
 
 namespace InventorySystem.Infrastructure.Services
 {
-    public static class DatabaseService
+    public class DatabaseService
     {
+        // Helper to get the path
+        public static string GetDbPath()
+        {
+            // This forces the DB to be exactly where the .exe is running
+            return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "inventory.db");
+        }
+
         public static InventoryDbContext CreateDbContext()
         {
-            var folder = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "InventorySystem"
-            );
+            var optionsBuilder = new DbContextOptionsBuilder<InventoryDbContext>();
 
+            // USE THE FIXED PATH HERE
+            optionsBuilder.UseSqlite($"Data Source={GetDbPath()}");
 
-            Directory.CreateDirectory(folder);
-
-
-            var dbPath = Path.Combine(folder, "inventory.db");
-
-
-            var options = new DbContextOptionsBuilder<InventoryDbContext>()
-            .UseSqlite($"Data Source={dbPath}")
-            .Options;
-
-
-            return new InventoryDbContext(options);
+            return new InventoryDbContext(optionsBuilder.Options);
         }
     }
 }

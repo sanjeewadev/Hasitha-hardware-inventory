@@ -16,11 +16,11 @@ using System.Windows.Shapes;
 namespace InventorySystem.UI.Views
 {
     /// <summary>
-    /// Interaction logic for ReportsView.xaml
+    /// Interaction logic for DashboardView.xaml
     /// </summary>
-    public partial class ReportsView : UserControl
+    public partial class DashboardView : UserControl
     {
-        public ReportsView()
+        public DashboardView()
         {
             InitializeComponent();
         }

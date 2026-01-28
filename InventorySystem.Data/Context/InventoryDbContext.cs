@@ -23,11 +23,12 @@ namespace InventorySystem.Data.Context
             base.OnModelCreating(modelBuilder);
 
             // Category parent-child
+            // NEW: Category Self-Referencing Relationship
             modelBuilder.Entity<Category>()
-                .HasOne(c => c.ParentCategory)
-                .WithMany()
-                .HasForeignKey(c => c.ParentCategoryId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .HasOne(c => c.Parent)
+                .WithMany(c => c.SubCategories)
+                .HasForeignKey(c => c.ParentId)
+                .OnDelete(DeleteBehavior.Restrict); // Don't delete Parent if it has children!
 
             // Price precision
             modelBuilder.Entity<Product>()
@@ -44,6 +45,16 @@ namespace InventorySystem.Data.Context
                 .WithMany(p => p.Batches)
                 .HasForeignKey(b => b.ProductId)
                 .OnDelete(DeleteBehavior.Cascade); // If Product deleted, batches go too
+        }
+
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            if (!optionsBuilder.IsConfigured)
+            {
+                // Force the same path logic here too
+                string dbPath = System.IO.Path.Combine(System.AppDomain.CurrentDomain.BaseDirectory, "inventory.db");
+                optionsBuilder.UseSqlite($"Data Source={dbPath}");
+            }
         }
     }
 }

@@ -1,80 +1,148 @@
 ﻿using InventorySystem.Core.Entities;
 using InventorySystem.Data.Repositories;
-using InventorySystem.Infrastructure.Services;
 using InventorySystem.UI.Commands;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
 
 namespace InventorySystem.UI.ViewModels
 {
     public class ProductViewModel : ViewModelBase
     {
-        private readonly IProductRepository _repo;
+        private readonly IProductRepository _productRepo;
+        private readonly ICategoryRepository _categoryRepo;
+        private readonly IStockRepository _stockRepo; // Needed to see "Branches" (Batches)
 
-        public ObservableCollection<Product> Products { get; set; } = new();
+        // --- DATA ---
+        private List<Product> _allProducts = new();
+        public ObservableCollection<Product> Products { get; } = new();
+        public ObservableCollection<Category> Categories { get; } = new();
 
-        public Product SelectedProduct { get; set; }
+        // This list holds the "Branches" (Batches) for the selected product
+        public ObservableCollection<StockBatch> ProductBatches { get; } = new();
 
-        public ICommand OpenAddProductCommand { get; }
+        // --- SELECTION & POPUP STATE ---
+        private Product? _viewingProduct;
+        public Product? ViewingProduct
+        {
+            get => _viewingProduct;
+            set
+            {
+                _viewingProduct = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsDetailVisible));
+
+                if (value != null) LoadBatches(value.Id); // Load specific prices/history
+            }
+        }
+
+        public bool IsDetailVisible => ViewingProduct != null;
+
+        // --- SEARCH ---
+        private string _searchText = "";
+        public string SearchText
+        {
+            get => _searchText;
+            set { _searchText = value; OnPropertyChanged(); ApplyFilters(); }
+        }
+
+        private Category? _selectedCategoryFilter;
+        public Category? SelectedCategoryFilter
+        {
+            get => _selectedCategoryFilter;
+            set { _selectedCategoryFilter = value; OnPropertyChanged(); ApplyFilters(); }
+        }
+
+        // --- COMMANDS ---
+        public ICommand ClearSearchCommand { get; }
+        public ICommand ViewProductCommand { get; }
+        public ICommand CloseDetailCommand { get; }
         public ICommand EditProductCommand { get; }
         public ICommand DeleteProductCommand { get; }
 
-        public ProductViewModel(IProductRepository repo)
+        public ProductViewModel(IProductRepository productRepo, ICategoryRepository categoryRepo, IStockRepository stockRepo)
         {
-            _repo = repo;
+            _productRepo = productRepo;
+            _categoryRepo = categoryRepo;
+            _stockRepo = stockRepo; // Inject StockRepo
 
-            LoadProducts();
+            ClearSearchCommand = new RelayCommand(ClearFilters);
 
-            OpenAddProductCommand = new RelayCommand(OpenAddProduct);
-            EditProductCommand = new RelayCommand(() => EditProduct(SelectedProduct));
-            DeleteProductCommand = new RelayCommand(() => DeleteProduct(SelectedProduct));
-        }
+            // Open the Popup
+            ViewProductCommand = new RelayCommand<Product>(p => ViewingProduct = p);
 
-        private void LoadProducts()
-        {
-            Products.Clear();
-            foreach (var p in _repo.GetAllAsync().Result)
-                Products.Add(p);
-        }
+            // Close the Popup
+            CloseDetailCommand = new RelayCommand(() => ViewingProduct = null);
 
-        private void OpenAddProduct()
-        {
-            var addWindow = new AddProductWindow();
-            addWindow.ShowDialog();
-            LoadProducts();
-        }
-
-        private void EditProduct(Product product)
-        {
-            if (product == null) return;
-
-            // Open the AddProductWindow but pre-fill the fields
-            var editWindow = new AddProductWindow();
-
-            // Create an EditProductViewModel (inherits AddProductViewModel)
-            var categoryRepo = new CategoryRepository(DatabaseService.CreateDbContext());
-            var vm = new EditProductViewModel(product, _repo, categoryRepo, () => editWindow.Close());
-
-            (editWindow.Content as InventorySystem.UI.Views.AddProductView)?.SetViewModel(vm);
-            editWindow.ShowDialog();
-
-            LoadProducts();
-        }
-
-        private void DeleteProduct(Product product)
-        {
-            if (product == null) return;
-
-            var result = System.Windows.MessageBox.Show(
-                $"Are you sure you want to delete {product.Name}?",
-                "Confirm Delete",
-                System.Windows.MessageBoxButton.YesNo,
-                System.Windows.MessageBoxImage.Warning);
-
-            if (result == System.Windows.MessageBoxResult.Yes)
+            // Edit (Placeholder for now)
+            EditProductCommand = new RelayCommand<Product>(p =>
             {
-                _repo.DeleteAsync(product).Wait();
-                LoadProducts();
+                // We will hook up the Edit Popup logic here next!
+                System.Windows.MessageBox.Show($"Edit Popup for {p.Name}");
+            });
+
+            // Delete
+            DeleteProductCommand = new RelayCommand<Product>(async (p) => await DeleteProduct(p));
+
+            LoadData();
+        }
+
+        private async void LoadData()
+        {
+            var cats = await _categoryRepo.GetAllAsync();
+            Categories.Clear();
+            Categories.Add(new Category { Id = -1, Name = "All Categories" });
+            foreach (var c in cats) Categories.Add(c);
+            SelectedCategoryFilter = Categories.First();
+
+            var products = await _productRepo.GetAllAsync();
+            _allProducts = products.ToList();
+
+            ApplyFilters();
+        }
+
+        private async void LoadBatches(int productId)
+        {
+            ProductBatches.Clear();
+            var allBatches = await _stockRepo.GetAllBatchesAsync(); // In real app, make a GetByProductId query!
+
+            // Filter batches for this product
+            foreach (var b in allBatches.Where(b => b.ProductId == productId))
+            {
+                ProductBatches.Add(b);
+            }
+        }
+
+        private void ApplyFilters()
+        {
+            var query = _allProducts.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(SearchText))
+                query = query.Where(p => p.Name.ToLower().Contains(SearchText.ToLower()));
+
+            if (SelectedCategoryFilter != null && SelectedCategoryFilter.Id != -1)
+                query = query.Where(p => p.CategoryId == SelectedCategoryFilter.Id);
+
+            Products.Clear();
+            foreach (var p in query) Products.Add(p);
+        }
+
+        private void ClearFilters()
+        {
+            SearchText = "";
+            SelectedCategoryFilter = Categories.FirstOrDefault();
+            ApplyFilters();
+        }
+
+        private async Task DeleteProduct(Product p)
+        {
+            if (System.Windows.MessageBox.Show("Are you sure? This will delete all stock history too.", "Delete", System.Windows.MessageBoxButton.YesNo) == System.Windows.MessageBoxResult.Yes)
+            {
+                await _productRepo.DeleteAsync(p);
+                ViewingProduct = null; // Close popup if open
+                LoadData(); // Refresh list
             }
         }
     }

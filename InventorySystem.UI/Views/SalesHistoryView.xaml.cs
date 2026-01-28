@@ -16,11 +16,11 @@ using System.Windows.Shapes;
 namespace InventorySystem.UI.Views
 {
     /// <summary>
-    /// Interaction logic for CategoryView.xaml
+    /// Interaction logic for SalesHistoryView.xaml
     /// </summary>
-    public partial class CategoryView : UserControl
+    public partial class SalesHistoryView : UserControl
     {
-        public CategoryView()
+        public SalesHistoryView()
         {
             InitializeComponent();
         }
