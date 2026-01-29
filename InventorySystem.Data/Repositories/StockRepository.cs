@@ -137,5 +137,12 @@ namespace InventorySystem.Data.Repositories
             _context.StockMovements.Update(sale);
             await _context.SaveChangesAsync();
         }
+
+        // --- THE MISSING METHOD ---
+        public async Task AddStockBatchAsync(StockBatch batch)
+        {
+            await _context.StockBatches.AddAsync(batch);
+            await _context.SaveChangesAsync();
+        }
     }
 }

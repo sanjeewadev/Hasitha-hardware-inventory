@@ -1,21 +1,13 @@
-﻿using InventorySystem.Core.Enums;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using InventorySystem.Core.Enums; // <--- Make sure this is here
 
 namespace InventorySystem.Core.Entities
 {
     public class User
     {
         public int Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
 
-        public string Username { get; set; } = null!;
-        public string PasswordHash { get; set; } = null!;
-
-        public UserRole Role { get; set; }
-
-        public bool IsActive { get; set; } = true;
+        public UserRole Role { get; set; } // Uses your Admin/Employee enum
     }
 }

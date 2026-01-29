@@ -6,22 +6,20 @@ namespace InventorySystem.Core.Entities
     {
         public int Id { get; set; }
         public string Name { get; set; } = null!;
+        public string Barcode { get; set; } = string.Empty;
         public string? Description { get; set; }
-
         public int CategoryId { get; set; }
         public Category Category { get; set; } = null!;
 
-        // This is the "Current Market Price" or "Last Price Paid"
-        public decimal BuyingPrice { get; set; }
+        // --- PRICING DECISIONS ---
+        public decimal BuyingPrice { get; set; } // Last Buying Price (Reference)
+        public decimal SellingPrice { get; set; } // Current Shelf Price
+        public double DiscountLimit { get; set; } // NEW: Max Discount % (e.g., 10%)
 
-        public decimal SellingPrice { get; set; }
-
-        // CACHED TOTAL: This must always equal Sum(Batches.RemainingQuantity)
         public int Quantity { get; set; }
-
+        public int LowStockThreshold { get; set; } = 5;
         public bool IsActive { get; set; } = true;
 
-        // NEW: Link to the batches
         public ICollection<StockBatch> Batches { get; set; } = new List<StockBatch>();
     }
 }

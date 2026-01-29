@@ -1,4 +1,6 @@
-﻿using System;
+﻿using InventorySystem.Core.Entities;
+using InventorySystem.UI.ViewModels;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -23,6 +25,17 @@ namespace InventorySystem.UI.Views
         public InventoryView()
         {
             InitializeComponent();
+        }
+
+        // This handles the Single Click Selection
+        private void TreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+        {
+            // Get the ViewModel
+            if (DataContext is InventoryViewModel vm)
+            {
+                // Send the selected item to the ViewModel
+                vm.SelectedCategory = e.NewValue as Category;
+            }
         }
     }
 }

@@ -13,11 +13,11 @@ namespace InventorySystem.UI.ViewModels
             set { _currentView = value; OnPropertyChanged(); }
         }
 
+        // --- NAVIGATION COMMANDS ---
         public RelayCommand NavigateToProductsCommand { get; }
         public RelayCommand NavigateToInventoryCommand { get; }
         public RelayCommand NavigateToStockCommand { get; }
         public RelayCommand NavigateToPOSCommand { get; }
-        public RelayCommand NavigateToReportsCommand { get; }
         public RelayCommand NavigateToDashboardCommand { get; }
         public RelayCommand NavigateToHistoryCommand { get; }
         public RelayCommand NavigateToTodaySalesCommand { get; }
@@ -27,39 +27,46 @@ namespace InventorySystem.UI.ViewModels
         {
             var db = DatabaseService.CreateDbContext();
 
-            // 1. FIXED: Create both repos here
+            // 1. Products (FIXED: Added StockRepository)
             NavigateToProductsCommand = new RelayCommand(() =>
             {
-                var productRepo = new ProductRepository(db);
-                var categoryRepo = new CategoryRepository(db);
-                var stockRepo = new StockRepository(db); // <--- NEW
-
-                // Pass all 3
-                CurrentView = new ProductViewModel(productRepo, categoryRepo, stockRepo);
+                CurrentView = new ProductViewModel(
+                    new ProductRepository(db),
+                    new CategoryRepository(db),
+                    new StockRepository(db) // <--- THIS WAS MISSING
+                );
             });
 
-            // 2. FIXED: Create both repos here
+            // 2. Inventory Catalog
             NavigateToInventoryCommand = new RelayCommand(() =>
             {
-                var productRepo = new ProductRepository(db);
-                var categoryRepo = new CategoryRepository(db);
-                CurrentView = new InventoryViewModel(productRepo, categoryRepo);
+                CurrentView = new InventoryViewModel(
+                    new ProductRepository(db),
+                    new CategoryRepository(db),
+                    new StockRepository(db)
+                );
             });
 
+            // 3. Stock
             NavigateToStockCommand = new RelayCommand(() =>
             {
-                var productRepo = new ProductRepository(db);
-                var stockRepo = new StockRepository(db);
-                CurrentView = new StockViewModel(productRepo, stockRepo);
+                CurrentView = new StockViewModel(
+                    new ProductRepository(db),
+                    new CategoryRepository(db),
+                    new StockRepository(db)
+                );
             });
 
+            // 4. POS
             NavigateToPOSCommand = new RelayCommand(() =>
             {
-                var productRepo = new ProductRepository(db);
-                var stockRepo = new StockRepository(db);
-                CurrentView = new POSViewModel(productRepo, stockRepo);
+                CurrentView = new POSViewModel(
+                    new ProductRepository(db),
+                    new StockRepository(db)
+                );
             });
 
+            // 5. Analytics & Dashboard
             NavigateToDashboardCommand = new RelayCommand(() =>
             {
                 CurrentView = new DashboardViewModel(new StockRepository(db));
@@ -75,12 +82,13 @@ namespace InventorySystem.UI.ViewModels
                 CurrentView = new TodaySalesViewModel(new StockRepository(db));
             });
 
+            // 6. Settings
             NavigateToSettingsCommand = new RelayCommand(() =>
             {
                 CurrentView = new SettingsViewModel();
             });
 
-            // Default view
+            // Default Startup View
             NavigateToProductsCommand.Execute(null);
         }
     }

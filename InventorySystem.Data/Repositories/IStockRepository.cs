@@ -15,11 +15,16 @@ namespace InventorySystem.Data.Repositories
         Task<IEnumerable<StockBatch>> GetAllBatchesAsync();
         Task<IEnumerable<StockMovement>> GetHistoryAsync();
 
+        // --- NEW: For adding stock ---
+        Task AddStockBatchAsync(StockBatch batch);
+
         // 3. New Report Methods (You added these, so we must implement them!)
         Task<IEnumerable<StockMovement>> GetSalesHistoryAsync();
         Task<IEnumerable<Product>> GetLowStockProductsAsync(int threshold);
 
         Task<IEnumerable<StockMovement>> GetSalesByDateRangeAsync(DateTime start, DateTime end);
         Task VoidSaleAsync(int movementId, string reason);
+
+
     }
 }

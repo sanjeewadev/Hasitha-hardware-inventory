@@ -1,5 +1,4 @@
 ﻿using InventorySystem.Core.Entities;
-using InventorySystem.Core.Enums;
 using InventorySystem.Data.Repositories;
 using InventorySystem.UI.Commands;
 using System;
@@ -15,17 +14,38 @@ namespace InventorySystem.UI.ViewModels
     public class StockViewModel : ViewModelBase
     {
         private readonly IProductRepository _productRepo;
+        private readonly ICategoryRepository _categoryRepo;
         private readonly IStockRepository _stockRepo;
 
-        // --- LEFT SIDE: SEARCH & SELECT ---
-        private List<Product> _allProductsCache = new(); // Cache for fast search
-        public ObservableCollection<Product> FilteredProducts { get; } = new();
+        // --- LEFT PANEL: NAVIGATION ---
+        public ObservableCollection<Category> CategoryTree { get; } = new();
+        public ObservableCollection<Product> ProductsInSelectedCategory { get; } = new();
+        private List<Product> _allProductsCache = new();
 
+        private Category? _selectedCategory;
+        public Category? SelectedCategory
+        {
+            get => _selectedCategory;
+            set
+            {
+                _selectedCategory = value;
+                OnPropertyChanged();
+                SearchText = ""; // Clear search on folder change
+                LoadProductsForCategory();
+            }
+        }
+
+        // Search Logic
         private string _searchText = "";
         public string SearchText
         {
             get => _searchText;
-            set { _searchText = value; OnPropertyChanged(); FilterList(); }
+            set
+            {
+                _searchText = value;
+                OnPropertyChanged();
+                FilterProducts();
+            }
         }
 
         private Product? _selectedProduct;
@@ -36,144 +56,190 @@ namespace InventorySystem.UI.ViewModels
             {
                 _selectedProduct = value;
                 OnPropertyChanged();
-                // When you click a product, auto-fill the Cost Price for convenience
-                if (value != null) CostPrice = value.BuyingPrice;
+
+                if (_selectedProduct != null)
+                {
+                    // PRE-FILL inputs with current product data
+                    StockInCost = _selectedProduct.BuyingPrice;
+                    StockInSellingPrice = _selectedProduct.SellingPrice; // <--- Pre-fill Selling Price
+                    StockInDiscount = _selectedProduct.DiscountLimit;    // <--- Pre-fill Discount
+                    LoadBatchHistory(_selectedProduct.Id);
+                }
+                else
+                {
+                    ClearInputs();
+                }
             }
         }
 
-        // --- RIGHT SIDE: INPUTS ---
-        private int _quantity;
-        public int Quantity
+        // --- RIGHT PANEL: STOCK IN INPUTS ---
+        public DateTime StockInDate { get; set; } = DateTime.Now;
+
+        private int _stockInQty;
+        public int StockInQty
         {
-            get => _quantity;
-            set { _quantity = value; OnPropertyChanged(); }
+            get => _stockInQty;
+            set { _stockInQty = value; OnPropertyChanged(); }
         }
 
-        private decimal _costPrice;
-        public decimal CostPrice
+        private decimal _stockInCost;
+        public decimal StockInCost
         {
-            get => _costPrice;
-            set { _costPrice = value; OnPropertyChanged(); }
+            get => _stockInCost;
+            set
+            {
+                _stockInCost = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(GeneratedSecretCode));
+            }
         }
 
-        // Adjustment Inputs
-        private int _adjustmentQty;
-        public int AdjustmentQty
+        // NEW: Selling Price
+        private decimal _stockInSellingPrice;
+        public decimal StockInSellingPrice
         {
-            get => _adjustmentQty;
-            set { _adjustmentQty = value; OnPropertyChanged(); }
+            get => _stockInSellingPrice;
+            set { _stockInSellingPrice = value; OnPropertyChanged(); }
         }
 
-        private string _adjustmentReason = "Damaged";
-        public string AdjustmentReason
+        // NEW: Discount
+        private double _stockInDiscount;
+        public double StockInDiscount
         {
-            get => _adjustmentReason;
-            set { _adjustmentReason = value; OnPropertyChanged(); }
+            get => _stockInDiscount;
+            set { _stockInDiscount = value; OnPropertyChanged(); }
         }
-        public ObservableCollection<string> AdjustmentReasons { get; } = new() { "Damaged", "Stolen", "Expired", "Inventory Correction" };
 
-        // --- BOTTOM: HISTORY LOG ---
-        public ObservableCollection<StockMovement> RecentHistory { get; } = new();
+        public string GeneratedSecretCode => GenerateCipher(StockInCost);
+
+        // --- RIGHT PANEL: HISTORY ---
+        public ObservableCollection<StockBatch> BatchHistory { get; } = new();
 
         // --- COMMANDS ---
-        public ICommand ReceiveStockCommand { get; }
-        public ICommand AdjustStockCommand { get; }
+        public ICommand StockInCommand { get; }
 
-        public StockViewModel(IProductRepository productRepo, IStockRepository stockRepo)
+        public StockViewModel(IProductRepository pRepo, ICategoryRepository cRepo, IStockRepository sRepo)
         {
-            _productRepo = productRepo;
-            _stockRepo = stockRepo;
+            _productRepo = pRepo;
+            _categoryRepo = cRepo;
+            _stockRepo = sRepo;
 
-            ReceiveStockCommand = new RelayCommand(async () => await ReceiveStockAsync());
-            AdjustStockCommand = new RelayCommand(async () => await AdjustStockAsync());
+            StockInCommand = new RelayCommand(async () => await ExecuteStockIn());
 
-            LoadData();
+            LoadTree();
         }
 
-        private async void LoadData()
+        private async void LoadTree()
         {
-            // Load Products
-            var products = await _productRepo.GetAllAsync();
-            _allProductsCache = products.ToList();
-            FilterList();
+            var all = await _categoryRepo.GetAllAsync();
+            var cats = all.ToList();
 
-            // Load Recent History
-            await LoadHistory();
+            CategoryTree.Clear();
+            foreach (var c in cats) c.SubCategories.Clear();
+            foreach (var c in cats)
+            {
+                if (c.ParentId != null)
+                    cats.FirstOrDefault(p => p.Id == c.ParentId)?.SubCategories.Add(c);
+            }
+            foreach (var c in cats.Where(x => x.ParentId == null)) CategoryTree.Add(c);
         }
 
-        private void FilterList()
+        private async void LoadProductsForCategory()
         {
-            FilteredProducts.Clear();
+            _allProductsCache.Clear();
+            ProductsInSelectedCategory.Clear();
+
+            if (SelectedCategory == null) return;
+
+            var all = await _productRepo.GetAllAsync();
+            _allProductsCache = all.Where(p => p.CategoryId == SelectedCategory.Id).ToList();
+            FilterProducts();
+        }
+
+        private void FilterProducts()
+        {
+            ProductsInSelectedCategory.Clear();
+
             if (string.IsNullOrWhiteSpace(SearchText))
             {
-                foreach (var p in _allProductsCache) FilteredProducts.Add(p);
+                foreach (var p in _allProductsCache) ProductsInSelectedCategory.Add(p);
             }
             else
             {
                 var lower = SearchText.ToLower();
-                foreach (var p in _allProductsCache.Where(p => p.Name.ToLower().Contains(lower)))
-                    FilteredProducts.Add(p);
+                var filtered = _allProductsCache.Where(p =>
+                    p.Name.ToLower().Contains(lower) ||
+                    p.Barcode.ToLower().Contains(lower));
+
+                foreach (var p in filtered) ProductsInSelectedCategory.Add(p);
             }
         }
 
-        private async Task LoadHistory()
+        private async void LoadBatchHistory(int productId)
         {
-            RecentHistory.Clear();
-            var history = await _stockRepo.GetHistoryAsync(); // Assuming you have this method
-            // Show only last 20 items for speed
-            foreach (var h in history.OrderByDescending(x => x.Date).Take(20))
-                RecentHistory.Add(h);
+            BatchHistory.Clear();
+            var batches = await _stockRepo.GetAllBatchesAsync();
+            var relevant = batches
+                .Where(b => b.ProductId == productId)
+                .OrderByDescending(b => b.ReceivedDate);
+
+            foreach (var b in relevant) BatchHistory.Add(b);
         }
 
-        private async Task ReceiveStockAsync()
+        private async Task ExecuteStockIn()
         {
-            if (SelectedProduct == null) { MessageBox.Show("Select a product from the list!"); return; }
-            if (Quantity <= 0) { MessageBox.Show("Quantity must be positive!"); return; }
+            if (SelectedProduct == null) return;
+            if (StockInQty <= 0) { MessageBox.Show("Quantity must be greater than 0"); return; }
 
-            var movement = new StockMovement
+            // 1. Create Batch (History)
+            var batch = new StockBatch
             {
                 ProductId = SelectedProduct.Id,
-                Quantity = Quantity,
-                Type = StockMovementType.In,
-                Date = DateTime.UtcNow,
-                // --- NEW: SAVE THE COST ---
-                UnitCost = CostPrice,  // Save the specific cost of this batch
-                UnitPrice = 0          // Not applicable for Stock In
+                InitialQuantity = StockInQty,
+                RemainingQuantity = StockInQty,
+                CostPrice = StockInCost,
+                ReceivedDate = StockInDate
             };
 
-            // Note: We need to pass CostPrice to the repo too if we want to save it in a Batch
-            // For now, we update the product's main buying price
-            SelectedProduct.BuyingPrice = CostPrice;
+            await _stockRepo.AddStockBatchAsync(batch);
 
-            await _stockRepo.ReceiveStockAsync(movement);
+            // 2. Update Product (Owner Decision)
+            SelectedProduct.Quantity += StockInQty;
+            SelectedProduct.BuyingPrice = StockInCost;       // Update Reference Cost
+            SelectedProduct.SellingPrice = StockInSellingPrice; // Update Shelf Price
+            SelectedProduct.DiscountLimit = StockInDiscount;    // Update Discount Rule
 
-            // Success
-            MessageBox.Show($"Received {Quantity} x {SelectedProduct.Name}");
-            Quantity = 0;
+            await _productRepo.UpdateAsync(SelectedProduct);
 
-            LoadData(); // Refresh list and history
+            MessageBox.Show("Stock Added & Prices Updated!");
+
+            ClearInputs();
+            LoadBatchHistory(SelectedProduct.Id);
+
+            // Refresh List Logic (Preserve Search)
+            var currentSearch = SearchText;
+            LoadProductsForCategory();
+            SearchText = currentSearch;
         }
 
-        private async Task AdjustStockAsync()
+        private void ClearInputs()
         {
-            if (SelectedProduct == null) { MessageBox.Show("Select a product!"); return; }
-            if (AdjustmentQty <= 0) { MessageBox.Show("Quantity must be positive!"); return; }
+            StockInQty = 0;
+            StockInCost = 0;
+            StockInSellingPrice = 0;
+            StockInDiscount = 0;
+            StockInDate = DateTime.Now;
+            OnPropertyChanged(nameof(StockInQty));
+            OnPropertyChanged(nameof(StockInCost));
+            OnPropertyChanged(nameof(StockInSellingPrice));
+            OnPropertyChanged(nameof(StockInDiscount));
+            OnPropertyChanged(nameof(StockInDate));
+        }
 
-            var adjustment = new StockMovement
-            {
-                ProductId = SelectedProduct.Id,
-                Quantity = AdjustmentQty,
-                Type = StockMovementType.Adjustment,
-                Note = AdjustmentReason,
-                Date = DateTime.UtcNow
-            };
-
-            await _stockRepo.AdjustStockAsync(adjustment);
-
-            MessageBox.Show($"Removed {AdjustmentQty} x {SelectedProduct.Name}");
-            AdjustmentQty = 0;
-
-            LoadData();
+        private string GenerateCipher(decimal price)
+        {
+            if (price == 0) return "-";
+            return $"CIPHER: {price:00}";
         }
     }
 }
