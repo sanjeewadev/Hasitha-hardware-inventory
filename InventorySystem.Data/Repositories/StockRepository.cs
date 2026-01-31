@@ -1,7 +1,8 @@
 ﻿using InventorySystem.Core.Entities;
-using InventorySystem.Core.Enums; // Ensure you have this for StockMovementType
+using InventorySystem.Core.Enums;
 using InventorySystem.Data.Context;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -18,27 +19,25 @@ namespace InventorySystem.Data.Repositories
         }
 
         // --- 1. CORE ACTIONS ---
-
         public async Task ReceiveStockAsync(StockMovement movement)
         {
             var product = await _context.Products.FindAsync(movement.ProductId);
             if (product == null) return;
 
-            // Update Product
             product.Quantity += movement.Quantity;
-
-            // Add Movement Record
             _context.StockMovements.Add(movement);
 
-            // Create the Batch Record (The "Branch" logic)
+            // Create Batch
             var batch = new StockBatch
             {
                 ProductId = movement.ProductId,
                 InitialQuantity = movement.Quantity,
                 RemainingQuantity = movement.Quantity,
-                CostPrice = movement.UnitCost, // Use the exact cost saved in the movement
+                CostPrice = movement.UnitCost,
                 ReceivedDate = movement.Date,
-
+                // Default settings from product if available
+                SellingPrice = product.SellingPrice,
+                Discount = product.DiscountLimit
             };
             _context.StockBatches.Add(batch);
 
@@ -71,10 +70,9 @@ namespace InventorySystem.Data.Repositories
         }
 
         // --- 2. DATA RETRIEVAL ---
-
         public async Task<IEnumerable<StockBatch>> GetAllBatchesAsync()
         {
-            return await _context.StockBatches.ToListAsync();
+            return await _context.StockBatches.Include(b => b.Product).ToListAsync();
         }
 
         public async Task<IEnumerable<StockMovement>> GetHistoryAsync()
@@ -85,11 +83,28 @@ namespace InventorySystem.Data.Repositories
                 .ToListAsync();
         }
 
-        // --- 3. REPORT METHODS (Implemented!) ---
+        // --- 3. BATCH MANAGEMENT (Implemented Here) ---
+        public async Task AddStockBatchAsync(StockBatch batch)
+        {
+            await _context.StockBatches.AddAsync(batch);
+            await _context.SaveChangesAsync();
+        }
 
+        public async Task UpdateBatchAsync(StockBatch batch)
+        {
+            _context.StockBatches.Update(batch);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task DeleteBatchAsync(StockBatch batch)
+        {
+            _context.StockBatches.Remove(batch);
+            await _context.SaveChangesAsync();
+        }
+
+        // --- 4. REPORTS ---
         public async Task<IEnumerable<StockMovement>> GetSalesHistoryAsync()
         {
-            // Filter only "Out" movements (Sales)
             return await _context.StockMovements
                 .Include(m => m.Product)
                 .Where(m => m.Type == StockMovementType.Out)
@@ -99,7 +114,6 @@ namespace InventorySystem.Data.Repositories
 
         public async Task<IEnumerable<Product>> GetLowStockProductsAsync(int threshold)
         {
-            // Find products where Quantity is below the threshold (e.g., 5)
             return await _context.Products
                 .Include(p => p.Category)
                 .Where(p => p.Quantity <= threshold)
@@ -119,29 +133,19 @@ namespace InventorySystem.Data.Repositories
         public async Task VoidSaleAsync(int movementId, string reason)
         {
             var sale = await _context.StockMovements.FindAsync(movementId);
-            if (sale == null) return;
-            if (sale.IsVoided) return; // Already voided
+            if (sale == null || sale.IsVoided) return;
 
-            // 1. Mark as Voided
             sale.IsVoided = true;
-            sale.Note += $" [VOIDED: {reason}]"; // Append reason to history
+            sale.Note += $" [VOIDED: {reason}]";
 
-            // 2. RESTORE Stock to Product
             var product = await _context.Products.FindAsync(sale.ProductId);
             if (product != null)
             {
-                product.Quantity += sale.Quantity; // Put items back on shelf
+                product.Quantity += sale.Quantity;
                 _context.Products.Update(product);
             }
 
             _context.StockMovements.Update(sale);
-            await _context.SaveChangesAsync();
-        }
-
-        // --- THE MISSING METHOD ---
-        public async Task AddStockBatchAsync(StockBatch batch)
-        {
-            await _context.StockBatches.AddAsync(batch);
             await _context.SaveChangesAsync();
         }
     }

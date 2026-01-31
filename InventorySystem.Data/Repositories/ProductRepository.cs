@@ -2,6 +2,7 @@
 using InventorySystem.Data.Context;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace InventorySystem.Data.Repositories
@@ -15,22 +16,13 @@ namespace InventorySystem.Data.Repositories
             _context = context;
         }
 
-        public async Task AddAsync(Product product)
-        {
-            _context.Products.Add(product);
-            await _context.SaveChangesAsync();
-        }
-
-        public async Task DeleteAsync(Product product)
-        {
-            _context.Products.Remove(product);
-            await _context.SaveChangesAsync();
-        }
-
+        // 1. GET ALL (Hide the deleted ones!)
         public async Task<IEnumerable<Product>> GetAllAsync()
         {
             return await _context.Products
                 .Include(p => p.Category)
+                .ThenInclude(c => c.Parent) // <--- ADD THIS LINE (Loads the Parent info)
+                .Where(p => !p.IsDeleted) // <--- CRITICAL FILTER
                 .ToListAsync();
         }
 
@@ -41,9 +33,25 @@ namespace InventorySystem.Data.Repositories
                 .FirstOrDefaultAsync(p => p.Id == id);
         }
 
+        public async Task AddAsync(Product product)
+        {
+            await _context.Products.AddAsync(product);
+            await _context.SaveChangesAsync();
+        }
+
         public async Task UpdateAsync(Product product)
         {
             _context.Products.Update(product);
+            await _context.SaveChangesAsync();
+        }
+
+        // 2. DELETE (Don't erase, just hide!)
+        public async Task DeleteAsync(Product product)
+        {
+            // Instead of .Remove(product), we do this:
+            product.IsDeleted = true;
+
+            _context.Products.Update(product); // Save as "Updated", not deleted
             await _context.SaveChangesAsync();
         }
     }

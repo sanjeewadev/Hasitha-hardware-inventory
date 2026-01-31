@@ -2,7 +2,9 @@
 using InventorySystem.Data.Repositories;
 using InventorySystem.Infrastructure.Services;
 using InventorySystem.Infrastructure.Startup;
-using System.Linq; // Required for .Any()
+using InventorySystem.UI.ViewModels; // Added for SettingsViewModel
+using System.Linq;
+using System.Threading.Tasks; // Added for Task.Run
 using System.Windows;
 
 namespace InventorySystem.UI
@@ -13,8 +15,8 @@ namespace InventorySystem.UI
         {
             base.OnStartup(e);
 
-            // 1. Initialize Infrastructure (if you have this class)
-            await AppInitializer.InitializeAsync();
+            // 1. Initialize Infrastructure
+            // await AppInitializer.InitializeAsync(); // Uncomment if you use this
 
             // 2. Create Database & Seed Data
             using var db = DatabaseService.CreateDbContext();
@@ -30,14 +32,19 @@ namespace InventorySystem.UI
                 await categoryRepo.AddAsync(new Category { Name = "Hardware" });
             }
 
-            // 4. Show Main Window
-            // Note: Since you are using manual injection in MainViewModel, 
-            // the MainWindow XAML will automatically instantiate MainViewModel 
-            // if you set it as DataContext in XAML or here.
+            // --- 4. START BACKGROUND BACKUP CHECK ---
+            // We create a temporary Settings VM just to run the check logic.
+            // Using Task.Run prevents this from slowing down the app launch.
+            _ = Task.Run(async () =>
+            {
+                var settingsVm = new SettingsViewModel();
+                await settingsVm.CheckAndRunAutoBackup();
+            });
 
-            // If you removed StartupUri="MainWindow.xaml" from App.xaml, uncomment this:
+            // 5. Show Main Window
+            // (Assuming MainWindow is set as StartupUri in App.xaml)
+            // If not, uncomment below:
             // var mainWindow = new MainWindow();
-            // mainWindow.DataContext = new MainViewModel();
             // mainWindow.Show();
         }
     }

@@ -7,6 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Google.Apis.Auth" Version="1.73.0" />
+    <PackageReference Include="Google.Apis.Drive.v3" Version="1.73.0.3996" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\InventorySystem.Data\InventorySystem.Data.csproj" />
   </ItemGroup>
 

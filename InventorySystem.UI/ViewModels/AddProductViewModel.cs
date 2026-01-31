@@ -2,7 +2,7 @@
 using InventorySystem.Data.Repositories;
 using InventorySystem.UI.Commands;
 using System;
-using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
@@ -14,159 +14,143 @@ namespace InventorySystem.UI.ViewModels
     {
         private readonly IProductRepository _productRepo;
         private readonly ICategoryRepository _categoryRepo;
-        private readonly Product? _editingProduct;
-        private List<Category> _allCategoriesRaw = new();
 
-        // This holds the ID of the folder we are adding to
-        private int _targetCategoryId;
+        public Product EditingProduct { get; set; }
 
-        // --- UI PROPERTIES ---
-        public string WindowTitle { get; set; }
-        public string Name { get; set; } = "";
+        // We don't need the list of categories for a dropdown anymore, 
+        // but we keep it internally to lookup names.
+        private ObservableCollection<Category> _allCategories = new();
 
-        // NEW: This shows "Tools / Hammers" instead of a dropdown
-        public string CategoryPath { get; set; } = "Loading...";
-
-        public bool IsEditMode => _editingProduct != null;
-
-        private string _barcode = "";
-        public string Barcode
+        // NEW: Property to display "Main > Sub" as text
+        private string _categoryDisplayPath = "Loading...";
+        public string CategoryDisplayPath
         {
-            get => _barcode;
-            set { _barcode = value; OnPropertyChanged(); }
+            get => _categoryDisplayPath;
+            set { _categoryDisplayPath = value; OnPropertyChanged(); }
         }
-
-        public string Description { get; set; } = "";
 
         public Action? CloseAction { get; set; }
+
         public ICommand SaveCommand { get; }
         public ICommand CancelCommand { get; }
-        public ICommand GenerateBarcodeCommand { get; }
+        public ICommand GenerateCodeCommand { get; }
 
         // --- CONSTRUCTOR ---
-        public AddProductViewModel(IProductRepository productRepo, ICategoryRepository categoryRepo, Product? productToEdit = null, int? preSelectedCategoryId = null)
+        public AddProductViewModel(IProductRepository pRepo, ICategoryRepository cRepo, Product? productToEdit = null, int? preSelectedCategoryId = null)
         {
-            _productRepo = productRepo;
-            _categoryRepo = categoryRepo;
-            _editingProduct = productToEdit;
+            _productRepo = pRepo;
+            _categoryRepo = cRepo;
 
-            // Set the target category ID
-            if (_editingProduct != null) _targetCategoryId = _editingProduct.CategoryId;
-            else if (preSelectedCategoryId.HasValue) _targetCategoryId = preSelectedCategoryId.Value;
+            // Initialize Commands
+            SaveCommand = new RelayCommand(Save);
+            CancelCommand = new RelayCommand(Cancel);
+            GenerateCodeCommand = new RelayCommand(() => EditingProduct.Barcode = GenerateSimpleCode());
 
-            SaveCommand = new RelayCommand(async () => await SaveAsync());
-            CancelCommand = new RelayCommand(() => CloseAction?.Invoke());
-            GenerateBarcodeCommand = new RelayCommand(() => GenerateSmartSku());
-
-            // Load Data
-            InitializeData();
-
-            if (_editingProduct != null)
+            if (productToEdit != null)
             {
-                WindowTitle = "Edit Product Identity";
-                Name = _editingProduct.Name;
-                Barcode = _editingProduct.Barcode ?? "";
-                Description = _editingProduct.Description ?? "";
-            }
-            else
-            {
-                WindowTitle = "Create New Product Identity";
-            }
-        }
-
-        private async void InitializeData()
-        {
-            // 1. Load all categories to build the path
-            var cats = await _categoryRepo.GetAllAsync();
-            _allCategoriesRaw = cats.ToList();
-
-            // 2. Find the target category
-            var targetCat = _allCategoriesRaw.FirstOrDefault(c => c.Id == _targetCategoryId);
-
-            if (targetCat != null)
-            {
-                // 3. Build the Path String (e.g. "Tools / Hammers")
-                CategoryPath = GetFullPath(targetCat);
-                OnPropertyChanged(nameof(CategoryPath));
-
-                // 4. Generate Code automatically if adding new
-                if (_editingProduct == null)
+                // EDIT MODE
+                EditingProduct = new Product
                 {
-                    GenerateSmartSku(targetCat);
-                }
-            }
-        }
-
-        private string GetFullPath(Category cat)
-        {
-            if (cat.ParentId == null) return cat.Name;
-            var parent = _allCategoriesRaw.FirstOrDefault(c => c.Id == cat.ParentId);
-            return parent != null ? $"{GetFullPath(parent)} / {cat.Name}" : cat.Name;
-        }
-
-        // --- THE "SMART SKU" LOGIC ---
-        private void GenerateSmartSku(Category? cat = null)
-        {
-            // Use the target category if none passed
-            if (cat == null)
-                cat = _allCategoriesRaw.FirstOrDefault(c => c.Id == _targetCategoryId);
-
-            if (cat == null) return;
-
-            string currentCode = GetShortCode(cat.Name);
-            string parentCode = "";
-
-            if (cat.ParentId != null)
-            {
-                var parent = _allCategoriesRaw.FirstOrDefault(c => c.Id == cat.ParentId);
-                if (parent != null)
-                {
-                    parentCode = GetShortCode(parent.Name) + "-";
-                }
-            }
-
-            string number = DateTime.Now.ToString("mmss");
-            Barcode = $"{parentCode}{currentCode}-{number}";
-        }
-
-        private string GetShortCode(string name)
-        {
-            if (string.IsNullOrEmpty(name)) return "GEN";
-            return name.Substring(0, Math.Min(3, name.Length)).ToUpper();
-        }
-
-        private async Task SaveAsync()
-        {
-            if (string.IsNullOrWhiteSpace(Name)) { MessageBox.Show("Name Required"); return; }
-
-            string finalBarcode = string.IsNullOrWhiteSpace(Barcode)
-                ? $"AUTO-{Guid.NewGuid().ToString().Substring(0, 6)}"
-                : Barcode;
-
-            if (_editingProduct == null)
-            {
-                var newProduct = new Product
-                {
-                    Name = Name,
-                    CategoryId = _targetCategoryId, // Use the fixed ID
-                    Barcode = finalBarcode,
-                    SellingPrice = 0,
-                    BuyingPrice = 0,
-                    Quantity = 0,
-                    Description = Description
+                    Id = productToEdit.Id,
+                    Name = productToEdit.Name,
+                    Barcode = productToEdit.Barcode,
+                    Description = productToEdit.Description,
+                    CategoryId = productToEdit.CategoryId,
+                    Quantity = productToEdit.Quantity
                 };
-                await _productRepo.AddAsync(newProduct);
             }
             else
             {
-                _editingProduct.Name = Name;
-                // Category usually doesn't change in simple edit, but if it did, we'd update it here.
-                _editingProduct.CategoryId = _targetCategoryId;
-                _editingProduct.Barcode = finalBarcode;
-                _editingProduct.Description = Description;
-                await _productRepo.UpdateAsync(_editingProduct);
+                // NEW MODE
+                EditingProduct = new Product();
+                EditingProduct.Barcode = GenerateSimpleCode(); // Auto-fill Barcode
+
+                if (preSelectedCategoryId.HasValue)
+                {
+                    EditingProduct.CategoryId = preSelectedCategoryId.Value;
+                }
             }
 
+            // Load category data to build the display path
+            LoadCategoryPath();
+        }
+
+        private async void LoadCategoryPath()
+        {
+            var cats = await _categoryRepo.GetAllAsync();
+            _allCategories.Clear();
+            foreach (var c in cats) _allCategories.Add(c);
+
+            // Find the category for this product
+            var currentCat = _allCategories.FirstOrDefault(c => c.Id == EditingProduct.CategoryId);
+
+            if (currentCat != null)
+            {
+                // Check if it has a parent to make a pretty path like "Tools > Hammers"
+                var parentCat = _allCategories.FirstOrDefault(c => c.Id == currentCat.ParentId);
+
+                if (parentCat != null)
+                    CategoryDisplayPath = $"{parentCat.Name} / {currentCat.Name}";
+                else
+                    CategoryDisplayPath = currentCat.Name;
+            }
+            else
+            {
+                CategoryDisplayPath = "Uncategorized";
+            }
+        }
+
+        private string GenerateSimpleCode()
+        {
+            var random = new Random();
+            return random.Next(10000000, 99999999).ToString();
+        }
+
+        private async void Save()
+        {
+            // 1. Validation
+            if (string.IsNullOrWhiteSpace(EditingProduct.Name))
+            {
+                MessageBox.Show("Please enter a Product Name.", "Missing Info", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(EditingProduct.Barcode))
+            {
+                MessageBox.Show("Product must have a Barcode or SKU.", "Missing Info", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            try
+            {
+                // 2. Database Action
+                if (EditingProduct.Id == 0)
+                {
+                    await _productRepo.AddAsync(EditingProduct);
+                }
+                else
+                {
+                    await _productRepo.UpdateAsync(EditingProduct);
+                }
+
+                CloseAction?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                if (ex.InnerException != null && ex.InnerException.Message.Contains("UNIQUE"))
+                {
+                    MessageBox.Show($"The Barcode '{EditingProduct.Barcode}' is already taken!\n\nPlease click 'Auto' (⚡) to generate a new one.",
+                                    "Duplicate Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                else
+                {
+                    MessageBox.Show($"Error saving product: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void Cancel()
+        {
             CloseAction?.Invoke();
         }
     }

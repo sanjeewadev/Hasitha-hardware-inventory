@@ -20,67 +20,79 @@
                     <RowDefinition Height="1.5*"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Text="Stock Manager" FontSize="20" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,20"/>
+                <TextBlock Text="Stock Manager" FontSize="20" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,15"/>
 
-                <TextBlock Grid.Row="1" Text="1. Select Category" FontWeight="SemiBold" Foreground="#64748B" Margin="0,0,0,10" VerticalAlignment="Top"/>
-                <TreeView Grid.Row="1" ItemsSource="{Binding CategoryTree}" BorderThickness="0" Margin="0,25,0,0">
-                    <TreeView.ItemTemplate>
-                        <HierarchicalDataTemplate ItemsSource="{Binding SubCategories}">
-                            <StackPanel Orientation="Horizontal" Margin="0,2">
-                                <TextBlock Text="📁" FontSize="16" Foreground="#F59E0B" Margin="0,0,8,0"/>
-                                <TextBlock Text="{Binding Name}" FontWeight="Medium"/>
-                            </StackPanel>
-                        </HierarchicalDataTemplate>
-                    </TreeView.ItemTemplate>
-                    <x:Code>
-                        <![CDATA[
-                            private void TreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e) {
-                                if (DataContext is InventorySystem.UI.ViewModels.StockViewModel vm) {
-                                    vm.SelectedCategory = e.NewValue as InventorySystem.Core.Entities.Category;
-                                }
-                            }
-                        ]]>
-                    </x:Code>
-                    <TreeView.Resources>
-                        <Style TargetType="TreeView">
-                            <EventSetter Event="SelectedItemChanged" Handler="TreeView_SelectedItemChanged"/>
-                        </Style>
-                    </TreeView.Resources>
-                </TreeView>
+                <Grid Grid.Row="1">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="2" Margin="0,15,0,5">
-                    <TextBlock Text="2. Select Product" FontWeight="SemiBold" Foreground="#64748B" Margin="0,0,0,5"/>
-                    <Border Background="#F1F5F9" CornerRadius="5" Padding="5">
+                    <Border Background="#F1F5F9" CornerRadius="6" Padding="8,6" Margin="0,0,0,10">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
                                 <ColumnDefinition Width="*"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="🔍" Margin="5,0,5,0" VerticalAlignment="Center" Foreground="Gray"/>
+                            <TextBlock Text="🔍" Margin="5,0,8,0" VerticalAlignment="Center" Foreground="#94A3B8"/>
+                            <TextBox Grid.Column="1" Text="{Binding CategorySearchText, UpdateSourceTrigger=PropertyChanged}" 
+                                     Background="Transparent" BorderThickness="0" VerticalAlignment="Center" FontSize="13" 
+                                     Tag="Search Categories..."/>
+                        </Grid>
+                    </Border>
 
-                            <TextBox Grid.Column="1" Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" 
-                                     Background="Transparent" BorderThickness="0" VerticalAlignment="Center" FontSize="14"
-                                     Tag="Search name or code..."/>
+                    <TreeView Grid.Row="1" ItemsSource="{Binding CategoryTree}" BorderThickness="0" SelectedItemChanged="TreeView_SelectedItemChanged">
+                        <TreeView.ItemTemplate>
+                            <HierarchicalDataTemplate ItemsSource="{Binding SubCategories}">
+                                <StackPanel Orientation="Horizontal" Margin="0,3">
+                                    <TextBlock Text="📁" FontSize="16" Foreground="#F59E0B" Margin="0,0,8,0"/>
+                                    <TextBlock Text="{Binding Name}" FontWeight="Medium" Foreground="#334155"/>
+                                </StackPanel>
+                            </HierarchicalDataTemplate>
+                        </TreeView.ItemTemplate>
+                    </TreeView>
+                </Grid>
+
+                <StackPanel Grid.Row="2" Margin="0,15,0,10">
+                    <Border Background="#F1F5F9" CornerRadius="6" Padding="8,6">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="🔍" Margin="5,0,8,0" VerticalAlignment="Center" Foreground="#94A3B8"/>
+                            <TextBox Grid.Column="1" Text="{Binding ProductSearchText, UpdateSourceTrigger=PropertyChanged}" 
+                                     Background="Transparent" BorderThickness="0" VerticalAlignment="Center" FontSize="13" 
+                                     Tag="Search Products..."/>
                         </Grid>
                     </Border>
                 </StackPanel>
 
                 <ListBox Grid.Row="3" ItemsSource="{Binding ProductsInSelectedCategory}" SelectedItem="{Binding SelectedProduct}"
-                         BorderThickness="1" BorderBrush="#E2E8F0" Background="White">
+                         BorderThickness="1" BorderBrush="#E2E8F0" Background="White"
+                         HorizontalContentAlignment="Stretch">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                            <Setter Property="Padding" Value="5"/>
+                            <Setter Property="Margin" Value="0,0,0,5"/>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <Grid Margin="0,6">
+                            <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#334155"/>
+
+                                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#334155" TextTrimming="CharacterEllipsis"/>
                                     <TextBlock Text="{Binding Barcode}" FontSize="11" Foreground="#94A3B8"/>
                                 </StackPanel>
-                                <Border Grid.Column="1" Background="#E0F2F1" CornerRadius="4" Padding="6,2">
-                                    <TextBlock Text="{Binding Quantity, StringFormat='Qty: {0}'}" 
-                                               FontSize="11" FontWeight="Bold" Foreground="#009688"/>
+
+                                <Border Grid.Column="1" Background="#E0F2F1" CornerRadius="4" Padding="8,4" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Quantity, StringFormat='Qty: {0}'}" FontSize="11" FontWeight="Bold" Foreground="#009688"/>
                                 </Border>
                             </Grid>
                         </DataTemplate>
@@ -89,85 +101,218 @@
             </Grid>
         </Border>
 
-        <Grid Grid.Column="1" Margin="30">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
+        <Grid Grid.Column="1" Margin="30,20,30,30">
 
-            <StackPanel Grid.Row="0" Margin="0,0,0,20">
-                <TextBlock Text="{Binding SelectedProduct.Name, TargetNullValue='Select a Product'}" 
-                           FontSize="28" FontWeight="Bold" Foreground="#1E293B"/>
-                <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
-                    <TextBlock Text="Current Total Stock: " FontSize="16" Foreground="Gray"/>
-                    <TextBlock Text="{Binding SelectedProduct.Quantity, TargetNullValue='-'}" 
-                               FontSize="16" FontWeight="Bold" Foreground="#009688"/>
+            <Grid VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Setter Property="Visibility" Value="Visible"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsProductSelected}" Value="True">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+                <StackPanel HorizontalAlignment="Center">
+                    <TextBlock Text="👈" FontSize="40" HorizontalAlignment="Center" Margin="0,0,0,10"/>
+                    <TextBlock Text="Select a Product" FontSize="24" FontWeight="Bold" Foreground="#CBD5E1" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Select an item from the list to view history or adjust stock." 
+                               FontSize="14" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,5,0,0"/>
                 </StackPanel>
-            </StackPanel>
+            </Grid>
 
-            <Border Grid.Row="1" Background="White" CornerRadius="8" Padding="25" BorderBrush="#E2E8F0" BorderThickness="1">
-                <Grid>
+            <Grid>
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsProductSelected}" Value="True">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Margin="0,0,0,25" Orientation="Horizontal">
+                    <TextBlock Text="{Binding SelectedProduct.Name, TargetNullValue='Select a Product'}" 
+                               FontSize="26" FontWeight="Bold" Foreground="#1E293B" VerticalAlignment="Bottom"/>
+
+                    <Border Background="#F0FDFA" BorderBrush="#009688" BorderThickness="1" CornerRadius="4" Margin="15,0,0,2" Padding="10,2" VerticalAlignment="Bottom">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="Total Stock: " FontSize="12" Foreground="#009688" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding SelectedProduct.Quantity, TargetNullValue='-'}" 
+                                       FontSize="14" FontWeight="Bold" Foreground="#009688" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="0,0,0,15">
+                    <TabControl.Resources>
+                        <Style TargetType="TabItem">
+                            <Setter Property="FontSize" Value="14"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="Padding" Value="20,10"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="TabItem">
+                                        <Border Name="Border" BorderThickness="0,0,0,3" BorderBrush="Transparent" Margin="0,0,15,0">
+                                            <ContentPresenter x:Name="ContentSite" VerticalAlignment="Center" HorizontalAlignment="Center" ContentSource="Header" Margin="5,5"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="Border" Property="BorderBrush" Value="#009688"/>
+                                                <Setter Property="Foreground" Value="#009688"/>
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="False">
+                                                <Setter Property="Foreground" Value="#94A3B8"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </TabControl.Resources>
+
+                    <TabItem Header="RECEIVE STOCK (IN)">
+                        <Border Background="White" CornerRadius="8" Padding="30" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,5,0,0">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <UniformGrid Grid.Row="0" Columns="2" Margin="0,0,0,20">
+                                    <StackPanel Margin="0,0,20,0">
+                                        <TextBlock Text="Quantity Arrived" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
+                                        <TextBox Text="{Binding StockInQty}" Padding="10,8" FontSize="14" FontWeight="Bold" BorderBrush="#009688"/>
+                                    </StackPanel>
+                                    <StackPanel>
+                                        <TextBlock Text="Buying Cost (Per Item)" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
+                                        <TextBox Text="{Binding StockInCost}" Padding="10,8" FontSize="14"/>
+                                    </StackPanel>
+                                </UniformGrid>
+
+                                <UniformGrid Grid.Row="1" Columns="2" Margin="0,0,0,25">
+                                    <StackPanel Margin="0,0,20,0">
+                                        <TextBlock Text="Selling Price (Shelf)" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
+                                        <TextBox Text="{Binding StockInSellingPrice}" Padding="10,8" FontSize="14" Background="#F0FDF4"/>
+                                    </StackPanel>
+
+                                    <StackPanel>
+                                        <TextBlock Text="Max Discount %" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
+                                        <Grid>
+                                            <TextBox Text="{Binding StockInDiscount, UpdateSourceTrigger=PropertyChanged}" Padding="10,8,60,8" FontSize="14"/>
+                                            <Border HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0" 
+                                                    Background="#FFFBEB" BorderBrush="#FCD34D" BorderThickness="1" CornerRadius="4" Padding="6,2">
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Text="CODE:" FontSize="9" Foreground="#D97706" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                                                    <TextBlock Text="{Binding GeneratedSecretCode}" FontSize="12" FontWeight="Bold" Foreground="#B45309" VerticalAlignment="Center"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </Grid>
+                                    </StackPanel>
+                                </UniformGrid>
+
+                                <Button Grid.Row="2" Content="CONFIRM STOCK IN" Command="{Binding StockInCommand}" 
+                                        Background="#009688" Foreground="White" Width="220" HorizontalAlignment="Right"
+                                        Padding="0,10" FontSize="13" FontWeight="Bold" Cursor="Hand">
+                                    <Button.Resources>
+                                        <Style TargetType="Border">
+                                            <Setter Property="CornerRadius" Value="6"/>
+                                        </Style>
+                                    </Button.Resources>
+                                </Button>
+                            </Grid>
+                        </Border>
+                    </TabItem>
+
+                    <TabItem Header="ADJUSTMENT (OUT)">
+                        <Border Background="White" CornerRadius="8" Padding="30" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,5,0,0">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <UniformGrid Grid.Row="0" Columns="2" Margin="0,0,0,20">
+                                    <StackPanel Margin="0,0,20,0">
+                                        <TextBlock Text="Quantity to Remove" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
+                                        <TextBox Text="{Binding StockOutQty}" Padding="10,8" FontSize="14" FontWeight="Bold" BorderBrush="#EF4444"/>
+                                    </StackPanel>
+                                    <StackPanel>
+                                        <TextBlock Text="Reason" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
+                                        <ComboBox SelectedValue="{Binding StockOutReason}" SelectedValuePath="Content"
+                                                  Padding="10,8" FontSize="14" IsEditable="False" IsReadOnly="True" Cursor="Hand">
+                                            <ComboBoxItem Content="Correction"/>
+                                            <ComboBoxItem Content="Damaged"/>
+                                            <ComboBoxItem Content="Expired"/>
+                                            <ComboBoxItem Content="Stolen / Lost"/>
+                                            <ComboBoxItem Content="Other"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                </UniformGrid>
+
+                                <StackPanel Grid.Row="1" Margin="0,0,0,25">
+                                    <TextBlock Text="Note / Details" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
+                                    <TextBox Text="{Binding StockOutNote}" Padding="10" Height="60" TextWrapping="Wrap"/>
+                                </StackPanel>
+
+                                <Button Grid.Row="2" Content="CONFIRM REMOVAL" Command="{Binding StockOutCommand}" 
+                                        Background="#EF4444" Foreground="White" Width="220" HorizontalAlignment="Right"
+                                        Padding="0,10" FontSize="13" FontWeight="Bold" Cursor="Hand">
+                                    <Button.Resources>
+                                        <Style TargetType="Border">
+                                            <Setter Property="CornerRadius" Value="6"/>
+                                        </Style>
+                                    </Button.Resources>
+                                </Button>
+                            </Grid>
+                        </Border>
+                    </TabItem>
+                </TabControl>
+
+                <Grid Grid.Row="2">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,20">
-                        <TextBlock Text="RECEIVE STOCK &amp; UPDATE PRICE" FontWeight="Bold" Foreground="#009688" VerticalAlignment="Center"/>
-                        <Border Background="#F8FAFC" CornerRadius="4" Padding="8,4" Margin="15,0,0,0">
-                            <TextBlock Text="{Binding StockInDate, StringFormat='Date: dd MMM yyyy'}" Foreground="Gray" FontSize="12"/>
-                        </Border>
-                    </StackPanel>
+                    <TextBlock Text="Batch History" FontWeight="Bold" Margin="0,15,0,10" Foreground="#334155" FontSize="16"/>
 
-                    <UniformGrid Grid.Row="1" Columns="2" Margin="0,0,0,15">
-                        <StackPanel Margin="0,0,15,0">
-                            <TextBlock Text="Quantity Arrived" Foreground="#64748B" Margin="0,0,0,5"/>
-                            <TextBox Text="{Binding StockInQty}" Padding="10" FontSize="15" FontWeight="Bold" BorderBrush="#009688"/>
-                        </StackPanel>
-
-                        <StackPanel>
-                            <TextBlock Text="Buying Cost (We Pay)" Foreground="#64748B" Margin="0,0,0,5"/>
-                            <TextBox Text="{Binding StockInCost}" Padding="10" FontSize="15"/>
-                            <TextBlock Text="{Binding GeneratedSecretCode}" Foreground="#F59E0B" FontWeight="Bold" FontSize="11" Margin="0,2,0,0"/>
-                        </StackPanel>
-                    </UniformGrid>
-
-                    <UniformGrid Grid.Row="2" Columns="2" Margin="0,0,0,15">
-                        <StackPanel Margin="0,0,15,0">
-                            <TextBlock Text="Set Selling Price (Shelf)" Foreground="#1E293B" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                            <TextBox Text="{Binding StockInSellingPrice}" Padding="10" FontSize="15" FontWeight="Bold" Background="#F0FDF4"/>
-                        </StackPanel>
-
-                        <StackPanel>
-                            <TextBlock Text="Max Discount %" Foreground="#1E293B" FontWeight="SemiBold" Margin="0,0,0,5"/>
-                            <TextBox Text="{Binding StockInDiscount}" Padding="10" FontSize="15"/>
-                        </StackPanel>
-                    </UniformGrid>
-
-                    <Button Grid.Row="3" Content="CONFIRM &amp; UPDATE" Command="{Binding StockInCommand}" 
-                            Background="#009688" Padding="0,12" FontSize="14" FontWeight="Bold" Cursor="Hand" Margin="0,10,0,0">
-                        <Button.Resources>
-                            <Style TargetType="Border">
-                                <Setter Property="CornerRadius" Value="6"/>
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding BatchHistory}" AutoGenerateColumns="False" 
+                              IsReadOnly="True" Background="White" BorderBrush="#E2E8F0" BorderThickness="1"
+                              RowHeight="40" HeadersVisibility="Column">
+                        <DataGrid.ColumnHeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="#F8FAFC"/>
+                                <Setter Property="Padding" Value="10,8"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="Foreground" Value="#64748B"/>
+                                <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                                <Setter Property="BorderThickness" Value="0,0,0,1"/>
                             </Style>
-                        </Button.Resources>
-                    </Button>
+                        </DataGrid.ColumnHeaderStyle>
+
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Date" Binding="{Binding ReceivedDate, StringFormat='dd MMM yyyy'}" Width="120" Foreground="#475569"/>
+                            <DataGridTextColumn Header="Original" Binding="{Binding InitialQuantity}" Width="80"/>
+                            <DataGridTextColumn Header="Remaining" Binding="{Binding RemainingQuantity}" Width="100" FontWeight="Bold"/>
+                            <DataGridTextColumn Header="Cost Price" Binding="{Binding CostPrice, StringFormat=N2}" Width="100"/>
+                            <DataGridTextColumn Header="Cost Code" Binding="{Binding DiscountCode}" Width="*" FontWeight="Bold" Foreground="#B45309"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
                 </Grid>
-            </Border>
-
-            <TextBlock Grid.Row="2" Text="Batch History (FIFO Layers)" FontWeight="Bold" Margin="0,25,0,10" Foreground="#334155"/>
-            <DataGrid Grid.Row="2" ItemsSource="{Binding BatchHistory}" Margin="0,55,0,0" AutoGenerateColumns="False" IsReadOnly="True" Background="White">
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Date" Binding="{Binding ReceivedDate, StringFormat='dd MMM yyyy'}" Width="120"/>
-                    <DataGridTextColumn Header="Original Qty" Binding="{Binding InitialQuantity}" Width="100"/>
-                    <DataGridTextColumn Header="Remaining" Binding="{Binding RemainingQuantity}" Width="100" FontWeight="Bold"/>
-                    <DataGridTextColumn Header="Cost Price" Binding="{Binding CostPrice, StringFormat=N2}" Width="*"/>
-                </DataGrid.Columns>
-            </DataGrid>
-
+            </Grid>
         </Grid>
     </Grid>
 </UserControl>

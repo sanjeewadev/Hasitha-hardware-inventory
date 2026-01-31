@@ -14,4 +14,10 @@
     <ProjectReference Include="..\InventorySystem.Infrastructure\InventorySystem.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="credentials.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

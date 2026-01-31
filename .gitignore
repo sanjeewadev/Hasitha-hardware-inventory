@@ -6,3 +6,5 @@ obj/
 *.db
 *.db-shm
 *.db-wal
+
+InventorySystem.UI/credentials.json

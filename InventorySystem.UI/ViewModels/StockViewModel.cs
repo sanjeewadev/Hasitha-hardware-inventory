@@ -1,4 +1,5 @@
 ﻿using InventorySystem.Core.Entities;
+using InventorySystem.Core.Enums; // Ensure you have this or remove 'StockMovementType' usage if using strings
 using InventorySystem.Data.Repositories;
 using InventorySystem.UI.Commands;
 using System;
@@ -18,10 +19,13 @@ namespace InventorySystem.UI.ViewModels
         private readonly IStockRepository _stockRepo;
 
         // --- LEFT PANEL: NAVIGATION ---
-        public ObservableCollection<Category> CategoryTree { get; } = new();
-        public ObservableCollection<Product> ProductsInSelectedCategory { get; } = new();
+        private List<Category> _allCategoriesCache = new();
         private List<Product> _allProductsCache = new();
 
+        public ObservableCollection<Category> CategoryTree { get; } = new();
+        public ObservableCollection<Product> ProductsInSelectedCategory { get; } = new();
+
+        // 1. Category Selection
         private Category? _selectedCategory;
         public Category? SelectedCategory
         {
@@ -30,24 +34,27 @@ namespace InventorySystem.UI.ViewModels
             {
                 _selectedCategory = value;
                 OnPropertyChanged();
-                SearchText = ""; // Clear search on folder change
+                ProductSearchText = "";
                 LoadProductsForCategory();
             }
         }
 
-        // Search Logic
-        private string _searchText = "";
-        public string SearchText
+        // 2. Search Inputs
+        private string _categorySearchText = "";
+        public string CategorySearchText
         {
-            get => _searchText;
-            set
-            {
-                _searchText = value;
-                OnPropertyChanged();
-                FilterProducts();
-            }
+            get => _categorySearchText;
+            set { _categorySearchText = value; OnPropertyChanged(); FilterCategoryTree(); }
         }
 
+        private string _productSearchText = "";
+        public string ProductSearchText
+        {
+            get => _productSearchText;
+            set { _productSearchText = value; OnPropertyChanged(); FilterProducts(); }
+        }
+
+        // 3. Product Selection & Safety Lock
         private Product? _selectedProduct;
         public Product? SelectedProduct
         {
@@ -56,13 +63,19 @@ namespace InventorySystem.UI.ViewModels
             {
                 _selectedProduct = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(IsProductSelected)); // Unlocks the UI
 
                 if (_selectedProduct != null)
                 {
-                    // PRE-FILL inputs with current product data
+                    // PRE-FILL Stock In
                     StockInCost = _selectedProduct.BuyingPrice;
-                    StockInSellingPrice = _selectedProduct.SellingPrice; // <--- Pre-fill Selling Price
-                    StockInDiscount = _selectedProduct.DiscountLimit;    // <--- Pre-fill Discount
+                    StockInSellingPrice = _selectedProduct.SellingPrice;
+                    StockInDiscount = _selectedProduct.DiscountLimit;
+
+                    // PRE-FILL Stock Out Defaults
+                    StockOutQty = 0;
+                    StockOutReason = "Correction"; // Set Default to Correction
+
                     LoadBatchHistory(_selectedProduct.Id);
                 }
                 else
@@ -72,51 +85,54 @@ namespace InventorySystem.UI.ViewModels
             }
         }
 
-        // --- RIGHT PANEL: STOCK IN INPUTS ---
+        // Helper for UI Enabling
+        public bool IsProductSelected => SelectedProduct != null;
+
+        // --- TAB 1: STOCK IN INPUTS ---
         public DateTime StockInDate { get; set; } = DateTime.Now;
 
         private int _stockInQty;
-        public int StockInQty
-        {
-            get => _stockInQty;
-            set { _stockInQty = value; OnPropertyChanged(); }
-        }
+        public int StockInQty { get => _stockInQty; set { _stockInQty = value; OnPropertyChanged(); } }
 
         private decimal _stockInCost;
-        public decimal StockInCost
-        {
-            get => _stockInCost;
-            set
-            {
-                _stockInCost = value;
-                OnPropertyChanged();
-                OnPropertyChanged(nameof(GeneratedSecretCode));
-            }
-        }
+        public decimal StockInCost { get => _stockInCost; set { _stockInCost = value; OnPropertyChanged(); } }
 
-        // NEW: Selling Price
         private decimal _stockInSellingPrice;
-        public decimal StockInSellingPrice
-        {
-            get => _stockInSellingPrice;
-            set { _stockInSellingPrice = value; OnPropertyChanged(); }
-        }
+        public decimal StockInSellingPrice { get => _stockInSellingPrice; set { _stockInSellingPrice = value; OnPropertyChanged(); } }
 
-        // NEW: Discount
         private double _stockInDiscount;
         public double StockInDiscount
         {
             get => _stockInDiscount;
-            set { _stockInDiscount = value; OnPropertyChanged(); }
+            set
+            {
+                _stockInDiscount = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(GeneratedSecretCode)); // Update code when discount changes
+            }
         }
 
-        public string GeneratedSecretCode => GenerateCipher(StockInCost);
+        // The Display Property for the UI
+        public string GeneratedSecretCode => GenerateSmartDiscountCode(StockInDiscount);
 
-        // --- RIGHT PANEL: HISTORY ---
+        // --- TAB 2: STOCK OUT INPUTS ---
+        public DateTime StockOutDate { get; set; } = DateTime.Now;
+
+        private int _stockOutQty;
+        public int StockOutQty { get => _stockOutQty; set { _stockOutQty = value; OnPropertyChanged(); } }
+
+        private string _stockOutReason = "Correction"; // Default
+        public string StockOutReason { get => _stockOutReason; set { _stockOutReason = value; OnPropertyChanged(); } }
+
+        private string _stockOutNote = "";
+        public string StockOutNote { get => _stockOutNote; set { _stockOutNote = value; OnPropertyChanged(); } }
+
+        // --- HISTORY ---
         public ObservableCollection<StockBatch> BatchHistory { get; } = new();
 
         // --- COMMANDS ---
         public ICommand StockInCommand { get; }
+        public ICommand StockOutCommand { get; }
 
         public StockViewModel(IProductRepository pRepo, ICategoryRepository cRepo, IStockRepository sRepo)
         {
@@ -125,22 +141,41 @@ namespace InventorySystem.UI.ViewModels
             _stockRepo = sRepo;
 
             StockInCommand = new RelayCommand(async () => await ExecuteStockIn());
+            StockOutCommand = new RelayCommand(async () => await ExecuteStockOut());
 
             LoadTree();
         }
 
+        // --- DATA LOADING LOGIC ---
         private async void LoadTree()
         {
             var all = await _categoryRepo.GetAllAsync();
-            var cats = all.ToList();
+            _allCategoriesCache = all.ToList();
+            FilterCategoryTree();
+        }
 
+        private void FilterCategoryTree()
+        {
             CategoryTree.Clear();
+            var cats = _allCategoriesCache;
+
+            if (!string.IsNullOrWhiteSpace(CategorySearchText))
+            {
+                var lower = CategorySearchText.ToLower();
+                cats = _allCategoriesCache.Where(c => c.Name.ToLower().Contains(lower)).ToList();
+            }
+
             foreach (var c in cats) c.SubCategories.Clear();
             foreach (var c in cats)
             {
                 if (c.ParentId != null)
-                    cats.FirstOrDefault(p => p.Id == c.ParentId)?.SubCategories.Add(c);
+                {
+                    var parent = _allCategoriesCache.FirstOrDefault(p => p.Id == c.ParentId);
+                    if (parent != null && (cats.Contains(parent) || string.IsNullOrWhiteSpace(CategorySearchText)))
+                        parent.SubCategories.Add(c);
+                }
             }
+
             foreach (var c in cats.Where(x => x.ParentId == null)) CategoryTree.Add(c);
         }
 
@@ -148,7 +183,6 @@ namespace InventorySystem.UI.ViewModels
         {
             _allProductsCache.Clear();
             ProductsInSelectedCategory.Clear();
-
             if (SelectedCategory == null) return;
 
             var all = await _productRepo.GetAllAsync();
@@ -159,18 +193,14 @@ namespace InventorySystem.UI.ViewModels
         private void FilterProducts()
         {
             ProductsInSelectedCategory.Clear();
-
-            if (string.IsNullOrWhiteSpace(SearchText))
+            if (string.IsNullOrWhiteSpace(ProductSearchText))
             {
                 foreach (var p in _allProductsCache) ProductsInSelectedCategory.Add(p);
             }
             else
             {
-                var lower = SearchText.ToLower();
-                var filtered = _allProductsCache.Where(p =>
-                    p.Name.ToLower().Contains(lower) ||
-                    p.Barcode.ToLower().Contains(lower));
-
+                var lower = ProductSearchText.ToLower();
+                var filtered = _allProductsCache.Where(p => p.Name.ToLower().Contains(lower) || p.Barcode.ToLower().Contains(lower));
                 foreach (var p in filtered) ProductsInSelectedCategory.Add(p);
             }
         }
@@ -179,67 +209,108 @@ namespace InventorySystem.UI.ViewModels
         {
             BatchHistory.Clear();
             var batches = await _stockRepo.GetAllBatchesAsync();
-            var relevant = batches
-                .Where(b => b.ProductId == productId)
-                .OrderByDescending(b => b.ReceivedDate);
-
+            var relevant = batches.Where(b => b.ProductId == productId).OrderByDescending(b => b.ReceivedDate);
             foreach (var b in relevant) BatchHistory.Add(b);
         }
 
+        // --- EXECUTION LOGIC ---
         private async Task ExecuteStockIn()
         {
             if (SelectedProduct == null) return;
             if (StockInQty <= 0) { MessageBox.Show("Quantity must be greater than 0"); return; }
 
-            // 1. Create Batch (History)
+            // 1. Generate the Code
+            string secretCode = GenerateSmartDiscountCode(StockInDiscount);
+
             var batch = new StockBatch
             {
                 ProductId = SelectedProduct.Id,
                 InitialQuantity = StockInQty,
                 RemainingQuantity = StockInQty,
                 CostPrice = StockInCost,
+                SellingPrice = StockInSellingPrice,
+                Discount = StockInDiscount,
+                DiscountCode = secretCode, // 2. Save Code
                 ReceivedDate = StockInDate
             };
 
             await _stockRepo.AddStockBatchAsync(batch);
 
-            // 2. Update Product (Owner Decision)
+            // Update Main Product Totals
             SelectedProduct.Quantity += StockInQty;
-            SelectedProduct.BuyingPrice = StockInCost;       // Update Reference Cost
-            SelectedProduct.SellingPrice = StockInSellingPrice; // Update Shelf Price
-            SelectedProduct.DiscountLimit = StockInDiscount;    // Update Discount Rule
+            SelectedProduct.BuyingPrice = StockInCost;
+            SelectedProduct.SellingPrice = StockInSellingPrice;
+            SelectedProduct.DiscountLimit = StockInDiscount;
 
             await _productRepo.UpdateAsync(SelectedProduct);
+            MessageBox.Show($"Stock Added!\nDiscount Code Generated: {secretCode}");
 
-            MessageBox.Show("Stock Added & Prices Updated!");
+            RefreshView();
+        }
 
+        private async Task ExecuteStockOut()
+        {
+            if (SelectedProduct == null) return;
+            if (StockOutQty <= 0) { MessageBox.Show("Quantity must be greater than 0"); return; }
+            if (StockOutQty > SelectedProduct.Quantity) { MessageBox.Show("Cannot remove more than current stock!"); return; }
+
+            var movement = new StockMovement
+            {
+                ProductId = SelectedProduct.Id,
+                Quantity = StockOutQty,
+                Type = StockMovementType.Adjustment,
+                Date = StockOutDate,
+                Note = $"{StockOutReason}: {StockOutNote}"
+            };
+
+            await _stockRepo.AdjustStockAsync(movement);
+
+            // Note: Ideally, subtract from specific batches here (FIFO), 
+            // but for now we just update the total product count via the repo.
+
+            MessageBox.Show("Stock Adjustment Recorded.");
+            RefreshView();
+        }
+
+        private void RefreshView()
+        {
             ClearInputs();
-            LoadBatchHistory(SelectedProduct.Id);
+            if (SelectedProduct != null) LoadBatchHistory(SelectedProduct.Id);
 
-            // Refresh List Logic (Preserve Search)
-            var currentSearch = SearchText;
+            // Refresh list
+            var currentSearch = ProductSearchText;
             LoadProductsForCategory();
-            SearchText = currentSearch;
+            ProductSearchText = currentSearch;
         }
 
         private void ClearInputs()
         {
-            StockInQty = 0;
-            StockInCost = 0;
-            StockInSellingPrice = 0;
-            StockInDiscount = 0;
-            StockInDate = DateTime.Now;
-            OnPropertyChanged(nameof(StockInQty));
-            OnPropertyChanged(nameof(StockInCost));
-            OnPropertyChanged(nameof(StockInSellingPrice));
-            OnPropertyChanged(nameof(StockInDiscount));
-            OnPropertyChanged(nameof(StockInDate));
+            StockInQty = 0; StockInCost = 0; StockInSellingPrice = 0; StockInDiscount = 0; StockInDate = DateTime.Now;
+            StockOutQty = 0; StockOutNote = ""; StockOutDate = DateTime.Now;
+            StockOutReason = "Correction";
+
+            OnPropertyChanged(nameof(StockInQty)); OnPropertyChanged(nameof(StockInCost));
+            OnPropertyChanged(nameof(StockInSellingPrice)); OnPropertyChanged(nameof(StockInDiscount));
+            OnPropertyChanged(nameof(GeneratedSecretCode));
+
+            OnPropertyChanged(nameof(StockOutQty)); OnPropertyChanged(nameof(StockOutNote));
+            OnPropertyChanged(nameof(StockOutReason));
         }
 
-        private string GenerateCipher(decimal price)
+        // --- NEW GENERATOR LOGIC ---
+        private string GenerateSmartDiscountCode(double discount)
         {
-            if (price == 0) return "-";
-            return $"CIPHER: {price:00}";
+            // Format: Random(0-9) - Discount(000) - Random(0-9)
+            // Example: 10% -> 50109
+            var rnd = new Random();
+            int firstRandom = rnd.Next(0, 10);
+            int lastRandom = rnd.Next(0, 10);
+
+            // Ensure discount is integer for code generation
+            int discInt = (int)discount;
+            string middlePart = discInt.ToString("000"); // Pads with zeros: 5->"005", 10->"010"
+
+            return $"{firstRandom}{middlePart}{lastRandom}";
         }
     }
 }

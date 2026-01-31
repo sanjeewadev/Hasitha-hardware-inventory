@@ -1,13 +1,13 @@
 ﻿using InventorySystem.Core.Entities;
 using InventorySystem.Data.Repositories;
 using InventorySystem.UI.Commands;
+using InventorySystem.UI.Views;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
-using InventorySystem.UI.Views;
 
 namespace InventorySystem.UI.ViewModels
 {
@@ -17,22 +17,20 @@ namespace InventorySystem.UI.ViewModels
         private readonly ICategoryRepository _categoryRepo;
         private readonly IStockRepository _stockRepo;
 
-        // Cache
         private List<Category> _allCategoriesCache = new();
         private List<Product> _allProductsInFolderCache = new();
 
         public ObservableCollection<Category> CategoryTree { get; } = new();
         public ObservableCollection<Product> Products { get; } = new();
+        public ObservableCollection<StockBatch> ProductBatches { get; } = new();
 
-        // --- POPUP: Product Details ---
+        // --- PROPERTIES ---
         private Product? _viewingProduct;
         public Product? ViewingProduct
         {
             get => _viewingProduct;
             set { _viewingProduct = value; OnPropertyChanged(); }
         }
-
-        public ObservableCollection<StockBatch> ProductBatches { get; } = new();
 
         private bool _isDetailVisible;
         public bool IsDetailVisible
@@ -41,7 +39,6 @@ namespace InventorySystem.UI.ViewModels
             set { _isDetailVisible = value; OnPropertyChanged(); }
         }
 
-        // --- SELECTION ---
         private Category? _selectedCategory;
         public Category? SelectedCategory
         {
@@ -54,47 +51,35 @@ namespace InventorySystem.UI.ViewModels
             }
         }
 
-        // --- SEARCH ---
+        public string NewCategoryName { get; set; } = "";
+
+        // Search properties
         private string _categorySearchText = "";
         public string CategorySearchText
         {
             get => _categorySearchText;
-            set
-            {
-                _categorySearchText = value;
-                OnPropertyChanged();
-                FilterCategoryTree();
-            }
+            set { _categorySearchText = value; OnPropertyChanged(); FilterCategoryTree(); }
         }
 
         private string _productSearchText = "";
         public string ProductSearchText
         {
             get => _productSearchText;
-            set
-            {
-                _productSearchText = value;
-                OnPropertyChanged();
-                FilterProductList();
-            }
+            set { _productSearchText = value; OnPropertyChanged(); FilterProductList(); }
         }
 
-        public string NewCategoryName { get; set; } = "";
-
         // --- COMMANDS ---
-        public ICommand SetSelectedCommand { get; }
         public ICommand AddMainCategoryCommand { get; }
         public ICommand AddSubCategoryCommand { get; }
         public ICommand DeleteCategoryCommand { get; }
-
         public ICommand AddProductCommand { get; }
-        public ICommand EditProductCommand { get; } // <--- ADDED THIS
+        public ICommand EditProductCommand { get; }
         public ICommand DeleteProductCommand { get; }
-
         public ICommand ViewProductCommand { get; }
         public ICommand CloseDetailCommand { get; }
+        public ICommand EditBatchCommand { get; }
+        public ICommand DeleteBatchCommand { get; }
 
-        // Constructor
         public InventoryViewModel(IProductRepository productRepo, ICategoryRepository categoryRepo, IStockRepository stockRepo)
         {
             _productRepo = productRepo;
@@ -103,8 +88,6 @@ namespace InventorySystem.UI.ViewModels
 
             ViewProductCommand = new RelayCommand<Product>(async (p) => await OpenProductDetail(p));
             CloseDetailCommand = new RelayCommand(() => IsDetailVisible = false);
-
-            SetSelectedCommand = new RelayCommand<Category>(c => SelectedCategory = c);
 
             AddMainCategoryCommand = new RelayCommand(async () => await AddCategoryAsync(null));
             AddSubCategoryCommand = new RelayCommand(async () =>
@@ -115,30 +98,23 @@ namespace InventorySystem.UI.ViewModels
 
             DeleteCategoryCommand = new RelayCommand(async () => await DeleteCategoryAsync());
 
-            // 1. ADD PRODUCT LOGIC
+            // --- FIXED ADD PRODUCT COMMAND ---
             AddProductCommand = new RelayCommand(() =>
             {
                 if (SelectedCategory == null) { MessageBox.Show("Please select a Category first!"); return; }
 
-                var vm = new AddProductViewModel(
-                    _productRepo,
-                    _categoryRepo,
-                    productToEdit: null,
-                    preSelectedCategoryId: SelectedCategory.Id
-                );
-
+                // We pass 'SelectedCategory.Id' so the new product knows where it belongs
+                var vm = new AddProductViewModel(_productRepo, _categoryRepo, null, SelectedCategory.Id);
                 OpenAddEditWindow(vm);
             });
 
-            // 2. EDIT PRODUCT LOGIC (ADDED THIS)
             EditProductCommand = new RelayCommand<Product>((p) =>
             {
                 if (p == null) return;
-                var vm = new AddProductViewModel(_productRepo, _categoryRepo, productToEdit: p);
+                var vm = new AddProductViewModel(_productRepo, _categoryRepo, p);
                 OpenAddEditWindow(vm);
             });
 
-            // 3. DELETE PRODUCT LOGIC
             DeleteProductCommand = new RelayCommand<Product>(async (p) =>
             {
                 if (MessageBox.Show("Delete product?", "Confirm", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
@@ -148,21 +124,17 @@ namespace InventorySystem.UI.ViewModels
                 }
             });
 
+            EditBatchCommand = new RelayCommand<StockBatch>(OpenEditBatchWindow);
+            DeleteBatchCommand = new RelayCommand<StockBatch>(async (b) => await DeleteBatchAsync(b));
+
             LoadTree();
         }
 
-        // --- HELPER: Open the Add/Edit Window ---
         private void OpenAddEditWindow(AddProductViewModel vm)
         {
-            var window = new AddProductWindow(); // Now it will find this class
+            var window = new AddProductWindow();
             window.DataContext = vm;
-
-            vm.CloseAction = () =>
-            {
-                window.Close();
-                LoadProductsForSelected();
-            };
-
+            vm.CloseAction = () => { window.Close(); LoadProductsForSelected(); };
             window.ShowDialog();
         }
 
@@ -170,24 +142,26 @@ namespace InventorySystem.UI.ViewModels
         {
             if (p == null) return;
             ViewingProduct = p;
+            LoadBatchesForViewingProduct();
+            IsDetailVisible = true;
+        }
 
+        private async void LoadBatchesForViewingProduct()
+        {
+            if (ViewingProduct == null) return;
             var allBatches = await _stockRepo.GetAllBatchesAsync();
-            var specificBatches = allBatches.Where(b => b.ProductId == p.Id).OrderByDescending(b => b.ReceivedDate).ToList();
+            var specificBatches = allBatches.Where(b => b.ProductId == ViewingProduct.Id)
+                                            .OrderByDescending(b => b.ReceivedDate).ToList();
 
             ProductBatches.Clear();
             foreach (var b in specificBatches) ProductBatches.Add(b);
-
-            IsDetailVisible = true;
         }
 
         private async void LoadTree()
         {
             var all = await _categoryRepo.GetAllAsync();
             _allCategoriesCache = all.ToList();
-
-            // Rebuild Hierarchy
             foreach (var cat in _allCategoriesCache) cat.SubCategories.Clear();
-
             foreach (var cat in _allCategoriesCache)
             {
                 if (cat.ParentId != null)
@@ -196,24 +170,20 @@ namespace InventorySystem.UI.ViewModels
                     if (parent != null) parent.SubCategories.Add(cat);
                 }
             }
-
             FilterCategoryTree();
         }
 
         private void FilterCategoryTree()
         {
             CategoryTree.Clear();
-
             if (string.IsNullOrWhiteSpace(CategorySearchText))
             {
-                foreach (var c in _allCategoriesCache.Where(c => c.ParentId == null))
-                    CategoryTree.Add(c);
+                foreach (var c in _allCategoriesCache.Where(c => c.ParentId == null)) CategoryTree.Add(c);
             }
             else
             {
                 var lowerText = CategorySearchText.ToLower();
-                foreach (var c in _allCategoriesCache.Where(c => c.Name.ToLower().Contains(lowerText)))
-                    CategoryTree.Add(c);
+                foreach (var c in _allCategoriesCache.Where(c => c.Name.ToLower().Contains(lowerText))) CategoryTree.Add(c);
             }
         }
 
@@ -221,7 +191,6 @@ namespace InventorySystem.UI.ViewModels
         {
             Products.Clear();
             if (SelectedCategory == null) return;
-
             var all = await _productRepo.GetAllAsync();
             _allProductsInFolderCache = all.Where(p => p.CategoryId == SelectedCategory.Id).ToList();
             FilterProductList();
@@ -231,23 +200,16 @@ namespace InventorySystem.UI.ViewModels
         {
             Products.Clear();
             var query = _allProductsInFolderCache.AsEnumerable();
-
             if (!string.IsNullOrWhiteSpace(ProductSearchText))
-            {
-                var lowerText = ProductSearchText.ToLower();
-                query = query.Where(p => p.Name.ToLower().Contains(lowerText));
-            }
-
+                query = query.Where(p => p.Name.ToLower().Contains(ProductSearchText.ToLower()));
             foreach (var p in query) Products.Add(p);
         }
 
         private async Task AddCategoryAsync(int? parentId)
         {
             if (string.IsNullOrWhiteSpace(NewCategoryName)) return;
-
             var cat = new Category { Name = NewCategoryName, ParentId = parentId };
             await _categoryRepo.AddAsync(cat);
-
             NewCategoryName = "";
             OnPropertyChanged(nameof(NewCategoryName));
             LoadTree();
@@ -256,11 +218,35 @@ namespace InventorySystem.UI.ViewModels
         private async Task DeleteCategoryAsync()
         {
             if (SelectedCategory == null) return;
-            if (MessageBox.Show($"Delete '{SelectedCategory.Name}' and all items inside?", "Confirm", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (MessageBox.Show($"Delete '{SelectedCategory.Name}'?", "Confirm", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
             {
                 await _categoryRepo.DeleteAsync(SelectedCategory);
                 SelectedCategory = null;
                 LoadTree();
+            }
+        }
+
+        private void OpenEditBatchWindow(StockBatch batch)
+        {
+            if (batch == null) return;
+            var vm = new EditBatchViewModel(_stockRepo, batch);
+            var win = new EditBatchWindow { DataContext = vm };
+            vm.CloseAction = () => { win.Close(); LoadBatchesForViewingProduct(); };
+            win.ShowDialog();
+        }
+
+        private async Task DeleteBatchAsync(StockBatch batch)
+        {
+            if (batch == null) return;
+            if (MessageBox.Show("Delete this batch permanently?", "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            {
+                await _stockRepo.DeleteBatchAsync(batch);
+                if (ViewingProduct != null)
+                {
+                    ViewingProduct.Quantity -= batch.RemainingQuantity;
+                    await _productRepo.UpdateAsync(ViewingProduct);
+                }
+                LoadBatchesForViewingProduct();
             }
         }
     }

@@ -27,13 +27,13 @@ namespace InventorySystem.UI.ViewModels
         {
             var db = DatabaseService.CreateDbContext();
 
-            // 1. Products (FIXED: Added StockRepository)
+            // 1. Products
             NavigateToProductsCommand = new RelayCommand(() =>
             {
                 CurrentView = new ProductViewModel(
                     new ProductRepository(db),
                     new CategoryRepository(db),
-                    new StockRepository(db) // <--- THIS WAS MISSING
+                    new StockRepository(db)
                 );
             });
 
@@ -66,10 +66,14 @@ namespace InventorySystem.UI.ViewModels
                 );
             });
 
-            // 5. Analytics & Dashboard
+            // 5. Analytics & Dashboard (UPDATED)
             NavigateToDashboardCommand = new RelayCommand(() =>
             {
-                CurrentView = new DashboardViewModel(new StockRepository(db));
+                // Now passing BOTH StockRepository and ProductRepository
+                CurrentView = new DashboardViewModel(
+                    new StockRepository(db),
+                    new ProductRepository(db)
+                );
             });
 
             NavigateToHistoryCommand = new RelayCommand(() =>
@@ -89,7 +93,7 @@ namespace InventorySystem.UI.ViewModels
             });
 
             // Default Startup View
-            NavigateToProductsCommand.Execute(null);
+            NavigateToDashboardCommand.Execute(null); // Changed default to Dashboard (optional, usually better for admins)
         }
     }
 }
