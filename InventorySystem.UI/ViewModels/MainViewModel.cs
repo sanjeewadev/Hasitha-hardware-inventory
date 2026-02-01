@@ -93,7 +93,7 @@ namespace InventorySystem.UI.ViewModels
             });
 
             // Default Startup View
-            NavigateToDashboardCommand.Execute(null); // Changed default to Dashboard (optional, usually better for admins)
+            NavigateToPOSCommand.Execute(null); // Changed default to Dashboard (optional, usually better for admins)
         }
     }
 }

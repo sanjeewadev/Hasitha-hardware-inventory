@@ -10,6 +10,8 @@ namespace InventorySystem.Data.Repositories
         Task<IEnumerable<Product>> GetAllAsync();
         Task AddAsync(Product product);
         Task UpdateAsync(Product product);
-        Task DeleteAsync(Product product);
+
+        // Changed to int id for easier usage from ViewModel
+        Task DeleteAsync(int id);
     }
 }

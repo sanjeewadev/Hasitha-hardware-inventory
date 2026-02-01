@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" d:DesignHeight="700" d:DesignWidth="1000"
-             Background="#F8FAFC">
+             Background="Transparent">
     <UserControl.Resources>
         <Style TargetType="DataGridColumnHeader">
             <Setter Property="Background" Value="White"/>
@@ -37,7 +37,7 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Margin="30">
+    <Grid Margin="15">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -74,7 +74,7 @@
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Time" Binding="{Binding Date, StringFormat='hh:mm tt'}" Width="100" Foreground="#64748B"/>
 
-                <DataGridTextColumn Binding="{Binding ReferenceId}" Width="100" Foreground="#94A3B8">
+                <DataGridTextColumn Binding="{Binding ReferenceId}" Width="120" Foreground="#94A3B8">
                     <DataGridTextColumn.HeaderStyle>
                         <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                             <Setter Property="Content" Value="Ref #"/>
@@ -91,7 +91,7 @@
 
                 <DataGridTextColumn Header="Sale Summary" Binding="{Binding SummaryText}" Width="*" FontWeight="SemiBold" Foreground="#334155"/>
 
-                <DataGridTemplateColumn Width="80">
+                <DataGridTemplateColumn Width="70">
                     <DataGridTemplateColumn.HeaderStyle>
                         <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                             <Setter Property="Content" Value="Items"/>
@@ -107,11 +107,11 @@
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
 
-                <DataGridTextColumn Binding="{Binding TotalAmount, StringFormat='Rs {0:N2}'}" Width="140" FontWeight="Bold" Foreground="#009688">
+                <DataGridTextColumn Binding="{Binding TotalAmount, StringFormat='Rs {0:N2}'}" Width="160" FontWeight="Bold" Foreground="#009688">
                     <DataGridTextColumn.HeaderStyle>
                         <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                             <Setter Property="Content" Value="Amount"/>
-                            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
                         </Style>
                     </DataGridTextColumn.HeaderStyle>
                     <DataGridTextColumn.ElementStyle>
@@ -123,7 +123,7 @@
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
 
-                <DataGridTemplateColumn Width="70">
+                <DataGridTemplateColumn Width="100">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Button Command="{Binding DataContext.ViewDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 

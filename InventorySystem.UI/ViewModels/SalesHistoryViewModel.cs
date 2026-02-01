@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows; // Required for MessageBox
 using System.Windows.Input;
 
 namespace InventorySystem.UI.ViewModels
@@ -14,19 +15,27 @@ namespace InventorySystem.UI.ViewModels
     {
         private readonly IStockRepository _stockRepo;
 
-        public ObservableCollection<SaleGroup> HistoryList { get; } = new();
+        // --- FILTERS ---
+        private DateTime _startDate = DateTime.Today.AddDays(-7);
+        public DateTime StartDate { get => _startDate; set { _startDate = value; OnPropertyChanged(); } }
 
-        public DateTime StartDate { get; set; } = DateTime.Today.AddDays(-7);
-        public DateTime EndDate { get; set; } = DateTime.Today;
+        private DateTime _endDate = DateTime.Today;
+        public DateTime EndDate { get => _endDate; set { _endDate = value; OnPropertyChanged(); } }
 
-        private bool _isDetailsVisible;
-        public bool IsDetailsVisible { get => _isDetailsVisible; set { _isDetailsVisible = value; OnPropertyChanged(); } }
+        // --- LIST DATA ---
+        public ObservableCollection<SalesHistoryItem> SalesHistory { get; } = new();
 
-        private SaleGroup? _selectedSale;
-        public SaleGroup? SelectedSale { get => _selectedSale; set { _selectedSale = value; OnPropertyChanged(); } }
+        private SalesHistoryItem? _selectedSale;
+        public SalesHistoryItem? SelectedSale
+        {
+            get => _selectedSale;
+            set { _selectedSale = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsDetailsVisible)); }
+        }
 
-        public ICommand FilterCommand { get; }
-        public ICommand ClearFilterCommand { get; }
+        public bool IsDetailsVisible => SelectedSale != null;
+
+        public ICommand SearchCommand { get; }
+        public ICommand ResetFilterCommand { get; }
         public ICommand ViewDetailsCommand { get; }
         public ICommand CloseDetailsCommand { get; }
 
@@ -34,90 +43,111 @@ namespace InventorySystem.UI.ViewModels
         {
             _stockRepo = stockRepo;
 
-            FilterCommand = new RelayCommand(async () => await LoadData());
+            SearchCommand = new RelayCommand(async () => await ExecuteSearch());
 
-            ClearFilterCommand = new RelayCommand(async () =>
+            ResetFilterCommand = new RelayCommand(() =>
             {
                 StartDate = DateTime.Today.AddDays(-7);
                 EndDate = DateTime.Today;
-                OnPropertyChanged(nameof(StartDate));
-                OnPropertyChanged(nameof(EndDate));
-                await LoadData();
+                ExecuteSearch();
             });
 
-            ViewDetailsCommand = new RelayCommand<SaleGroup>((sale) =>
-            {
-                SelectedSale = sale;
-                IsDetailsVisible = true;
-            });
+            ViewDetailsCommand = new RelayCommand<SalesHistoryItem>(item => SelectedSale = item);
+            CloseDetailsCommand = new RelayCommand(() => SelectedSale = null);
 
-            CloseDetailsCommand = new RelayCommand(() => IsDetailsVisible = false);
-
-            LoadData();
+            // Load initial data
+            ExecuteSearch();
         }
 
-        private async Task LoadData()
+        private async Task ExecuteSearch()
         {
-            HistoryList.Clear();
-            var sales = await _stockRepo.GetSalesByDateRangeAsync(StartDate, EndDate.AddDays(1));
+            // VALIDATION 1: Date Range Check
+            if (StartDate > EndDate)
+            {
+                MessageBox.Show("Start Date cannot be after End Date.", "Invalid Date Range", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
 
-            // --- CRITICAL FIX: GROUP BY SECOND ---
-            // We strip milliseconds by formatting to string "yyyyMMddHHmmss"
-            // This forces items sold in the same second to merge into one receipt.
-            var groupedSales = sales
-                .Where(s => s.Type == Core.Enums.StockMovementType.Out)
-                .GroupBy(s => s.Date.ToString("yyyyMMddHHmmss"))
-                .Select(g => new SaleGroup(g.First().Date, g.ToList()))
-                .OrderByDescending(g => g.Date);
+            try
+            {
+                // Force Start to 00:00:00
+                DateTime actualStart = StartDate.Date;
+                // Force End to 23:59:59
+                DateTime actualEnd = EndDate.Date.AddDays(1).AddTicks(-1);
 
-            foreach (var item in groupedSales) HistoryList.Add(item);
+                var allMoves = await _stockRepo.GetSalesByDateRangeAsync(actualStart, actualEnd);
+
+                var groupedSales = allMoves
+                    .Where(m => m.Type == Core.Enums.StockMovementType.Out)
+                    .GroupBy(m => m.ReceiptId)
+                    .Select(g => new SalesHistoryItem
+                    {
+                        ReferenceId = g.Key,
+                        Date = g.First().Date,
+                        IsVoided = g.Any(x => x.IsVoided),
+                        TotalItems = g.Sum(x => x.Quantity),
+                        TotalAmount = g.Sum(x => x.Quantity * x.UnitPrice),
+                        Items = g.Select(x => new SaleDetailItem
+                        {
+                            ProductName = x.Product?.Name ?? "Unknown",
+                            Barcode = x.Product?.Barcode ?? "-",
+                            Quantity = x.Quantity,
+                            UnitPrice = x.UnitPrice
+                        }).ToList()
+                    })
+                    .OrderByDescending(x => x.Date)
+                    .ToList();
+
+                SalesHistory.Clear();
+
+                if (groupedSales.Any())
+                {
+                    foreach (var sale in groupedSales) SalesHistory.Add(sale);
+                }
+                else
+                {
+                    // VALIDATION 2: Empty State Feedback (Optional but helpful)
+                    // We don't necessarily need a popup here, but if the user specifically clicked "Search", it's good to know.
+                    // If this was an auto-load, maybe skip the message. 
+                    // For now, we leave it silent or you can uncomment the line below:
+                    // MessageBox.Show("No sales found for this period.", "No Records", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                // VALIDATION 3: Crash Protection
+                MessageBox.Show($"Failed to load sales history.\n\nError: {ex.Message}", "System Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
     }
 
-    // Wrapper for the Main Grid Row
-    public class SaleGroup
+    // --- DTO CLASSES ---
+    public class SalesHistoryItem
     {
-        public DateTime Date { get; }
-        public List<SaleItemDetail> Items { get; }
+        public string ReferenceId { get; set; } = "";
+        public DateTime Date { get; set; }
+        public bool IsVoided { get; set; }
+        public int TotalItems { get; set; }
+        public decimal TotalAmount { get; set; }
+        public List<SaleDetailItem> Items { get; set; } = new();
 
-        // Grid Columns
-        public string SummaryText => Items.Count == 1 ? Items.First().ProductName : $"{Items.Count} Items (Combined)";
-        public int TotalQuantity => Items.Sum(i => i.Quantity);
-        public decimal TotalAmount => Items.Sum(i => i.Total);
-
-        // Generate a cleaner Ref ID based on time
-        public string ReferenceId => Date.ToString("HHmmss");
-
-        public SaleGroup(DateTime date, List<StockMovement> rawMovements)
+        public string SummaryText
         {
-            Date = date;
-            Items = rawMovements.Select(m => new SaleItemDetail
+            get
             {
-                ProductName = m.Product?.Name ?? "Unknown",
-                Barcode = m.Product?.Barcode ?? "-",
-                Quantity = m.Quantity,
-                UnitPrice = m.UnitPrice,
-                Total = m.Quantity * m.UnitPrice,
-
-                // For Popup Details
-                Note = m.Note,
-                UnitCost = m.UnitCost
-            }).ToList();
+                if (IsVoided) return "[VOIDED / REFUNDED]";
+                if (Items.Count == 1) return Items[0].ProductName;
+                return $"{Items.Count} Items (Combined)";
+            }
         }
-
-        // For Popup Footer
-        public decimal EstimatedProfit => TotalAmount - Items.Sum(i => i.Quantity * i.UnitCost);
     }
 
-    // Wrapper for the Inner Popup List
-    public class SaleItemDetail
+    public class SaleDetailItem
     {
-        public string ProductName { get; set; }
-        public string Barcode { get; set; }
+        public string ProductName { get; set; } = "";
+        public string Barcode { get; set; } = "";
         public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
-        public decimal Total { get; set; }
-        public decimal UnitCost { get; set; } // Hidden, for calculation
-        public string Note { get; set; }
+        public decimal Total => Quantity * UnitPrice;
     }
 }

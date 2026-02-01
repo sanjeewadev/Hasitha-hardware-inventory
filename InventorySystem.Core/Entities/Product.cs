@@ -1,11 +1,15 @@
 ﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 
 namespace InventorySystem.Core.Entities
 {
     public class Product
     {
         public int Id { get; set; }
-        public string Name { get; set; } = null!;
+
+        [Required]
+        public string Name { get; set; } = string.Empty;
+
         public string Barcode { get; set; } = string.Empty;
         public string? Description { get; set; }
 
@@ -15,13 +19,15 @@ namespace InventorySystem.Core.Entities
         // Pricing
         public decimal BuyingPrice { get; set; }
         public decimal SellingPrice { get; set; }
-        public double DiscountLimit { get; set; }
+
+        // --- FIX: Use decimal for financial math ---
+        public decimal DiscountLimit { get; set; }
 
         public int Quantity { get; set; }
         public int LowStockThreshold { get; set; } = 5;
 
-        // --- NEW: THE SAFETY FLAG ---
-        public bool IsDeleted { get; set; } = false;
+        // --- SOFT DELETE FLAG ---
+        public bool IsActive { get; set; } = true;
 
         public ICollection<StockBatch> Batches { get; set; } = new List<StockBatch>();
     }

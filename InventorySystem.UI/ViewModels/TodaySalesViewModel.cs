@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows;
+using System.Windows; // Required for MessageBox
 using System.Windows.Input;
 
 namespace InventorySystem.UI.ViewModels
@@ -15,7 +15,6 @@ namespace InventorySystem.UI.ViewModels
     {
         private readonly IStockRepository _stockRepo;
 
-        // Grouped Collection for UI
         public ObservableCollection<TodaySaleGroup> TodayTransactions { get; } = new();
 
         // --- DASHBOARD STATS ---
@@ -44,13 +43,16 @@ namespace InventorySystem.UI.ViewModels
         public TodaySalesViewModel(IStockRepository stockRepo)
         {
             _stockRepo = stockRepo;
+
             RefreshCommand = new RelayCommand(async () => await LoadData());
+
             VoidLastSaleCommand = new RelayCommand(async () => await ExecuteVoidLastSale());
 
             ViewDetailsCommand = new RelayCommand<TodaySaleGroup>((sale) => {
                 SelectedSale = sale;
                 IsDetailsVisible = true;
             });
+
             CloseDetailsCommand = new RelayCommand(() => IsDetailsVisible = false);
 
             LoadData();
@@ -58,73 +60,92 @@ namespace InventorySystem.UI.ViewModels
 
         private async Task LoadData()
         {
-            TodayTransactions.Clear();
+            try
+            {
+                TodayTransactions.Clear();
 
-            var start = DateTime.Today;
-            var end = DateTime.Today.AddDays(1).AddTicks(-1);
+                var start = DateTime.Today;
+                var end = DateTime.Today.AddDays(1).AddTicks(-1);
 
-            var allMoves = await _stockRepo.GetSalesByDateRangeAsync(start, end);
+                var allMoves = await _stockRepo.GetSalesByDateRangeAsync(start, end);
 
-            // Filter: Active Sales Only (Not Voided)
-            var activeSales = allMoves.Where(m => m.Type == Core.Enums.StockMovementType.Out && !m.IsVoided);
+                // Filter: Active Sales Only (Not Voided)
+                var activeSales = allMoves.Where(m => m.Type == Core.Enums.StockMovementType.Out && !m.IsVoided);
 
-            // --- 1. CALCULATE DASHBOARD STATS ---
-            DailyRevenue = activeSales.Sum(s => s.Quantity * s.UnitPrice);
-            decimal totalCost = activeSales.Sum(s => s.Quantity * s.UnitCost);
-            DailyProfit = DailyRevenue - totalCost;
+                // --- 1. CALCULATE DASHBOARD STATS ---
+                DailyRevenue = activeSales.Sum(s => s.Quantity * s.UnitPrice);
+                decimal totalCost = activeSales.Sum(s => s.Quantity * s.UnitCost);
+                DailyProfit = DailyRevenue - totalCost;
 
-            // --- 2. GROUP BY RECEIPT (Time) ---
-            var grouped = activeSales
-                .GroupBy(s => s.Date.ToString("yyyyMMddHHmmss"))
-                .Select(g => new TodaySaleGroup(g.First().Date, g.ToList()))
-                .OrderByDescending(g => g.Date)
-                .ToList();
+                // --- 2. GROUP BY RECEIPT ID ---
+                var grouped = activeSales
+                    .GroupBy(s => s.ReceiptId)
+                    .Select(g => new TodaySaleGroup(g.First().Date, g.ToList()))
+                    .OrderByDescending(g => g.Date)
+                    .ToList();
 
-            SaleCount = grouped.Count;
+                SaleCount = grouped.Count;
 
-            foreach (var group in grouped) TodayTransactions.Add(group);
+                foreach (var group in grouped) TodayTransactions.Add(group);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to load today's sales data.\n\nError: {ex.Message}", "System Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
+        // --- SMART VOID LOGIC ---
         private async Task ExecuteVoidLastSale()
         {
-            // Get the most recent Sale Group
+            // 1. Check if there is anything to void
             var lastGroup = TodayTransactions.FirstOrDefault();
 
             if (lastGroup == null)
             {
-                MessageBox.Show("No active sales found today to void.");
+                MessageBox.Show("No active sales found today to void.", "List Empty", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
-            var result = MessageBox.Show(
-                $"⚠ ARE YOU SURE?\n\nThis will DELETE the last sale:\n" +
-                $"Time: {lastGroup.Date:hh:mm tt}\n" +
-                $"Total: Rs {lastGroup.TotalAmount:N2}\n\n" +
-                "Stock will be returned to inventory.",
-                "Confirm Refund / Void",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
+            // 2. High-Alert Warning (Financial Impact)
+            string warningMsg = $"⚠ SECURITY WARNING: VOIDING TRANSACTION\n\n" +
+                                $"You are about to undo the last sale:\n" +
+                                $"--------------------------------------\n" +
+                                $"Time: {lastGroup.Date:hh:mm tt}\n" +
+                                $"Items: {lastGroup.TotalItems}\n" +
+                                $"Total Refund: Rs {lastGroup.TotalAmount:N2}\n" +
+                                $"--------------------------------------\n\n" +
+                                $"• Revenue will be deducted.\n" +
+                                $"• Items will be returned to Stock.\n\n" +
+                                $"Are you sure you want to proceed?";
+
+            var result = MessageBox.Show(warningMsg, "Confirm Refund / Void", MessageBoxButton.YesNo, MessageBoxImage.Warning);
 
             if (result == MessageBoxResult.Yes)
             {
-                // Loop through all items in that receipt and void them
-                foreach (var item in lastGroup.OriginalIds)
+                try
                 {
-                    await _stockRepo.VoidSaleAsync(item, "Undo Last Sale - Manager Override");
-                }
+                    // Use the ReceiptId from the first item to void the whole group
+                    var receiptId = lastGroup.Items.First().ReceiptId;
 
-                await LoadData();
-                MessageBox.Show("Last Sale Voided Successfully.");
+                    await _stockRepo.VoidReceiptAsync(receiptId);
+
+                    await LoadData(); // Refresh UI
+
+                    MessageBox.Show("Transaction Voided Successfully.\nStock has been restored.", "Void Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Could not void transaction.\n\nError: {ex.Message}", "Void Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
     }
 
-    // --- WRAPPER CLASS (Mirror of History Wrapper) ---
+    // --- WRAPPER CLASSES ---
     public class TodaySaleGroup
     {
         public DateTime Date { get; }
         public List<TodayItemDetail> Items { get; }
-        public List<int> OriginalIds { get; } // To track IDs for Voiding
 
         public string ReferenceId => Date.ToString("HHmmss");
         public string SummaryText => Items.Count == 1 ? Items.First().ProductName : $"{Items.Count} Items";
@@ -134,24 +155,25 @@ namespace InventorySystem.UI.ViewModels
         public TodaySaleGroup(DateTime date, List<StockMovement> raw)
         {
             Date = date;
-            OriginalIds = raw.Select(r => r.Id).ToList();
             Items = raw.Select(m => new TodayItemDetail
             {
                 ProductName = m.Product?.Name ?? "?",
                 Barcode = m.Product?.Barcode ?? "-",
                 Quantity = m.Quantity,
                 UnitPrice = m.UnitPrice,
-                Total = m.Quantity * m.UnitPrice
+                Total = m.Quantity * m.UnitPrice,
+                ReceiptId = m.ReceiptId
             }).ToList();
         }
     }
 
     public class TodayItemDetail
     {
-        public string ProductName { get; set; }
-        public string Barcode { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public string Barcode { get; set; } = string.Empty;
         public int Quantity { get; set; }
         public decimal UnitPrice { get; set; }
         public decimal Total { get; set; }
+        public string ReceiptId { get; set; } = string.Empty;
     }
 }

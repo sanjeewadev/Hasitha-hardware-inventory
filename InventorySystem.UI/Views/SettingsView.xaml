@@ -3,130 +3,137 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             mc:Ignorable="d" d:DesignHeight="600" d:DesignWidth="1000">
+             mc:Ignorable="d" d:DesignHeight="700" d:DesignWidth="1100"
+             Background="{StaticResource BackgroundBrush}">
 
-    <Grid Background="White">
+    <Grid Margin="30">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="30">
-            <StackPanel>
-                <TextBlock Text="Data &amp; Backup Manager" FontSize="24" FontWeight="Bold" Foreground="#1E293B"/>
-                <TextBlock Text="Manage your database backups and restore points." Foreground="Gray" Margin="0,5,0,0"/>
-            </StackPanel>
-        </Border>
+        <StackPanel Grid.Row="0" Margin="0,0,0,25">
+            <TextBlock Text="Data &amp; Backup Manager" FontSize="26" FontWeight="Bold" Foreground="{StaticResource SidebarBrush}"/>
+            <TextBlock Text="Manage local database snapshots and restoration points." Foreground="{StaticResource TextSecondaryBrush}" Margin="0,5,0,0"/>
+        </StackPanel>
 
-        <Grid Grid.Row="1" Margin="30">
+        <Grid Grid.Row="1">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="320"/>
+                <ColumnDefinition Width="340"/>
             </Grid.ColumnDefinitions>
 
-            <Grid Grid.Column="0" Margin="0,0,30,0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
+            <Border Grid.Column="0" Background="White" CornerRadius="10" Padding="25" Margin="0,0,25,0">
+                <Border.Effect>
+                    <DropShadowEffect Color="Black" BlurRadius="10" Opacity="0.05" ShadowDepth="2"/>
+                </Border.Effect>
 
-                <StackPanel Grid.Row="0" Margin="0,0,0,20">
-                    <TextBlock Text="Backup Storage Location" FontSize="14" FontWeight="SemiBold" Foreground="#334155" Margin="0,0,0,8"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-                        <TextBox Text="{Binding BackupFolderPath}" IsReadOnly="True" 
-                                 Padding="10" Height="40" VerticalContentAlignment="Center"
-                                 BorderBrush="#CBD5E1" Background="#F8FAFC" Foreground="#475569">
-                            <TextBox.Resources>
-                                <Style TargetType="Border">
-                                    <Setter Property="CornerRadius" Value="5,0,0,5"/>
-                                </Style>
-                            </TextBox.Resources>
-                        </TextBox>
+                    <StackPanel Grid.Row="0" Margin="0,0,0,25">
+                        <TextBlock Text="Backup Storage Location" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,0,0,8"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
 
-                        <Button Grid.Column="1" Content="CHANGE FOLDER" Command="{Binding BrowseFolderCommand}"
-                                Background="#1E293B" Foreground="White" Padding="15,0" FontWeight="Bold" FontSize="11" Cursor="Hand">
-                            <Button.Resources>
-                                <Style TargetType="Border">
-                                    <Setter Property="CornerRadius" Value="0,5,5,0"/>
-                                </Style>
-                            </Button.Resources>
-                        </Button>
-                    </Grid>
-                </StackPanel>
+                            <TextBox Text="{Binding BackupFolderPath}" IsReadOnly="True" 
+                                     Padding="12" Height="42" VerticalContentAlignment="Center"
+                                     BorderBrush="#E2E8F0" Background="#F8FAFC" Foreground="{StaticResource TextSecondaryBrush}">
+                                <TextBox.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="6,0,0,6"/>
+                                    </Style>
+                                </TextBox.Resources>
+                            </TextBox>
 
-                <DataGrid Grid.Row="1" ItemsSource="{Binding Backups}" AutoGenerateColumns="False" IsReadOnly="True"
-                          BorderThickness="1" BorderBrush="#E2E8F0" Background="White" RowHeight="50"
-                          GridLinesVisibility="Horizontal" HeadersVisibility="Column">
+                            <Button Grid.Column="1" Content="BROWSE FOLDER" Command="{Binding BrowseFolderCommand}"
+                                    Background="{StaticResource SidebarBrush}" Foreground="White" 
+                                    Height="42" Padding="20,0" FontWeight="Bold" FontSize="11" Cursor="Hand">
+                                <Button.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="0,6,6,0"/>
+                                    </Style>
+                                </Button.Resources>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
 
-                    <DataGrid.ColumnHeaderStyle>
-                        <Style TargetType="DataGridColumnHeader">
-                            <Setter Property="Background" Value="#F1F5F9"/>
-                            <Setter Property="Foreground" Value="#64748B"/>
-                            <Setter Property="Padding" Value="15,10"/>
-                            <Setter Property="FontWeight" Value="SemiBold"/>
-                            <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                            <Setter Property="BorderBrush" Value="#E2E8F0"/>
-                        </Style>
-                    </DataGrid.ColumnHeaderStyle>
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding Backups}" AutoGenerateColumns="False" IsReadOnly="True"
+                              BorderThickness="0" Background="White" RowHeight="55"
+                              GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9" HeadersVisibility="Column">
 
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Date Created" Binding="{Binding CreatedDate, StringFormat='dd MMM yyyy  hh:mm tt'}" Width="180">
-                            <DataGridTextColumn.ElementStyle>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="VerticalAlignment" Value="Center"/>
-                                    <Setter Property="Padding" Value="15,0"/>
-                                    <Setter Property="Foreground" Value="#334155"/>
-                                </Style>
-                            </DataGridTextColumn.ElementStyle>
-                        </DataGridTextColumn>
+                        <DataGrid.ColumnHeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="White"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="Padding" Value="10"/>
+                                <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                                <Setter Property="Height" Value="45"/>
+                            </Style>
+                        </DataGrid.ColumnHeaderStyle>
 
-                        <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="*">
-                            <DataGridTextColumn.ElementStyle>
-                                <Style TargetType="TextBlock">
-                                    <Setter Property="VerticalAlignment" Value="Center"/>
-                                    <Setter Property="Padding" Value="15,0"/>
-                                    <Setter Property="Foreground" Value="#64748B"/>
-                                </Style>
-                            </DataGridTextColumn.ElementStyle>
-                        </DataGridTextColumn>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Date Created" Binding="{Binding CreatedDate, StringFormat='dd MMM yyyy - hh:mm tt'}" Width="200" Foreground="{StaticResource TextPrimaryBrush}"/>
+                            <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="*" Foreground="{StaticResource TextSecondaryBrush}"/>
 
-                        <DataGridTemplateColumn Header="Actions" Width="160">
-                            <DataGridTemplateColumn.CellTemplate>
-                                <DataTemplate>
-                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,10,0">
-                                        <Button Content="RESTORE" Command="{Binding DataContext.RestoreCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Background="#3B82F6" Foreground="White" FontSize="10" FontWeight="Bold" Padding="10,5" Margin="0,0,5,0">
-                                            <Button.Resources>
-                                                <Style TargetType="Border">
-                                                    <Setter Property="CornerRadius" Value="4"/>
-                                                </Style>
-                                            </Button.Resources>
-                                        </Button>
-                                        <Button Content="DEL" Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Background="#FEE2E2" Foreground="#EF4444" BorderThickness="0" FontSize="10" FontWeight="Bold" Padding="10,5">
-                                            <Button.Resources>
-                                                <Style TargetType="Border">
-                                                    <Setter Property="CornerRadius" Value="4"/>
-                                                </Style>
-                                            </Button.Resources>
-                                        </Button>
-                                    </StackPanel>
-                                </DataTemplate>
-                            </DataGridTemplateColumn.CellTemplate>
-                        </DataGridTemplateColumn>
-                    </DataGrid.Columns>
-                </DataGrid>
-            </Grid>
+                            <DataGridTemplateColumn Header="Actions" Width="100">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,10,0">
+                                            <Button Content="Restore" Command="{Binding DataContext.RestoreCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                    CommandParameter="{Binding}" 
+                                                    Background="#3B82F6" Foreground="White" FontSize="11" FontWeight="SemiBold" 
+                                                    Padding="12,6" Margin="0" Height="30">
+                                                <Button.Resources>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="CornerRadius" Value="4"/>
+                                                    </Style>
+                                                </Button.Resources>
+                                            </Button>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Border>
 
             <StackPanel Grid.Column="1">
-                <Border Background="#F0FDF4" BorderBrush="#BBF7D0" BorderThickness="1" CornerRadius="8" Padding="20">
+
+                <Border Background="White" CornerRadius="10" Padding="25" Margin="0,0,0,20">
+                    <Border.Effect>
+                        <DropShadowEffect Color="#10B981" BlurRadius="15" Opacity="0.1" ShadowDepth="4"/>
+                    </Border.Effect>
                     <StackPanel>
-                        <TextBlock Text="Backup Now" FontSize="16" FontWeight="Bold" Foreground="#166534"/>
-                        <TextBlock Text="Create a snapshot of your data in the selected folder." TextWrapping="Wrap" Foreground="#15803D" Margin="0,5,0,15" FontSize="13"/>
-                        <Button Content="+ CREATE NEW BACKUP" Command="{Binding CreateBackupCommand}" Background="#166534" Foreground="White" Padding="15" FontSize="13" FontWeight="Bold" Cursor="Hand">
+                        <Grid Margin="0,0,0,15">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="Create Backup" FontSize="16" FontWeight="Bold" Foreground="{StaticResource SidebarBrush}"/>
+                                <TextBlock Text="Manual Snapshot" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                            </StackPanel>
+                            <Border Background="#DCFCE7" CornerRadius="20" Width="40" Height="40">
+                                <TextBlock Text="💾" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="18"/>
+                            </Border>
+                        </Grid>
+
+                        <TextBlock Text="Save a complete copy of your current inventory database to the selected folder." 
+                                   TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,0,20" LineHeight="20"/>
+
+                        <Button Content="+ CREATE NEW BACKUP" Command="{Binding CreateBackupCommand}" 
+                                Background="{StaticResource PrimaryBrush}" Foreground="White" 
+                                Padding="15" FontSize="13" FontWeight="Bold" Cursor="Hand">
                             <Button.Resources>
                                 <Style TargetType="Border">
                                     <Setter Property="CornerRadius" Value="6"/>
@@ -136,13 +143,37 @@
                     </StackPanel>
                 </Border>
 
-                <Border Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="8" Padding="20" Margin="0,20,0,0">
+                <Border Background="White" CornerRadius="10" Padding="25" BorderBrush="#E2E8F0" BorderThickness="1">
                     <StackPanel>
-                        <TextBlock Text="Cloud Backup" FontSize="16" FontWeight="Bold" Foreground="#334155"/>
-                        <TextBlock Text="Google Drive integration coming soon." TextWrapping="Wrap" Foreground="#94A3B8" Margin="0,5,0,0" FontSize="13"/>
-                        <Button Content="TEST CLOUD UPLOAD" Command="{Binding TestCloudUploadCommand}" Background="#2563EB" Foreground="White" Padding="15"/>
+                        <Grid Margin="0,0,0,15">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="Cloud Sync" FontSize="16" FontWeight="Bold" Foreground="{StaticResource SidebarBrush}"/>
+                                <TextBlock Text="Google Drive" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
+                            </StackPanel>
+                            <Border Background="#F1F5F9" CornerRadius="20" Width="40" Height="40">
+                                <TextBlock Text="☁️" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="18"/>
+                            </Border>
+                        </Grid>
+
+                        <TextBlock Text="Automatically upload your backups to Google Drive for safety." 
+                                   TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,0,20" LineHeight="20"/>
+
+                        <Button Content="TEST CONNECTION" Command="{Binding TestCloudUploadCommand}" 
+                                Background="White" BorderBrush="#E2E8F0" BorderThickness="1" 
+                                Foreground="{StaticResource TextSecondaryBrush}" Padding="15" FontSize="12" FontWeight="SemiBold" Cursor="Hand">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
                     </StackPanel>
                 </Border>
+
             </StackPanel>
         </Grid>
     </Grid>

@@ -1,7 +1,10 @@
-﻿using System;
+﻿using InventorySystem.Data.Context;
+using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace InventorySystem.Infrastructure.Services
 {
@@ -13,12 +16,20 @@ namespace InventorySystem.Infrastructure.Services
         public string Size { get; set; } = "";
     }
 
-    public static class BackupService
+    public class BackupService
     {
-        private static string DbPath => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "inventory.db");
+        private readonly InventoryDbContext _context;
+        private readonly string _dbPath;
 
-        // 1. GET BACKUPS (From specific folder)
-        public static List<BackupFile> GetBackups(string folderPath)
+        public BackupService(InventoryDbContext context)
+        {
+            _context = context;
+            // Get the actual physical path of the running database
+            _dbPath = _context.Database.GetDbConnection().DataSource;
+        }
+
+        // 1. GET BACKUPS
+        public List<BackupFile> GetBackups(string folderPath)
         {
             if (string.IsNullOrEmpty(folderPath) || !Directory.Exists(folderPath))
                 return new List<BackupFile>();
@@ -41,37 +52,38 @@ namespace InventorySystem.Infrastructure.Services
             return list.OrderByDescending(x => x.CreatedDate).ToList();
         }
 
-        // 2. CREATE BACKUP (To specific folder)
-        public static void CreateBackup(string targetFolder)
+        // 2. CREATE BACKUP (Safe while running)
+        public async Task CreateBackupAsync(string targetFolder)
         {
-            if (!File.Exists(DbPath)) throw new FileNotFoundException("Database not found!");
             if (!Directory.Exists(targetFolder)) Directory.CreateDirectory(targetFolder);
 
             string fileName = $"Backup_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.db";
             string destPath = Path.Combine(targetFolder, fileName);
 
-            File.Copy(DbPath, destPath);
+            // "VACUUM INTO" creates a safe snapshot even if the app is active
+            string sql = $"VACUUM INTO '{destPath}'";
+            await _context.Database.ExecuteSqlRawAsync(sql);
         }
 
-        public static void RestoreBackup(string backupPath)
+        // 3. RESTORE BACKUP (File Operations Only)
+        public void RestoreBackup(string backupPath)
         {
             if (!File.Exists(backupPath)) throw new FileNotFoundException("Backup file missing!");
 
-            string tempName = DbPath + ".old";
+            string currentDb = _dbPath;
+            string tempName = currentDb + ".old";
+
+            // Try to rename the current DB file to move it out of the way.
+            // Note: On Windows, you can usually rename a locked file (Move), 
+            // but you cannot delete it.
+
             if (File.Exists(tempName)) File.Delete(tempName);
 
-            try
-            {
-                File.Move(DbPath, tempName);
-                File.Copy(backupPath, DbPath);
-            }
-            catch
-            {
-                File.Copy(backupPath, DbPath, true);
-            }
+            File.Move(currentDb, tempName); // Rename current active DB
+            File.Copy(backupPath, currentDb); // Copy backup into place
         }
 
-        public static void DeleteBackup(string path)
+        public void DeleteBackup(string path)
         {
             if (File.Exists(path)) File.Delete(path);
         }

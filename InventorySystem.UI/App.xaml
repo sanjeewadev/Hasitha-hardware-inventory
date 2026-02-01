@@ -10,7 +10,6 @@
         <converters:InvertBoolConverter x:Key="InvertBoolConverter"/>
 
         <Geometry x:Key="Icon_Dashboard">M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z</Geometry>
-
         <Geometry x:Key="Icon_Products">M20,6H16V4A2,2 0 0,0 14,2H10A2,2 0 0,0 8,4V6H4A2,2 0 0,0 2,8V20A2,2 0 0,0 4,22H20A2,2 0 0,0 22,20V8A2,2 0 0,0 20,6M10,4H14V6H10V4M20,20H4V8H8V10H10V8H14V10H16V8H20V20Z</Geometry>
         <Geometry x:Key="Icon_Categories">M19,20H5V4H7V7H17V4H19M5,2H19A2,2 0 0,1 21,4V20A2,2 0 0,1 19,22H5A2,2 0 0,1 3,20V4A2,2 0 0,1 5,2M12,18A3,3 0 0,0 15,15A3,3 0 0,0 12,12A3,3 0 0,0 9,15A3,3 0 0,0 12,18Z</Geometry>
         <Geometry x:Key="Icon_Stock">M9,3L5,7H8V14H10V7H13M16,17V10H14V17H11L15,21L19,17H16Z</Geometry>
@@ -19,11 +18,13 @@
         <Geometry x:Key="Icon_History">M13.5,8H12V13L16.28,15.54L17,14.33L13.5,12.25V8M13,3A9,9 0 1,1 4,12A9,9 0 0,1 13,3M13,21A10,10 0 1,0 3,12A10,10 0 0,0 13,21Z</Geometry>
         <Geometry x:Key="Icon_Settings">M19.14,12.94C19.16,12.78 19.16,12.61 19.16,12.44C19.16,12.27 19.16,12.11 19.14,11.94L21.41,10.18C21.61,10.02 21.67,9.73 21.54,9.5L19.38,5.77C19.26,5.54 18.97,5.45 18.73,5.55L16.06,6.62C15.5,6.18 14.9,5.83 14.25,5.56L13.84,2.71C13.8,2.46 13.59,2.27 13.33,2.27H9.04C8.79,2.27 8.57,2.46 8.53,2.71L8.12,5.56C7.47,5.83 6.87,6.18 6.31,6.62L3.64,5.55C3.4,5.45 3.11,5.54 2.99,5.77L0.83,9.5C0.7,9.73 0.76,10.02 0.96,10.18L3.23,11.94C3.21,12.11 3.2,12.27 3.2,12.44C3.2,12.61 3.21,12.78 3.23,12.94L0.96,14.71C0.76,14.86 0.7,15.15 0.83,15.38L2.99,19.12C3.11,19.35 3.4,19.43 3.64,19.34L6.31,18.26C6.87,18.7 7.47,19.05 8.12,19.32L8.53,22.17C8.57,22.42 8.79,22.61 9.04,22.61H13.33C13.58,22.61 13.8,22.42 13.84,22.17L14.25,19.32C14.9,19.05 15.5,18.7 16.06,18.26L18.73,19.34C18.97,19.43 19.26,19.35 19.38,19.12L21.54,15.38C21.67,15.15 21.61,14.86 21.41,14.71L19.14,12.94M12.4,15.67C10.61,15.67 9.17,14.22 9.17,12.44C9.17,10.65 10.61,9.21 12.4,9.21C14.19,9.21 15.63,10.65 15.63,12.44C15.63,14.22 14.19,15.67 12.4,15.67Z</Geometry>
 
-        <SolidColorBrush x:Key="SidebarBrush" Color="#1E293B"/>
-        <SolidColorBrush x:Key="SidebarHoverBrush" Color="#334155"/>
-        <SolidColorBrush x:Key="PrimaryBrush" Color="#009688"/>
-        <SolidColorBrush x:Key="PrimaryDarkBrush" Color="#00796B"/>
-        <SolidColorBrush x:Key="BackgroundBrush" Color="#F8FAFC"/>
+        <SolidColorBrush x:Key="SidebarBrush" Color="#0F172A"/>
+        <SolidColorBrush x:Key="SidebarHoverBrush" Color="#1E293B"/>
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#10B981"/>
+        <SolidColorBrush x:Key="PrimaryDarkBrush" Color="#059669"/>
+
+        <SolidColorBrush x:Key="BackgroundBrush" Color="#F1F5F9"/>
+
         <SolidColorBrush x:Key="TextPrimaryBrush" Color="#334155"/>
         <SolidColorBrush x:Key="TextSecondaryBrush" Color="#64748B"/>
         <SolidColorBrush x:Key="TextLightBrush" Color="#FFFFFF"/>
@@ -46,9 +47,6 @@
                             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="border" Property="Background" Value="{StaticResource PrimaryDarkBrush}"/>
-                            </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="border" Property="Opacity" Value="0.6"/>
                             </Trigger>
@@ -146,97 +144,6 @@
             </Setter>
         </Style>
 
-        <Style x:Key="ChevronToggleStyle" TargetType="ToggleButton">
-            <Setter Property="Focusable" Value="False"/>
-            <Setter Property="Width" Value="16"/>
-            <Setter Property="Height" Value="16"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ToggleButton">
-                        <Border Background="Transparent" Width="16" Height="16">
-                            <Path x:Name="Arrow" 
-                                  Data="M 5,4 L 9,8 L 5,12" 
-                                  Stroke="#64748B" 
-                                  StrokeThickness="2"
-                                  HorizontalAlignment="Center" 
-                                  VerticalAlignment="Center"
-                                  RenderTransformOrigin="0.5,0.5">
-                                <Path.RenderTransform>
-                                    <RotateTransform Angle="0"/>
-                                </Path.RenderTransform>
-                            </Path>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="Arrow" Property="RenderTransform">
-                                    <Setter.Value>
-                                        <RotateTransform Angle="90"/>
-                                    </Setter.Value>
-                                </Setter>
-                                <Setter TargetName="Arrow" Property="Stroke" Value="#1E293B"/>
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Arrow" Property="Stroke" Value="#009688"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <Style TargetType="TreeViewItem">
-            <Setter Property="IsExpanded" Value="True"/>
-            <Setter Property="Padding" Value="5,4"/>
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="TreeViewItem">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-
-                            <Border Name="Bd" Grid.Row="0" Padding="{TemplateBinding Padding}" CornerRadius="4" Background="{TemplateBinding Background}">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="20"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <ToggleButton x:Name="Expander" 
-                                                  Style="{StaticResource ChevronToggleStyle}" 
-                                                  ClickMode="Press"
-                                                  IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"/>
-
-                                    <ContentPresenter Grid.Column="1" ContentSource="Header" VerticalAlignment="Center"/>
-                                </Grid>
-                            </Border>
-
-                            <ItemsPresenter Grid.Row="1" Name="ItemsHost" Margin="18,0,0,0"/>
-                        </Grid>
-
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsExpanded" Value="False">
-                                <Setter TargetName="ItemsHost" Property="Visibility" Value="Collapsed"/>
-                            </Trigger>
-
-                            <Trigger Property="HasItems" Value="False">
-                                <Setter TargetName="Expander" Property="Visibility" Value="Hidden"/>
-                            </Trigger>
-
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Bd" Property="Background" Value="#E0F2F1"/>
-                                <Setter Property="Foreground" Value="#009688"/>
-                                <Setter Property="FontWeight" Value="Bold"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
         <Style x:Key="NavButtonStyle" TargetType="RadioButton">
             <Setter Property="Foreground" Value="#94A3B8"/>
             <Setter Property="Background" Value="Transparent"/>
@@ -260,7 +167,7 @@
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
                                 <Setter Property="FontWeight" Value="Bold"/>
-                                <Setter TargetName="back" Property="Background" Value="#0F172A"/>
+                                <Setter TargetName="back" Property="Background" Value="#020617"/>
                                 <Setter TargetName="indicator" Property="Background" Value="{StaticResource PrimaryBrush}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>

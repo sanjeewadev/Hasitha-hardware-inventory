@@ -25,7 +25,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="DataGridCell">
-                        <Border BorderThickness="0" Background="{TemplateBinding Background}" Padding="0">
+                        <Border Style="{x:Null}" BorderThickness="0" Background="{TemplateBinding Background}" Padding="0">
                             <ContentPresenter VerticalAlignment="Center"/>
                         </Border>
                     </ControlTemplate>
@@ -78,7 +78,7 @@
                         <DataTemplate>
                             <Button Command="{Binding DataContext.SelectProductCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                     CommandParameter="{Binding}"
-                                    Margin="0,0,12,12" Width="155" Height="100"
+                                    Margin="0,0,12,12" Width="150" Height="90"
                                     Background="White" BorderBrush="#E2E8F0" BorderThickness="1" Cursor="Hand">
                                 <Button.Template>
                                     <ControlTemplate TargetType="Button">
@@ -154,8 +154,10 @@
                                                             <ColumnDefinition Width="Auto"/>
                                                         </Grid.ColumnDefinitions>
                                                         <StackPanel>
-                                                            <TextBlock Text="{Binding ReceivedDate, StringFormat='Date: dd MMM yyyy'}" FontWeight="SemiBold" FontSize="14" Foreground="#334155"/>
-                                                            <TextBlock Text="{Binding RemainingQuantity, StringFormat='In Stock: {0}'}" FontSize="12" Foreground="#94A3B8" Margin="0,2,0,0"/>
+                                                            <TextBlock Text="{Binding ReceivedDate, StringFormat='{}Date: {0:dd MMM yyyy}'}" 
+                                                                       FontWeight="SemiBold" FontSize="14" Foreground="#334155"/>
+                                                            <TextBlock Text="{Binding RemainingQuantity, StringFormat='In Stock: {0}'}" 
+                                                                       FontSize="12" Foreground="#94A3B8" Margin="0,2,0,0"/>
                                                         </StackPanel>
 
                                                         <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right">
@@ -219,7 +221,7 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-                        <DataGridTemplateColumn Width="90">
+                        <DataGridTemplateColumn Width="110">
                             <DataGridTemplateColumn.HeaderStyle>
                                 <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                     <Setter Property="Content" Value="Qty"/>
@@ -229,22 +231,32 @@
 
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Border Background="#F8FAFC" CornerRadius="4" BorderBrush="#E2E8F0" BorderThickness="1" 
-                                            Height="32" Width="80" HorizontalAlignment="Center">
+                                    <Border Style="{x:Null}" Background="#F8FAFC" CornerRadius="4" BorderBrush="#E2E8F0" BorderThickness="1" 
+                                            Height="32" Width="90" HorizontalAlignment="Center" Padding="0,0,0,0">
                                         <Grid>
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="25"/>
                                                 <ColumnDefinition Width="*"/>
-                                                <ColumnDefinition Width="25"/>
+                                                <ColumnDefinition Width="28"/>
                                             </Grid.ColumnDefinitions>
-                                            <Button Grid.Column="0" Content="-" Command="{Binding DecreaseQuantityCommand}" 
-                                                    Background="Transparent" BorderThickness="0" FontWeight="Bold" Foreground="#64748B" Cursor="Hand"/>
-                                            <TextBox Grid.Column="1" Text="{Binding Quantity}" 
+
+                                            <TextBox Grid.Column="0" Text="{Binding Quantity}" 
                                                      IsReadOnly="True" BorderThickness="0" Background="Transparent"
                                                      TextAlignment="Center" VerticalContentAlignment="Center" 
-                                                     FontWeight="Bold" Padding="0"/>
-                                            <Button Grid.Column="2" Content="+" Command="{Binding IncreaseQuantityCommand}" 
-                                                    Background="Transparent" BorderThickness="0" FontWeight="Bold" Foreground="#009688" Cursor="Hand"/>
+                                                     FontWeight="Bold" Padding="0,0,5,0" Foreground="#334155" FontSize="14"/>
+
+                                            <StackPanel Style="{x:Null}" Grid.Column="1" Orientation="Vertical">
+                                                <Button Style="{x:Null}" Command="{Binding IncreaseQuantityCommand}" Content="⬆️"
+                                                        Background="Transparent" BorderThickness="0" Padding="0"
+                                                        FontSize="16" Height="15" VerticalContentAlignment="Bottom"
+                                                        Foreground="#64748B" Cursor="Hand" ClickMode="Press"/>
+
+                                                <Button Style="{x:Null}" Command="{Binding DecreaseQuantityCommand}" Content="⬇️"
+                                                        Background="Transparent" BorderThickness="0" Padding="0"
+                                                        FontSize="14" Height="15" VerticalContentAlignment="Top"
+                                                        Foreground="#64748B" Cursor="Hand" ClickMode="Press"/>
+                                            </StackPanel>
+
+                                            <Border Grid.Column="1" HorizontalAlignment="Left" Width="1" Background="#E2E8F0" Margin="0,2"/>
                                         </Grid>
                                     </Border>
                                 </DataTemplate>
@@ -261,11 +273,12 @@
 
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Border Background="White" CornerRadius="4" BorderBrush="#10B981" BorderThickness="1" 
+                                    <Border Background="White" CornerRadius="4" BorderBrush="#E2E8F0" BorderThickness="1" 
                                             Height="32" Width="85" HorizontalAlignment="Right">
                                         <TextBox Text="{Binding UnitPrice, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" 
                                                  TextAlignment="Right" VerticalContentAlignment="Center" Padding="0,0,5,0" FontSize="13"
-                                                 BorderThickness="0" Background="Transparent" Foreground="#059669" FontWeight="Bold"/>
+                                                 BorderThickness="0" Background="Transparent" 
+                                                 Foreground="{Binding PriceTextColor}" FontWeight="Bold"/>
                                     </Border>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
@@ -295,7 +308,7 @@
                                     <Button Command="{Binding DataContext.RemoveFromCartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
                                             CommandParameter="{Binding}"
                                             Content="✕" Foreground="#EF4444" Background="#FEE2E2" 
-                                            BorderThickness="0" Cursor="Hand" FontSize="12" FontWeight="Bold"
+                                            BorderThickness="0" Cursor="Hand" FontSize="12" Padding="0" FontWeight="Bold"
                                             Width="28" Height="28"
                                             VerticalAlignment="Center" HorizontalAlignment="Center">
                                         <Button.Resources>
@@ -333,5 +346,47 @@
                 </StackPanel>
             </Grid>
         </Border>
+
+        <Grid Grid.Column="0" Grid.ColumnSpan="2" Panel.ZIndex="999" 
+              Background="#7F000000" Visibility="{Binding IsNotificationVisible, Converter={StaticResource BoolToVis}}">
+
+            <Border Background="White" Width="400" MinHeight="250" CornerRadius="12" Padding="0" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="20" ShadowDepth="5" Opacity="0.3" Color="Black"/>
+                </Border.Effect>
+
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="120"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="80"/>
+                    </Grid.RowDefinitions>
+
+                    <Border Grid.Row="0" Background="{Binding NotificationColor}" CornerRadius="12,12,0,0">
+                        <TextBlock Text="{Binding NotificationIcon}" FontSize="60" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/>
+                    </Border>
+
+                    <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="30,20">
+                        <TextBlock Text="{Binding NotificationTitle}" FontSize="22" FontWeight="Bold" 
+                                   Foreground="#1E293B" HorizontalAlignment="Center" TextAlignment="Center" Margin="0,0,0,10"/>
+
+                        <TextBlock Text="{Binding NotificationMessage}" FontSize="15" 
+                                   Foreground="#64748B" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/>
+                    </StackPanel>
+
+                    <Button Grid.Row="2" Command="{Binding CloseNotificationCommand}" 
+                            Content="OK, GOT IT" Width="150" Height="45"
+                            Background="{Binding NotificationColor}" Foreground="White" 
+                            FontSize="14" FontWeight="Bold" Cursor="Hand" Margin="0,0,0,20">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="25"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                </Grid>
+            </Border>
+        </Grid>
+
     </Grid>
 </UserControl>

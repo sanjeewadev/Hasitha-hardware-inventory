@@ -27,7 +27,6 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-
                     <Border Background="#F1F5F9" CornerRadius="6" Padding="8,6" Margin="0,0,0,10">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -40,7 +39,6 @@
                                      Tag="Search Categories..."/>
                         </Grid>
                     </Border>
-
                     <TreeView Grid.Row="1" ItemsSource="{Binding CategoryTree}" BorderThickness="0" SelectedItemChanged="TreeView_SelectedItemChanged">
                         <TreeView.ItemTemplate>
                             <HierarchicalDataTemplate ItemsSource="{Binding SubCategories}">
@@ -85,12 +83,10 @@
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
-
                                 <StackPanel Grid.Column="0" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#334155" TextTrimming="CharacterEllipsis"/>
                                     <TextBlock Text="{Binding Barcode}" FontSize="11" Foreground="#94A3B8"/>
                                 </StackPanel>
-
                                 <Border Grid.Column="1" Background="#E0F2F1" CornerRadius="4" Padding="8,4" VerticalAlignment="Center">
                                     <TextBlock Text="{Binding Quantity, StringFormat='Qty: {0}'}" FontSize="11" FontWeight="Bold" Foreground="#009688"/>
                                 </Border>
@@ -102,7 +98,6 @@
         </Border>
 
         <Grid Grid.Column="1" Margin="30,20,30,30">
-
             <Grid VerticalAlignment="Center" HorizontalAlignment="Center">
                 <Grid.Style>
                     <Style TargetType="Grid">
@@ -143,7 +138,6 @@
                 <StackPanel Grid.Row="0" Margin="0,0,0,25" Orientation="Horizontal">
                     <TextBlock Text="{Binding SelectedProduct.Name, TargetNullValue='Select a Product'}" 
                                FontSize="26" FontWeight="Bold" Foreground="#1E293B" VerticalAlignment="Bottom"/>
-
                     <Border Background="#F0FDFA" BorderBrush="#009688" BorderThickness="1" CornerRadius="4" Margin="15,0,0,2" Padding="10,2" VerticalAlignment="Bottom">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="Total Stock: " FontSize="12" Foreground="#009688" VerticalAlignment="Center"/>
@@ -189,7 +183,6 @@
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
-
                                 <UniformGrid Grid.Row="0" Columns="2" Margin="0,0,0,20">
                                     <StackPanel Margin="0,0,20,0">
                                         <TextBlock Text="Quantity Arrived" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
@@ -200,13 +193,11 @@
                                         <TextBox Text="{Binding StockInCost}" Padding="10,8" FontSize="14"/>
                                     </StackPanel>
                                 </UniformGrid>
-
                                 <UniformGrid Grid.Row="1" Columns="2" Margin="0,0,0,25">
                                     <StackPanel Margin="0,0,20,0">
                                         <TextBlock Text="Selling Price (Shelf)" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
                                         <TextBox Text="{Binding StockInSellingPrice}" Padding="10,8" FontSize="14" Background="#F0FDF4"/>
                                     </StackPanel>
-
                                     <StackPanel>
                                         <TextBlock Text="Max Discount %" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
                                         <Grid>
@@ -221,7 +212,6 @@
                                         </Grid>
                                     </StackPanel>
                                 </UniformGrid>
-
                                 <Button Grid.Row="2" Content="CONFIRM STOCK IN" Command="{Binding StockInCommand}" 
                                         Background="#009688" Foreground="White" Width="220" HorizontalAlignment="Right"
                                         Padding="0,10" FontSize="13" FontWeight="Bold" Cursor="Hand">
@@ -241,33 +231,43 @@
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="Auto"/>
                                     <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
 
-                                <UniformGrid Grid.Row="0" Columns="2" Margin="0,0,0,20">
-                                    <StackPanel Margin="0,0,20,0">
+                                <Grid Grid.Row="0" Margin="0,0,0,25">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                                        <TextBlock Text="Select Batch to Reduce" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
+                                        <ComboBox ItemsSource="{Binding ActiveBatches}" SelectedItem="{Binding SelectedAdjustmentBatch}"
+                                                  Padding="10,8" FontSize="13" Cursor="Hand">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <StackPanel Orientation="Horizontal">
+                                                        <TextBlock Text="{Binding ReceivedDate, StringFormat='{} {0:dd MMM}'}" FontWeight="Bold"/>
+                                                        <TextBlock Text="{Binding RemainingQuantity, StringFormat=' - Qty: {0}'}" Foreground="Gray"/>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Column="1" Margin="0,0,15,0">
                                         <TextBlock Text="Quantity to Remove" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
                                         <TextBox Text="{Binding StockOutQty}" Padding="10,8" FontSize="14" FontWeight="Bold" BorderBrush="#EF4444"/>
                                     </StackPanel>
-                                    <StackPanel>
+
+                                    <StackPanel Grid.Column="2">
                                         <TextBlock Text="Reason" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
-                                        <ComboBox SelectedValue="{Binding StockOutReason}" SelectedValuePath="Content"
-                                                  Padding="10,8" FontSize="14" IsEditable="False" IsReadOnly="True" Cursor="Hand">
-                                            <ComboBoxItem Content="Correction"/>
-                                            <ComboBoxItem Content="Damaged"/>
-                                            <ComboBoxItem Content="Expired"/>
-                                            <ComboBoxItem Content="Stolen / Lost"/>
-                                            <ComboBoxItem Content="Other"/>
-                                        </ComboBox>
+                                        <ComboBox ItemsSource="{Binding AdjustmentReasons}" SelectedItem="{Binding StockOutReason}"
+                                                  Padding="10,8" FontSize="14" Cursor="Hand"/>
                                     </StackPanel>
-                                </UniformGrid>
+                                </Grid>
 
-                                <StackPanel Grid.Row="1" Margin="0,0,0,25">
-                                    <TextBlock Text="Note / Details" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
-                                    <TextBox Text="{Binding StockOutNote}" Padding="10" Height="60" TextWrapping="Wrap"/>
-                                </StackPanel>
-
-                                <Button Grid.Row="2" Content="CONFIRM REMOVAL" Command="{Binding StockOutCommand}" 
+                                <Button Grid.Row="1" Content="CONFIRM REMOVAL" Command="{Binding StockOutCommand}" 
                                         Background="#EF4444" Foreground="White" Width="220" HorizontalAlignment="Right"
                                         Padding="0,10" FontSize="13" FontWeight="Bold" Cursor="Hand">
                                     <Button.Resources>
@@ -286,9 +286,7 @@
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-
                     <TextBlock Text="Batch History" FontWeight="Bold" Margin="0,15,0,10" Foreground="#334155" FontSize="16"/>
-
                     <DataGrid Grid.Row="1" ItemsSource="{Binding BatchHistory}" AutoGenerateColumns="False" 
                               IsReadOnly="True" Background="White" BorderBrush="#E2E8F0" BorderThickness="1"
                               RowHeight="40" HeadersVisibility="Column">
@@ -302,7 +300,6 @@
                                 <Setter Property="BorderThickness" Value="0,0,0,1"/>
                             </Style>
                         </DataGrid.ColumnHeaderStyle>
-
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Date" Binding="{Binding ReceivedDate, StringFormat='dd MMM yyyy'}" Width="120" Foreground="#475569"/>
                             <DataGridTextColumn Header="Original" Binding="{Binding InitialQuantity}" Width="80"/>

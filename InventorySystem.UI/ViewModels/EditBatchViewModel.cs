@@ -15,14 +15,46 @@ namespace InventorySystem.UI.ViewModels
 
         public Action? CloseAction { get; set; }
 
-        // Read-Only Info
-        public string Title => $"Edit Batch ({_batch.ReceivedDate:dd MMM yyyy})";
-        public int Quantity => _batch.RemainingQuantity;
+        public int BatchId { get; }
+        public string ProductName { get; }
 
-        // Editable Fields
-        public decimal CostPrice { get; set; }
-        public decimal SellingPrice { get; set; }
-        public double Discount { get; set; }
+        // --- PROPERTIES ---
+
+        private int _quantity;
+        public int Quantity
+        {
+            get => _quantity;
+            set { _quantity = value; OnPropertyChanged(); }
+        }
+
+        private decimal _costPrice;
+        public decimal CostPrice
+        {
+            get => _costPrice;
+            set { _costPrice = value; OnPropertyChanged(); }
+        }
+
+        private decimal _sellingPrice;
+        public decimal SellingPrice
+        {
+            get => _sellingPrice;
+            set { _sellingPrice = value; OnPropertyChanged(); }
+        }
+
+        // --- FIX: Change from double to decimal ---
+        private decimal _discount;
+        public decimal Discount
+        {
+            get => _discount;
+            set { _discount = value; OnPropertyChanged(); }
+        }
+
+        private string _discountCode = "";
+        public string DiscountCode
+        {
+            get => _discountCode;
+            set { _discountCode = value; OnPropertyChanged(); }
+        }
 
         public ICommand SaveCommand { get; }
         public ICommand CancelCommand { get; }
@@ -32,25 +64,43 @@ namespace InventorySystem.UI.ViewModels
             _stockRepo = stockRepo;
             _batch = batch;
 
-            // Load current values
+            // Load Data
+            BatchId = batch.Id;
+            ProductName = batch.Product?.Name ?? "Unknown Product";
+            Quantity = batch.RemainingQuantity;
             CostPrice = batch.CostPrice;
             SellingPrice = batch.SellingPrice;
+
+            // Fix: No conversion needed now
             Discount = batch.Discount;
 
-            SaveCommand = new RelayCommand(async () => await SaveAsync());
+            DiscountCode = batch.DiscountCode;
+
+            SaveCommand = new RelayCommand(async () => await SaveChanges());
             CancelCommand = new RelayCommand(() => CloseAction?.Invoke());
         }
 
-        private async Task SaveAsync()
+        private async Task SaveChanges()
         {
-            // Update the batch object
+            if (Quantity < 0)
+            {
+                MessageBox.Show("Quantity cannot be negative.");
+                return;
+            }
+
+            // Update the entity
+            _batch.RemainingQuantity = Quantity;
             _batch.CostPrice = CostPrice;
             _batch.SellingPrice = SellingPrice;
+
+            // Fix: No conversion needed now
             _batch.Discount = Discount;
 
-            // Save to DB
-            await _stockRepo.UpdateBatchAsync(_batch); // We need to add this method to Repo
+            _batch.DiscountCode = DiscountCode;
 
+            await _stockRepo.UpdateBatchAsync(_batch);
+
+            MessageBox.Show("Batch updated successfully!");
             CloseAction?.Invoke();
         }
     }

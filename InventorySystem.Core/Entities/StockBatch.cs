@@ -15,9 +15,11 @@ namespace InventorySystem.Core.Entities
         // --- PRICING PER BATCH ---
         public decimal CostPrice { get; set; }       // Buying Price
         public decimal SellingPrice { get; set; }    // Selling Price
-        public double Discount { get; set; }         // Discount %
 
-        // NEW: The Owner-Only secret code (e.g., "40107" for 10%)
+        // --- FIX: Use decimal for financial math ---
+        public decimal Discount { get; set; }        // Discount %
+
+        // Owner-Only secret code
         public string DiscountCode { get; set; } = "";
 
         public DateTime ReceivedDate { get; set; } = DateTime.Now;

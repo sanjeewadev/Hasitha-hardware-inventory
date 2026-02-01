@@ -7,26 +7,31 @@ namespace InventorySystem.Data.Repositories
 {
     public interface IStockRepository
     {
-        // 1. Core Stock Actions
+        // Core Actions
         Task ReceiveStockAsync(StockMovement movement);
-        Task SellStockAsync(StockMovement saleRecord);
+        Task SellStockAsync(StockMovement sale);
         Task AdjustStockAsync(StockMovement adjustment);
 
-        // 2. Data Retrieval
+        // Data Retrieval
         Task<IEnumerable<StockBatch>> GetAllBatchesAsync();
+
+        // --- FIX VULNERABILITY 2: NEW METHOD ---
+        Task<IEnumerable<StockBatch>> GetActiveBatchesAsync(); // Only batches with Qty > 0
+
         Task<IEnumerable<StockMovement>> GetHistoryAsync();
 
-        // 3. Batch Management
+        // Batch Management
         Task AddStockBatchAsync(StockBatch batch);
-
-        // --- THESE WERE MISSING ---
         Task UpdateBatchAsync(StockBatch batch);
         Task DeleteBatchAsync(StockBatch batch);
 
-        // 4. Reports & Analytics
+        // Reports
         Task<IEnumerable<StockMovement>> GetSalesHistoryAsync();
         Task<IEnumerable<Product>> GetLowStockProductsAsync(int threshold);
         Task<IEnumerable<StockMovement>> GetSalesByDateRangeAsync(DateTime start, DateTime end);
+
+        // Voiding
+        Task VoidReceiptAsync(string receiptId);
         Task VoidSaleAsync(int movementId, string reason);
     }
 }

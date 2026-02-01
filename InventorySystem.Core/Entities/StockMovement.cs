@@ -10,15 +10,23 @@ namespace InventorySystem.Core.Entities
         public Product Product { get; set; } = null!;
 
         public int Quantity { get; set; }
-        public StockMovementType Type { get; set; } // In, Out, Adjustment
+        public StockMovementType Type { get; set; }
         public DateTime Date { get; set; } = DateTime.Now;
         public string Note { get; set; } = "";
 
         // --- FINANCIALS ---
-        public decimal UnitCost { get; set; }   // What we BOUGHT it for (Profit Calc)
-        public decimal UnitPrice { get; set; }  // What we SOLD it for (Revenue Calc) <--- ADD THIS
+        public decimal UnitCost { get; set; }
+        public decimal UnitPrice { get; set; }
 
-        // --- AUDIT ---
+        // --- TRACKING ---
+        public string ReceiptId { get; set; } = "";
+        public int? StockBatchId { get; set; }
+        public StockBatch? StockBatch { get; set; }
+
+        // --- AUDIT (Vulnerability 4 Fix) ---
+        public AdjustmentReason Reason { get; set; } // <--- NEW
+        public int? UserId { get; set; }             // <--- NEW (Who did it?)
+
         public bool IsVoided { get; set; } = false;
     }
 }

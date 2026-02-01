@@ -3,6 +3,7 @@ using InventorySystem.UI.Commands;
 using Microsoft.Win32;
 using System;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -14,7 +15,9 @@ namespace InventorySystem.UI.ViewModels
     public class SettingsViewModel : ViewModelBase
     {
         private const string ConfigFile = "backup_config.txt";
-        private const string CloudConfig = "cloud_history.txt"; // Stores last upload time
+        private const string CloudConfig = "cloud_history.txt";
+
+        private readonly BackupService _backupService;
 
         public ObservableCollection<BackupFile> Backups { get; } = new();
 
@@ -34,8 +37,11 @@ namespace InventorySystem.UI.ViewModels
 
         public SettingsViewModel()
         {
+            var db = DatabaseService.CreateDbContext();
+            _backupService = new BackupService(db);
+
             BrowseFolderCommand = new RelayCommand(BrowseFolder);
-            CreateBackupCommand = new RelayCommand(CreateBackup);
+            CreateBackupCommand = new RelayCommand(async () => await CreateBackup());
             RestoreCommand = new RelayCommand<BackupFile>(RestoreBackup);
             DeleteCommand = new RelayCommand<BackupFile>(DeleteBackup);
             TestCloudUploadCommand = new RelayCommand(async () => await TestCloudUpload());
@@ -57,7 +63,6 @@ namespace InventorySystem.UI.ViewModels
                 }
             }
 
-            // Default
             string defaultPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "InventoryBackups");
             if (!Directory.Exists(defaultPath)) Directory.CreateDirectory(defaultPath);
             BackupFolderPath = defaultPath;
@@ -80,56 +85,93 @@ namespace InventorySystem.UI.ViewModels
 
             if (dialog.ShowDialog() == true)
             {
-                BackupFolderPath = dialog.FolderName;
-                SaveSettings();
-                RefreshList();
+                // VALIDATION: Ensure path is writable/valid
+                if (Directory.Exists(dialog.FolderName))
+                {
+                    BackupFolderPath = dialog.FolderName;
+                    SaveSettings();
+                    RefreshList();
+                }
+                else
+                {
+                    MessageBox.Show("The selected folder is invalid or inaccessible.", "Invalid Path", MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
             }
         }
 
         private void RefreshList()
         {
-            Backups.Clear();
-            var files = BackupService.GetBackups(BackupFolderPath);
-            foreach (var f in files) Backups.Add(f);
+            try
+            {
+                Backups.Clear();
+                if (Directory.Exists(BackupFolderPath))
+                {
+                    var files = _backupService.GetBackups(BackupFolderPath);
+                    foreach (var f in files) Backups.Add(f);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to load backups list.\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
-        private void CreateBackup()
+        private async Task CreateBackup()
         {
             try
             {
-                BackupService.CreateBackup(BackupFolderPath);
+                await _backupService.CreateBackupAsync(BackupFolderPath);
                 RefreshList();
                 MessageBox.Show("Backup created successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}");
+                MessageBox.Show($"Backup Failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         private void RestoreBackup(BackupFile file)
         {
+            // SAFETY CHECK 1: File Existence
+            if (!File.Exists(file.FullPath))
+            {
+                MessageBox.Show("Backup file not found on disk. It may have been moved or deleted.", "File Missing", MessageBoxButton.OK, MessageBoxImage.Error);
+                RefreshList();
+                return;
+            }
+
+            // SAFETY CHECK 2: User Confirmation
             var result1 = MessageBox.Show(
-                $"You are about to restore data from:\n'{file.FileName}'\n\nThis will OVERWRITE current data. Continue?",
+                $"You are about to restore data from:\n'{file.FileName}'\n\nThis will OVERWRITE all current data. Continue?",
                 "Confirm Restore (Step 1/2)", MessageBoxButton.YesNo, MessageBoxImage.Warning);
 
             if (result1 == MessageBoxResult.Yes)
             {
+                // SAFETY CHECK 3: Final Danger Warning
                 var result2 = MessageBox.Show(
-                    "⚠️ FINAL WARNING ⚠️\n\nThe application will close immediately after restore.\nAre you absolutely sure?",
+                    "⚠️ FINAL WARNING ⚠️\n\nThe application will RESTART immediately after restore.\nAny unsaved work will be lost.\n\nAre you absolutely sure?",
                     "Final Confirmation (Step 2/2)", MessageBoxButton.YesNo, MessageBoxImage.Error);
 
                 if (result2 == MessageBoxResult.Yes)
                 {
                     try
                     {
-                        BackupService.RestoreBackup(file.FullPath);
-                        MessageBox.Show("Restore successful! Application will now close.");
-                        Application.Current.Shutdown();
+                        // 1. Perform Restore
+                        _backupService.RestoreBackup(file.FullPath);
+
+                        // 2. Restart Application
+                        MessageBox.Show("Restore successful! The application will now restart.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                        var exePath = Environment.ProcessPath;
+                        if (exePath != null)
+                        {
+                            Process.Start(exePath);
+                            Application.Current.Shutdown();
+                        }
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show($"Restore Failed: {ex.Message}");
+                        MessageBox.Show($"Restore Failed (Database might be locked): {ex.Message}\n\nTry closing the app and replacing 'inventory.db' manually.", "Critical Error", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                 }
             }
@@ -137,51 +179,61 @@ namespace InventorySystem.UI.ViewModels
 
         private void DeleteBackup(BackupFile file)
         {
-            if (MessageBox.Show($"Delete '{file.FileName}'?", "Confirm", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (MessageBox.Show($"Permanently delete backup '{file.FileName}'?", "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
-                BackupService.DeleteBackup(file.FullPath);
-                RefreshList();
+                try
+                {
+                    _backupService.DeleteBackup(file.FullPath);
+                    RefreshList();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Could not delete file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 
         // --- 3. CLOUD BACKUP ACTIONS ---
-
-        // Manual Test Button
         private async Task TestCloudUpload()
         {
             try
             {
                 if (Backups.Count == 0)
                 {
-                    BackupService.CreateBackup(BackupFolderPath);
-                    RefreshList();
+                    // Smart Behavior: Auto-create if empty
+                    if (MessageBox.Show("No local backups found. Create one now and upload it?", "No Backups", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                    {
+                        await CreateBackup();
+                    }
+                    else
+                    {
+                        return;
+                    }
                 }
 
                 var latestFile = Backups.FirstOrDefault();
                 if (latestFile != null)
                 {
-                    if (MessageBox.Show("Start Upload? Browser may open.", "Cloud Sync", MessageBoxButton.OKCancel) == MessageBoxResult.OK)
+                    if (MessageBox.Show($"Upload latest backup ('{latestFile.FileName}') to Google Drive?\n\nA browser window may open for authentication.", "Cloud Sync", MessageBoxButton.OKCancel, MessageBoxImage.Information) == MessageBoxResult.OK)
                     {
                         await GoogleDriveService.UploadBackupAsync(latestFile.FullPath);
-                        MessageBox.Show("✅ Upload Successful!");
+                        MessageBox.Show("✅ Upload Successful!\nFile is secure in Google Drive.", "Cloud Sync", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                        // Update the timer file so it doesn't run again automatically immediately
-                        File.WriteAllText(CloudConfig, DateTime.Now.ToString());
+                        try { File.WriteAllText(CloudConfig, DateTime.Now.ToString()); } catch { }
                     }
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Upload Failed: {ex.Message}");
+                MessageBox.Show($"Cloud Upload Failed.\n\nError: {ex.Message}\n\nCheck your internet connection.", "Upload Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        // --- 4. AUTOMATIC BACKGROUND CHECK (Called by App.xaml.cs) ---
+        // --- 4. AUTOMATIC BACKGROUND CHECK ---
         public async Task CheckAndRunAutoBackup()
         {
             try
             {
-                // 1. Check last run time
                 DateTime lastRun = DateTime.MinValue;
                 if (File.Exists(CloudConfig))
                 {
@@ -190,28 +242,27 @@ namespace InventorySystem.UI.ViewModels
 
                 double hoursSince = (DateTime.Now - lastRun).TotalHours;
 
-                // 2. Only run if > 12 hours passed
-                if (hoursSince >= 12)
+                // Auto-run every 6 hours
+                if (hoursSince >= 6)
                 {
-                    // Ensure we have a local backup to send
-                    // (Optional: Create a fresh one right now if you want strict 12h snapshots)
-                    BackupService.CreateBackup(BackupFolderPath);
-                    var files = BackupService.GetBackups(BackupFolderPath);
+                    // Create local
+                    await _backupService.CreateBackupAsync(BackupFolderPath);
+
+                    // Refresh list to find the new file
+                    var files = _backupService.GetBackups(BackupFolderPath);
                     var latest = files.FirstOrDefault();
 
                     if (latest != null)
                     {
-                        // 3. Upload (Silent Mode - No MessageBox)
+                        // Upload to Cloud
                         await GoogleDriveService.UploadBackupAsync(latest.FullPath);
-
-                        // 4. Update timer
                         File.WriteAllText(CloudConfig, DateTime.Now.ToString());
                     }
                 }
             }
             catch
             {
-                // Silent fail (e.g. no internet). Will try again next startup.
+                // Silent fail for background tasks (don't annoy user while working) 
             }
         }
     }

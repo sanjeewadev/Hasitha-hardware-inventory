@@ -157,16 +157,19 @@
                     <DataGridTemplateColumn Header="Action" Width="140">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <Button Content="VIEW DETAILS" Command="{Binding DataContext.ViewCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                        CommandParameter="{Binding}" 
-                                        Background="#1E293B" Foreground="White" FontSize="10" FontWeight="Bold" 
-                                        Padding="0" Height="30" Width="100" HorizontalAlignment="Left" Margin="20,0,0,0" Cursor="Hand">
-                                    <Button.Resources>
-                                        <Style TargetType="Border">
-                                            <Setter Property="CornerRadius" Value="4"/>
-                                        </Style>
-                                    </Button.Resources>
-                                </Button>
+                                <StackPanel Orientation="Horizontal" Margin="20,0,0,0">
+                                    <Button Content="VIEW DETAILS" Command="{Binding DataContext.ViewCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                            CommandParameter="{Binding}" 
+                                            Background="#1E293B" Foreground="White" FontSize="10" FontWeight="Bold" 
+                                            Padding="0" Height="30" Width="100" HorizontalAlignment="Left" Cursor="Hand">
+                                        <Button.Resources>
+                                            <Style TargetType="Border">
+                                                <Setter Property="CornerRadius" Value="4"/>
+                                            </Style>
+                                        </Button.Resources>
+                                    </Button>
+
+                                </StackPanel>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
@@ -174,7 +177,7 @@
             </DataGrid>
         </Grid>
 
-        <Grid Background="#7F000000" Visibility="{Binding IsDetailVisible, Converter={StaticResource BoolToVis}}">
+        <Grid Background="#7F000000" Visibility="{Binding IsDetailVisible, Converter={StaticResource BoolToVis}}" Panel.ZIndex="50">
             <Border Background="White" Width="800" Height="550" CornerRadius="8" Padding="30" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -189,7 +192,6 @@
                             <TextBlock Text="{Binding ViewingProduct.Name}" FontSize="24" FontWeight="Bold" Foreground="#1E293B"/>
                             <TextBlock Text="{Binding ViewingProduct.Category.Name, StringFormat='Category: {0}'}" Foreground="Gray" Margin="0,2,0,0"/>
                         </StackPanel>
-
                         <Border DockPanel.Dock="Right" BorderBrush="#009688" BorderThickness="2" CornerRadius="6" Padding="15,5" Margin="0,0,15,0">
                             <StackPanel>
                                 <TextBlock Text="Total Quantity" FontSize="10" Foreground="#009688" HorizontalAlignment="Center"/>
@@ -200,41 +202,58 @@
 
                     <TextBlock Grid.Row="2" Text="Inventory Batches (History &amp; Cost Variations)" FontWeight="SemiBold" Margin="0,0,0,10"/>
 
-                    <DataGrid Grid.Row="2" ItemsSource="{Binding ProductBatches}" Margin="0,25,0,0" AutoGenerateColumns="False" IsReadOnly="True" BorderThickness="1" BorderBrush="#E2E8F0">
+                    <DataGrid Grid.Row="2" ItemsSource="{Binding ProductBatches}" Margin="0,25,0,0" 
+                              AutoGenerateColumns="False" IsReadOnly="True" 
+                              BorderThickness="1" BorderBrush="#E2E8F0"
+                              GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9"
+                              HeadersVisibility="Column" RowHeight="40">
+                        <DataGrid.ColumnHeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="#F8FAFC"/>
+                                <Setter Property="Padding" Value="15,0"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="Foreground" Value="#64748B"/>
+                                <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                                <Setter Property="Height" Value="35"/>
+                            </Style>
+                        </DataGrid.ColumnHeaderStyle>
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="Cursor" Value="Hand"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="#E0F2F1"/>
+                                        <Setter Property="BorderBrush" Value="Transparent"/>
+                                    </Trigger>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#F8FAFC"/>
+                                    </Trigger>
+                                    <DataTrigger Binding="{Binding RemainingQuantity}" Value="0">
+                                        <Setter Property="Opacity" Value="0.5"/>
+                                        <Setter Property="Background" Value="#FAFAFA"/>
+                                        <Setter Property="ToolTip" Value="Sold Out / History Record"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Date" Binding="{Binding ReceivedDate, StringFormat='dd MMM yyyy'}" Width="110"/>
-                            <DataGridTextColumn Header="Original" Binding="{Binding InitialQuantity}" Width="90"/>
-                            <DataGridTextColumn Header="Current" Binding="{Binding RemainingQuantity}" Width="90" FontWeight="Bold"/>
-                            <DataGridTextColumn Header="Buying" Binding="{Binding CostPrice, StringFormat=N2}" Width="90"/>
-                            <DataGridTextColumn Header="Selling" Binding="{Binding SellingPrice, StringFormat=N2}" Width="90" Foreground="#009688" FontWeight="Bold"/>
-                            <DataGridTextColumn Header="Disc %" Binding="{Binding Discount}" Width="70"/>
-
-                            <DataGridTemplateColumn Header="Actions" Width="*">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                                            <Button Content="EDIT" Command="{Binding DataContext.EditBatchCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Background="#3B82F6" Foreground="White" FontSize="10" Padding="10,5" Margin="0,0,5,0">
-                                                <Button.Resources>
-                                                    <Style TargetType="Border">
-                                                        <Setter Property="CornerRadius" Value="4"/>
-                                                    </Style>
-                                                </Button.Resources>
-                                            </Button>
-                                            <Button Content="DEL" Command="{Binding DataContext.DeleteBatchCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Background="#EF4444" Foreground="White" FontSize="10" Padding="10,5">
-                                                <Button.Resources>
-                                                    <Style TargetType="Border">
-                                                        <Setter Property="CornerRadius" Value="4"/>
-                                                    </Style>
-                                                </Button.Resources>
-                                            </Button>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Date" Binding="{Binding ReceivedDate, StringFormat='dd MMM yyyy'}" Width="120" Foreground="#475569"/>
+                            <DataGridTextColumn Header="Original" Binding="{Binding InitialQuantity}" Width="110"/>
+                            <DataGridTextColumn Header="Current" Binding="{Binding RemainingQuantity}" Width="110" FontWeight="Bold"/>
+                            <DataGridTextColumn Header="Buying" Binding="{Binding CostPrice, StringFormat=N2}" Width="100"/>
+                            <DataGridTextColumn Header="Selling" Binding="{Binding SellingPrice, StringFormat=N2}" Width="110" Foreground="#009688" FontWeight="Bold"/>
+                            <DataGridTextColumn Header="Discount %" Binding="{Binding Discount}" Width="110"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
-                    <Button Grid.Row="3" Content="CLOSE" Command="{Binding CloseDetailCommand}" Background="#94A3B8" Padding="20,10" HorizontalAlignment="Right" Margin="0,20,0,0"/>
+                    <Button Grid.Row="3" Content="CLOSE" Command="{Binding CloseDetailCommand}" Background="#94A3B8" Padding="20,10" HorizontalAlignment="Right" Margin="0,20,0,0">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="6"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
                 </Grid>
             </Border>
         </Grid>
