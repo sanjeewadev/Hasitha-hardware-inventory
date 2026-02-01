@@ -16,6 +16,7 @@ namespace InventorySystem.UI.ViewModels
     {
         private const string ConfigFile = "backup_config.txt";
         private const string CloudConfig = "cloud_history.txt";
+        private const int MaxLocalBackups = 30; // Keep only the last 30 files
 
         private readonly BackupService _backupService;
 
@@ -85,7 +86,6 @@ namespace InventorySystem.UI.ViewModels
 
             if (dialog.ShowDialog() == true)
             {
-                // VALIDATION: Ensure path is writable/valid
                 if (Directory.Exists(dialog.FolderName))
                 {
                     BackupFolderPath = dialog.FolderName;
@@ -106,7 +106,8 @@ namespace InventorySystem.UI.ViewModels
                 Backups.Clear();
                 if (Directory.Exists(BackupFolderPath))
                 {
-                    var files = _backupService.GetBackups(BackupFolderPath);
+                    // Sort by newest first
+                    var files = _backupService.GetBackups(BackupFolderPath).OrderByDescending(f => f.FileName);
                     foreach (var f in files) Backups.Add(f);
                 }
             }
@@ -121,6 +122,10 @@ namespace InventorySystem.UI.ViewModels
             try
             {
                 await _backupService.CreateBackupAsync(BackupFolderPath);
+
+                // Trigger Cleanup after creating new file
+                PerformAutoCleanup();
+
                 RefreshList();
                 MessageBox.Show("Backup created successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -130,9 +135,41 @@ namespace InventorySystem.UI.ViewModels
             }
         }
 
+        // --- NEW: AUTO CLEANUP LOGIC ---
+        private void PerformAutoCleanup()
+        {
+            try
+            {
+                var allFiles = _backupService.GetBackups(BackupFolderPath)
+                                             .OrderByDescending(f => f.FileName) // Assuming name contains date, or use creation time
+                                             .ToList();
+
+                if (allFiles.Count > MaxLocalBackups)
+                {
+                    // Identify files to remove (Skip the newest 30)
+                    var filesToDelete = allFiles.Skip(MaxLocalBackups).ToList();
+
+                    foreach (var file in filesToDelete)
+                    {
+                        try
+                        {
+                            _backupService.DeleteBackup(file.FullPath);
+                        }
+                        catch
+                        {
+                            // Ignored: If a file is locked, just skip it this time
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                // Silent fail for cleanup logic
+            }
+        }
+
         private void RestoreBackup(BackupFile file)
         {
-            // SAFETY CHECK 1: File Existence
             if (!File.Exists(file.FullPath))
             {
                 MessageBox.Show("Backup file not found on disk. It may have been moved or deleted.", "File Missing", MessageBoxButton.OK, MessageBoxImage.Error);
@@ -140,14 +177,12 @@ namespace InventorySystem.UI.ViewModels
                 return;
             }
 
-            // SAFETY CHECK 2: User Confirmation
             var result1 = MessageBox.Show(
                 $"You are about to restore data from:\n'{file.FileName}'\n\nThis will OVERWRITE all current data. Continue?",
                 "Confirm Restore (Step 1/2)", MessageBoxButton.YesNo, MessageBoxImage.Warning);
 
             if (result1 == MessageBoxResult.Yes)
             {
-                // SAFETY CHECK 3: Final Danger Warning
                 var result2 = MessageBox.Show(
                     "⚠️ FINAL WARNING ⚠️\n\nThe application will RESTART immediately after restore.\nAny unsaved work will be lost.\n\nAre you absolutely sure?",
                     "Final Confirmation (Step 2/2)", MessageBoxButton.YesNo, MessageBoxImage.Error);
@@ -156,10 +191,7 @@ namespace InventorySystem.UI.ViewModels
                 {
                     try
                     {
-                        // 1. Perform Restore
                         _backupService.RestoreBackup(file.FullPath);
-
-                        // 2. Restart Application
                         MessageBox.Show("Restore successful! The application will now restart.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
 
                         var exePath = Environment.ProcessPath;
@@ -200,7 +232,6 @@ namespace InventorySystem.UI.ViewModels
             {
                 if (Backups.Count == 0)
                 {
-                    // Smart Behavior: Auto-create if empty
                     if (MessageBox.Show("No local backups found. Create one now and upload it?", "No Backups", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
                     {
                         await CreateBackup();
@@ -242,19 +273,19 @@ namespace InventorySystem.UI.ViewModels
 
                 double hoursSince = (DateTime.Now - lastRun).TotalHours;
 
-                // Auto-run every 6 hours
+                // UPDATED: Run every 6 Hours
                 if (hoursSince >= 6)
                 {
-                    // Create local
                     await _backupService.CreateBackupAsync(BackupFolderPath);
 
-                    // Refresh list to find the new file
+                    // Run cleanup silently in background
+                    PerformAutoCleanup();
+
                     var files = _backupService.GetBackups(BackupFolderPath);
-                    var latest = files.FirstOrDefault();
+                    var latest = files.OrderByDescending(f => f.FileName).FirstOrDefault();
 
                     if (latest != null)
                     {
-                        // Upload to Cloud
                         await GoogleDriveService.UploadBackupAsync(latest.FullPath);
                         File.WriteAllText(CloudConfig, DateTime.Now.ToString());
                     }
@@ -262,7 +293,7 @@ namespace InventorySystem.UI.ViewModels
             }
             catch
             {
-                // Silent fail for background tasks (don't annoy user while working) 
+                // Silent fail for background tasks
             }
         }
     }
