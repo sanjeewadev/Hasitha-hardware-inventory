@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows; // Required for MessageBox
+using System.Windows;
 using System.Windows.Input;
 
 namespace InventorySystem.UI.ViewModels
@@ -49,19 +49,18 @@ namespace InventorySystem.UI.ViewModels
             {
                 StartDate = DateTime.Today.AddDays(-7);
                 EndDate = DateTime.Today;
-                ExecuteSearch();
+                _ = ExecuteSearch();
             });
 
             ViewDetailsCommand = new RelayCommand<SalesHistoryItem>(item => SelectedSale = item);
             CloseDetailsCommand = new RelayCommand(() => SelectedSale = null);
 
             // Load initial data
-            ExecuteSearch();
+            _ = ExecuteSearch();
         }
 
         private async Task ExecuteSearch()
         {
-            // VALIDATION 1: Date Range Check
             if (StartDate > EndDate)
             {
                 MessageBox.Show("Start Date cannot be after End Date.", "Invalid Date Range", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -70,9 +69,7 @@ namespace InventorySystem.UI.ViewModels
 
             try
             {
-                // Force Start to 00:00:00
                 DateTime actualStart = StartDate.Date;
-                // Force End to 23:59:59
                 DateTime actualEnd = EndDate.Date.AddDays(1).AddTicks(-1);
 
                 var allMoves = await _stockRepo.GetSalesByDateRangeAsync(actualStart, actualEnd);
@@ -92,6 +89,7 @@ namespace InventorySystem.UI.ViewModels
                             ProductName = x.Product?.Name ?? "Unknown",
                             Barcode = x.Product?.Barcode ?? "-",
                             Quantity = x.Quantity,
+                            Unit = x.Product?.Unit ?? "", // Capture Unit
                             UnitPrice = x.UnitPrice
                         }).ToList()
                     })
@@ -99,23 +97,10 @@ namespace InventorySystem.UI.ViewModels
                     .ToList();
 
                 SalesHistory.Clear();
-
-                if (groupedSales.Any())
-                {
-                    foreach (var sale in groupedSales) SalesHistory.Add(sale);
-                }
-                else
-                {
-                    // VALIDATION 2: Empty State Feedback (Optional but helpful)
-                    // We don't necessarily need a popup here, but if the user specifically clicked "Search", it's good to know.
-                    // If this was an auto-load, maybe skip the message. 
-                    // For now, we leave it silent or you can uncomment the line below:
-                    // MessageBox.Show("No sales found for this period.", "No Records", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
+                foreach (var sale in groupedSales) SalesHistory.Add(sale);
             }
             catch (Exception ex)
             {
-                // VALIDATION 3: Crash Protection
                 MessageBox.Show($"Failed to load sales history.\n\nError: {ex.Message}", "System Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -127,7 +112,7 @@ namespace InventorySystem.UI.ViewModels
         public string ReferenceId { get; set; } = "";
         public DateTime Date { get; set; }
         public bool IsVoided { get; set; }
-        public int TotalItems { get; set; }
+        public decimal TotalItems { get; set; } // Decimal
         public decimal TotalAmount { get; set; }
         public List<SaleDetailItem> Items { get; set; } = new();
 
@@ -137,7 +122,8 @@ namespace InventorySystem.UI.ViewModels
             {
                 if (IsVoided) return "[VOIDED / REFUNDED]";
                 if (Items.Count == 1) return Items[0].ProductName;
-                return $"{Items.Count} Items (Combined)";
+                // Format: "5.5 Items"
+                return $"{TotalItems:0.###} Items (Combined)";
             }
         }
     }
@@ -146,7 +132,8 @@ namespace InventorySystem.UI.ViewModels
     {
         public string ProductName { get; set; } = "";
         public string Barcode { get; set; } = "";
-        public int Quantity { get; set; }
+        public decimal Quantity { get; set; }
+        public string Unit { get; set; } = ""; // Unit Property
         public decimal UnitPrice { get; set; }
         public decimal Total => Quantity * UnitPrice;
     }

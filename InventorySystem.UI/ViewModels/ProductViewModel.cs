@@ -31,7 +31,7 @@ namespace InventorySystem.UI.ViewModels
             set { _searchText = value; OnPropertyChanged(); FilterProducts(); }
         }
 
-        // --- POPUP STATE (For Details only, not errors) ---
+        // --- POPUP STATE ---
         private bool _isDetailVisible;
         public bool IsDetailVisible
         {
@@ -43,8 +43,15 @@ namespace InventorySystem.UI.ViewModels
         public Product? ViewingProduct
         {
             get => _viewingProduct;
-            set { _viewingProduct = value; OnPropertyChanged(); }
+            set
+            {
+                _viewingProduct = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CurrentUnit)); // Notify unit change
+            }
         }
+
+        public string CurrentUnit => ViewingProduct?.Unit ?? "";
 
         // --- COMMANDS ---
         public ICommand LoadCommand { get; }
@@ -68,7 +75,6 @@ namespace InventorySystem.UI.ViewModels
             ViewCommand = new RelayCommand<Product>(async (p) => await OpenProductDetail(p));
             CloseDetailCommand = new RelayCommand(() => IsDetailVisible = false);
 
-            // Smart Delete Command
             DeleteProductCommand = new RelayCommand<Product>(async (p) => await AttemptDeleteProduct(p));
 
             EditBatchCommand = new RelayCommand<StockBatch>(OpenEditBatchWindow);
@@ -77,44 +83,27 @@ namespace InventorySystem.UI.ViewModels
             LoadData();
         }
 
-        // --- SMART DELETE LOGIC (Using Windows MessageBox) ---
         private async Task AttemptDeleteProduct(Product p)
         {
             if (p == null) return;
 
-            // CHECK 1: STOCK (Blocking Error)
+            // CHECK 1: STOCK
             if (p.Quantity > 0)
             {
-                MessageBox.Show(
-                    $"You cannot delete '{p.Name}' because it still has stock ({p.Quantity}).\n\nPlease remove all stock using the Adjustment tab first.",
-                    "Deletion Blocked",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                MessageBox.Show($"You cannot delete '{p.Name}' because it still has stock ({p.Quantity}).\n\nPlease remove all stock using the Adjustment tab first.", "Deletion Blocked", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
-            // CHECK 2: HISTORY (Integrity Warning)
+            // CHECK 2: HISTORY
             var allHistory = await _stockRepo.GetHistoryAsync();
-            bool hasHistory = allHistory.Any(x => x.ProductId == p.Id);
-
-            if (hasHistory)
+            if (allHistory.Any(x => x.ProductId == p.Id))
             {
-                MessageBox.Show(
-                    $"The product '{p.Name}' has linked sales records.\n\nDeleting it will corrupt your past Sales Reports.\n\nWe recommend keeping it for records.",
-                    "Restricted Action",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show($"The product '{p.Name}' has linked sales records.\n\nDeleting it will corrupt your past Sales Reports.\n\nWe recommend keeping it for records.", "Restricted Action", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            // CHECK 3: CONFIRMATION (Final Safety)
-            var result = MessageBox.Show(
-                $"Are you sure you want to permanently delete '{p.Name}'?\nThis action cannot be undone.",
-                "Confirm Deletion",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (result == MessageBoxResult.Yes)
+            // CHECK 3: CONFIRM
+            if (MessageBox.Show($"Are you sure you want to permanently delete '{p.Name}'?\nThis action cannot be undone.", "Confirm Deletion", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
                 await _productRepo.DeleteAsync(p.Id);
                 await LoadData();
@@ -182,13 +171,7 @@ namespace InventorySystem.UI.ViewModels
 
         private async Task DeleteBatchAsync(StockBatch batch)
         {
-            var result = MessageBox.Show(
-                "Delete this batch record? Stock will be reduced.",
-                "Confirm Batch Delete",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (result == MessageBoxResult.Yes)
+            if (MessageBox.Show("Delete this batch record? Stock will be reduced.", "Confirm Batch Delete", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
                 await _stockRepo.DeleteBatchAsync(batch);
                 if (ViewingProduct != null)

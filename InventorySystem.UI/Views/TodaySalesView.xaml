@@ -91,10 +91,10 @@
 
                 <DataGridTextColumn Header="Sale Summary" Binding="{Binding SummaryText}" Width="*" FontWeight="SemiBold" Foreground="#334155"/>
 
-                <DataGridTemplateColumn Width="70">
+                <DataGridTemplateColumn Width="90">
                     <DataGridTemplateColumn.HeaderStyle>
                         <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                            <Setter Property="Content" Value="Items"/>
+                            <Setter Property="Content" Value="Total Qty"/>
                             <Setter Property="HorizontalContentAlignment" Value="Center"/>
                         </Style>
                     </DataGridTemplateColumn.HeaderStyle>
@@ -179,14 +179,16 @@
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
 
-                            <DataGridTextColumn Header="Qty" Binding="{Binding Quantity}" Width="60">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="HorizontalAlignment" Value="Center"/>
-                                        <Setter Property="VerticalAlignment" Value="Center"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
+                            <DataGridTemplateColumn Header="Qty" Width="80">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <TextBlock Text="{Binding Quantity}" FontWeight="Bold" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding Unit}" FontSize="10" Foreground="Gray" Margin="3,0,0,0" VerticalAlignment="Bottom"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
 
                             <DataGridTextColumn Header="Price" Binding="{Binding UnitPrice, StringFormat=N2}" Width="90">
                                 <DataGridTextColumn.ElementStyle>

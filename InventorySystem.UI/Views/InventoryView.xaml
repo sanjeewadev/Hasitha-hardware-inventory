@@ -11,7 +11,7 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" BorderBrush="#E2E8F0" BorderThickness="0,0,1,0" Padding="25" Background="#F8FAFC">
+        <Border Grid.Column="0" BorderBrush="#E2E8F0" BorderThickness="0,0,1,0" Padding="0,25,0,25" Background="#F8FAFC">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -19,7 +19,7 @@
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <StackPanel Grid.Row="0">
+                <StackPanel Grid.Row="0" Margin="25,0,25,0">
                     <TextBlock Text="Catalog Manager" FontSize="20" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,20"/>
                     <TextBlock Text="New Category Name" FontSize="12" Foreground="#64748B" Margin="0,0,0,5"/>
                     <TextBox Text="{Binding NewCategoryName, UpdateSourceTrigger=PropertyChanged}" 
@@ -67,33 +67,96 @@
                     </TextBox>
                 </StackPanel>
 
-                <TreeView Grid.Row="1" ItemsSource="{Binding CategoryTree}" BorderThickness="0" Background="Transparent" Margin="-5,0,0,0"
-                          SelectedItemChanged="TreeView_SelectedItemChanged">
+                <TreeView Grid.Row="1" ItemsSource="{Binding CategoryTree}" 
+                          BorderThickness="0" Background="Transparent" 
+                          SelectedItemChanged="TreeView_SelectedItemChanged"
+                          ClipToBounds="True">
+
+                    <TreeView.Resources>
+                        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="Transparent"/>
+                        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="Black"/>
+                        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="Transparent"/>
+                        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="Black"/>
+                    </TreeView.Resources>
+
                     <TreeView.ItemTemplate>
                         <HierarchicalDataTemplate ItemsSource="{Binding SubCategories}">
-                            <StackPanel Orientation="Horizontal" Margin="0,5">
+                            <StackPanel Orientation="Horizontal">
                                 <TextBlock Text="📁" Foreground="#F59E0B" Margin="0,0,8,0" FontSize="16" VerticalAlignment="Center"/>
-                                <TextBlock Text="{Binding Name}" Foreground="#334155" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center"/>
                             </StackPanel>
                         </HierarchicalDataTemplate>
                     </TreeView.ItemTemplate>
+
                     <TreeView.ItemContainerStyle>
                         <Style TargetType="TreeViewItem">
                             <Setter Property="IsExpanded" Value="True"/>
                             <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
-                            <Style.Triggers>
-                                <Trigger Property="IsSelected" Value="True">
-                                    <Setter Property="FontWeight" Value="Bold"/>
-                                    <Setter Property="Foreground" Value="#009688"/>
-                                </Trigger>
-                            </Style.Triggers>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                            <Setter Property="VerticalContentAlignment" Value="Center"/>
+                            <Setter Property="Padding" Value="5"/> 
+                            
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="TreeViewItem">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="*"/>
+                                            </Grid.RowDefinitions>
+
+                                            <Border x:Name="Bd" Grid.Row="0"
+                                                    Background="{TemplateBinding Background}"
+                                                    Padding="{TemplateBinding Padding}"
+                                                    SnapsToDevicePixels="true"
+                                                    Margin="-1000,0,0,0">
+                                                <ContentPresenter x:Name="PART_Header"
+                                                                  ContentSource="Header"
+                                                                  HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                  SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                                                  Margin="1000,0,0,0"/> 
+                                            </Border>
+
+                                            <ItemsPresenter x:Name="ItemsHost" Grid.Row="1" Margin="15,0,0,0"/>
+                                        </Grid>
+
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsExpanded" Value="false">
+                                                <Setter TargetName="ItemsHost" Property="Visibility" Value="Collapsed"/>
+                                            </Trigger>
+
+                                            <Trigger Property="IsSelected" Value="true">
+                                                <Setter TargetName="Bd" Property="Background" Value="#E0F2F1"/>
+                                                <Setter Property="Foreground" Value="#009688"/>
+                                            </Trigger>
+
+                                            <Trigger Property="IsMouseOver" Value="true">
+                                                <Setter TargetName="Bd" Property="Background" Value="#F1F5F9"/>
+                                            </Trigger>
+
+                                            <MultiTrigger>
+                                                <MultiTrigger.Conditions>
+                                                    <Condition Property="IsSelected" Value="true"/>
+                                                    <Condition Property="IsMouseOver" Value="true"/>
+                                                </MultiTrigger.Conditions>
+                                                <Setter TargetName="Bd" Property="Background" Value="#E0F2F1"/>
+                                            </MultiTrigger>
+
+                                            <Trigger Property="IsEnabled" Value="false">
+                                                <Setter Property="Foreground" Value="{DynamicResource {x:Static SystemColors.GrayTextBrushKey}}"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
                         </Style>
                     </TreeView.ItemContainerStyle>
                 </TreeView>
 
                 <Button Grid.Row="2" Content="Delete Selected Category" Command="{Binding DeleteCategoryCommand}" 
                         Background="Transparent" Foreground="#EF4444" BorderBrush="#EF4444" BorderThickness="1"
-                        Height="40" Margin="0,10,0,0" Cursor="Hand" FontWeight="SemiBold">
+                        Height="40" Margin="25,10,25,0" Cursor="Hand" FontWeight="SemiBold">
                     <Button.Resources>
                         <Style TargetType="Border">
                             <Setter Property="CornerRadius" Value="5"/>
@@ -165,15 +228,6 @@
                 <DataGrid.RowStyle>
                     <Style TargetType="DataGridRow">
                         <Setter Property="Cursor" Value="Hand"/>
-                        <Style.Triggers>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#E0F2F1"/>
-                                <Setter Property="BorderBrush" Value="Transparent"/>
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#F8FAFC"/>
-                            </Trigger>
-                        </Style.Triggers>
                     </Style>
                 </DataGrid.RowStyle>
 
@@ -190,6 +244,10 @@
                                 </ControlTemplate>
                             </Setter.Value>
                         </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="#E0F2F1"/> <Setter Property="Foreground" Value="#009688"/> </Trigger>
+                        </Style.Triggers>
                     </Style>
                 </DataGrid.CellStyle>
 
@@ -203,13 +261,20 @@
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
+
                     <DataGridTemplateColumn Header="PRODUCT NAME" Width="*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#1E293B" FontSize="14" VerticalAlignment="Center" Margin="25,0"/>
+                                <StackPanel VerticalAlignment="Center" Margin="25,0">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#1E293B" FontSize="14"/>
+                                    <TextBlock Text="{Binding Description}" FontSize="11" Foreground="Gray" 
+                                               TextTrimming="CharacterEllipsis" MaxWidth="250" HorizontalAlignment="Left"
+                                               Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
+                                </StackPanel>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
+
                     <DataGridTemplateColumn Header="LOCATION" Width="180">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
@@ -220,25 +285,35 @@
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
+
                     <DataGridTemplateColumn Header="ACTIONS" Width="210">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" Margin="25,0,0,0">
-                                    <Button Content="VIEW" Command="{Binding DataContext.ViewProductCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Background="#1E293B" Foreground="White" FontSize="10" FontWeight="Bold" Padding="10,5" Margin="0,0,5,0">
+                                    <Button Content="VIEW" Command="{Binding DataContext.ViewProductCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                            CommandParameter="{Binding}" 
+                                            Background="#1E293B" Foreground="White" FontSize="10" FontWeight="Bold" 
+                                            Padding="10,5" Margin="0,0,5,0">
                                         <Button.Resources>
                                             <Style TargetType="Border">
                                                 <Setter Property="CornerRadius" Value="4"/>
                                             </Style>
                                         </Button.Resources>
                                     </Button>
-                                    <Button Content="EDIT" Command="{Binding DataContext.EditProductCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Background="#3B82F6" Foreground="White" FontSize="10" FontWeight="Bold" Padding="10,5" Margin="0,0,5,0">
+                                    <Button Content="EDIT" Command="{Binding DataContext.EditProductCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                            CommandParameter="{Binding}" 
+                                            Background="#3B82F6" Foreground="White" FontSize="10" FontWeight="Bold" 
+                                            Padding="10,5" Margin="0,0,5,0">
                                         <Button.Resources>
                                             <Style TargetType="Border">
                                                 <Setter Property="CornerRadius" Value="4"/>
                                             </Style>
                                         </Button.Resources>
                                     </Button>
-                                    <Button Content="DEL" Command="{Binding DataContext.DeleteProductCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Background="#EF4444" Foreground="White" FontSize="10" FontWeight="Bold" Padding="10,5">
+                                    <Button Content="DEL" Command="{Binding DataContext.DeleteProductCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                            CommandParameter="{Binding}" 
+                                            Background="#EF4444" Foreground="White" FontSize="10" FontWeight="Bold" 
+                                            Padding="10,5">
                                         <Button.Resources>
                                             <Style TargetType="Border">
                                                 <Setter Property="CornerRadius" Value="4"/>
@@ -256,16 +331,16 @@
         <Grid Grid.Column="0" Grid.ColumnSpan="2" Panel.ZIndex="100"
               Background="#7F000000" Visibility="{Binding IsDetailVisible, Converter={StaticResource BoolToVis}}">
 
-            <Border Background="White" Width="800" Height="550" CornerRadius="8" Padding="30" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <Border Background="White" Width="800" Height="600" CornerRadius="8" Padding="30" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/> <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <DockPanel Grid.Row="0" Margin="0,0,0,25" LastChildFill="False">
+                    <DockPanel Grid.Row="0" Margin="0,0,0,15" LastChildFill="False">
                         <StackPanel>
                             <TextBlock Text="{Binding ViewingProduct.Name}" FontSize="24" FontWeight="Bold" Foreground="#1E293B"/>
                             <TextBlock Text="{Binding ViewingProduct.Category.Name, StringFormat='Category: {0}'}" Foreground="Gray" Margin="0,2,0,0"/>
@@ -274,7 +349,10 @@
                         <Border DockPanel.Dock="Right" BorderBrush="#009688" BorderThickness="2" CornerRadius="6" Padding="15,5" Margin="0,0,15,0">
                             <StackPanel>
                                 <TextBlock Text="Total Quantity" FontSize="10" Foreground="#009688" HorizontalAlignment="Center"/>
-                                <TextBlock Text="{Binding ViewingProduct.Quantity}" FontSize="20" FontWeight="Bold" Foreground="#009688" HorizontalAlignment="Center"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding ViewingProduct.Quantity}" FontSize="20" FontWeight="Bold" Foreground="#009688"/>
+                                    <TextBlock Text="{Binding CurrentUnit}" FontSize="12" Foreground="#009688" Margin="3,0,0,2" VerticalAlignment="Bottom"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
 
@@ -286,14 +364,18 @@
                         </Border>
                     </DockPanel>
 
+                    <TextBlock Grid.Row="1" Text="{Binding ViewingProduct.Description}" 
+                               FontSize="12" Foreground="#64748B" FontStyle="Italic" TextWrapping="Wrap" 
+                               Margin="0,0,0,20" MaxWidth="700" HorizontalAlignment="Left"
+                               Visibility="{Binding ViewingProduct.Description, Converter={StaticResource StringToVis}}"/>
+
                     <TextBlock Grid.Row="2" Text="Inventory Batches (History &amp; Cost Variations)" FontWeight="SemiBold" Margin="0,0,0,10"/>
 
-                    <DataGrid Grid.Row="2" ItemsSource="{Binding ProductBatches}" Margin="0,25,0,0" AutoGenerateColumns="False" IsReadOnly="True" BorderThickness="1" BorderBrush="#E2E8F0">
-
+                    <DataGrid Grid.Row="3" ItemsSource="{Binding ProductBatches}" Margin="0,0,0,0" AutoGenerateColumns="False" IsReadOnly="True" BorderThickness="1" BorderBrush="#E2E8F0">
                         <DataGrid.ColumnHeaderStyle>
                             <Style TargetType="DataGridColumnHeader">
                                 <Setter Property="Background" Value="#F8FAFC"/>
-                                <Setter Property="Padding" Value="15,0"/>
+                                <Setter Property="Padding" Value="10,0"/>
                                 <Setter Property="FontWeight" Value="SemiBold"/>
                                 <Setter Property="Foreground" Value="#64748B"/>
                                 <Setter Property="BorderThickness" Value="0,0,0,1"/>
@@ -306,34 +388,26 @@
                             <Style TargetType="DataGridRow">
                                 <Setter Property="Cursor" Value="Hand"/>
                                 <Style.Triggers>
-                                    <Trigger Property="IsSelected" Value="True">
-                                        <Setter Property="Background" Value="#E0F2F1"/>
-                                        <Setter Property="BorderBrush" Value="Transparent"/>
-                                    </Trigger>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="#F8FAFC"/>
-                                    </Trigger>
-
+                                    <Trigger Property="IsSelected" Value="True"><Setter Property="Background" Value="#E0F2F1"/><Setter Property="BorderBrush" Value="Transparent"/></Trigger>
+                                    <Trigger Property="IsMouseOver" Value="True"><Setter Property="Background" Value="#F8FAFC"/></Trigger>
                                     <DataTrigger Binding="{Binding RemainingQuantity}" Value="0">
-                                        <Setter Property="Opacity" Value="0.5"/>
-                                        <Setter Property="Background" Value="#FAFAFA"/>
-                                        <Setter Property="ToolTip" Value="Sold Out / History Record"/>
+                                        <Setter Property="Opacity" Value="0.5"/><Setter Property="Background" Value="#FAFAFA"/><Setter Property="ToolTip" Value="Sold Out / History Record"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </DataGrid.RowStyle>
 
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Date" Binding="{Binding ReceivedDate, StringFormat='dd MMM yyyy'}" Width="120"/>
-                            <DataGridTextColumn Header="Original" Binding="{Binding InitialQuantity}" Width="110"/>
-                            <DataGridTextColumn Header="Current" Binding="{Binding RemainingQuantity}" Width="110" FontWeight="Bold"/>
-                            <DataGridTextColumn Header="Buying" Binding="{Binding CostPrice, StringFormat=N2}" Width="110"/>
-                            <DataGridTextColumn Header="Selling" Binding="{Binding SellingPrice, StringFormat=N2}" Width="110" Foreground="#009688" FontWeight="Bold"/>
-                            <DataGridTextColumn Header="Disc %" Binding="{Binding Discount}" Width="100"/>
+                            <DataGridTextColumn Header="Date" Binding="{Binding ReceivedDate, StringFormat='dd MMM yyyy'}" Width="110"/>
+                            <DataGridTextColumn Header="Original" Binding="{Binding InitialQuantity}" Width="90"/>
+                            <DataGridTextColumn Header="Current" Binding="{Binding RemainingQuantity}" Width="90" FontWeight="Bold"/>
+                            <DataGridTextColumn Header="Buying" Binding="{Binding CostPrice, StringFormat=N2}" Width="90"/>
+                            <DataGridTextColumn Header="Selling" Binding="{Binding SellingPrice, StringFormat=N2}" Width="90" Foreground="#009688" FontWeight="Bold"/>
+                            <DataGridTextColumn Header="Disc %" Binding="{Binding Discount}" Width="70"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
-                    <Button Grid.Row="3" Content="CLOSE" Command="{Binding CloseDetailCommand}" Background="#94A3B8" Padding="20,10" HorizontalAlignment="Right" Margin="0,20,0,0">
+                    <Button Grid.Row="4" Content="CLOSE" Command="{Binding CloseDetailCommand}" Background="#94A3B8" Padding="20,10" HorizontalAlignment="Right" Margin="0,20,0,0">
                         <Button.Resources>
                             <Style TargetType="Border">
                                 <Setter Property="CornerRadius" Value="6"/>

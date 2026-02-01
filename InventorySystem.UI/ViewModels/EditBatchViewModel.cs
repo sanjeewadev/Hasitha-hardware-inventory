@@ -18,10 +18,11 @@ namespace InventorySystem.UI.ViewModels
         public int BatchId { get; }
         public string ProductName { get; }
 
-        // --- PROPERTIES ---
+        // --- PROPERTIES (Updated to Decimal) ---
 
-        private int _quantity;
-        public int Quantity
+        // FIX: Changed from int to decimal
+        private decimal _quantity;
+        public decimal Quantity
         {
             get => _quantity;
             set { _quantity = value; OnPropertyChanged(); }
@@ -41,7 +42,6 @@ namespace InventorySystem.UI.ViewModels
             set { _sellingPrice = value; OnPropertyChanged(); }
         }
 
-        // --- FIX: Change from double to decimal ---
         private decimal _discount;
         public decimal Discount
         {
@@ -67,13 +67,13 @@ namespace InventorySystem.UI.ViewModels
             // Load Data
             BatchId = batch.Id;
             ProductName = batch.Product?.Name ?? "Unknown Product";
+
+            // FIX: Direct assignment works now because both are decimal
             Quantity = batch.RemainingQuantity;
+
             CostPrice = batch.CostPrice;
             SellingPrice = batch.SellingPrice;
-
-            // Fix: No conversion needed now
             Discount = batch.Discount;
-
             DiscountCode = batch.DiscountCode;
 
             SaveCommand = new RelayCommand(async () => await SaveChanges());
@@ -92,10 +92,7 @@ namespace InventorySystem.UI.ViewModels
             _batch.RemainingQuantity = Quantity;
             _batch.CostPrice = CostPrice;
             _batch.SellingPrice = SellingPrice;
-
-            // Fix: No conversion needed now
             _batch.Discount = Discount;
-
             _batch.DiscountCode = DiscountCode;
 
             await _stockRepo.UpdateBatchAsync(_batch);

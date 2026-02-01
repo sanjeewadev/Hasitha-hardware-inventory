@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows; // Added for MessageBox
+using System.Windows;
 using System.Windows.Input;
 
 namespace InventorySystem.UI.ViewModels
@@ -59,7 +59,6 @@ namespace InventorySystem.UI.ViewModels
 
             RefreshCommand = new RelayCommand(async () => await LoadDashboardData());
 
-            // Clear Filter Logic: Reset Dates to Today
             ClearFilterCommand = new RelayCommand(() =>
             {
                 _startDate = DateTime.Today;
@@ -69,17 +68,16 @@ namespace InventorySystem.UI.ViewModels
                 LoadDashboardData();
             });
 
-            // Initial Load (Fire and forget, but handled internally)
-            LoadDashboardData();
+            // Initial Load
+            _ = LoadDashboardData();
         }
 
         private async Task LoadDashboardData()
         {
-            // 1. DATE VALIDATION
             if (StartDate > EndDate)
             {
                 MessageBox.Show("Start Date cannot be after End Date.", "Invalid Range", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return; // Stop loading to prevent weird calculations
+                return;
             }
 
             try
@@ -87,29 +85,22 @@ namespace InventorySystem.UI.ViewModels
                 DateTime actualStart = StartDate.Date;
                 DateTime actualEnd = EndDate.Date.AddDays(1).AddTicks(-1);
 
-                // 2. DATA FETCHING (Protected by Try-Catch)
-
-                // Get Sales
+                // 1. SALES DATA
                 var fetchStart = actualEnd.AddDays(-7);
                 if (actualStart < fetchStart) fetchStart = actualStart;
 
                 var rawMoves = await _stockRepo.GetSalesByDateRangeAsync(fetchStart, actualEnd);
-
-                // Filter valid sales only (ignore voided)
                 var activeMoves = rawMoves.Where(m => !m.IsVoided).ToList();
-
-                // Filter Strict Range for KPIs
                 var rangeMoves = activeMoves.Where(m => m.Date >= actualStart && m.Date <= actualEnd).ToList();
 
-                // Calculate KPIs
+                // 2. CALCULATE KPIS
                 PeriodRevenue = rangeMoves.Sum(m => m.Quantity * m.UnitPrice);
                 decimal totalCost = rangeMoves.Sum(m => m.Quantity * m.UnitCost);
                 PeriodProfit = PeriodRevenue - totalCost;
-
                 TransactionCount = rangeMoves.Select(m => m.ReceiptId).Distinct().Count();
 
                 // 3. LOW STOCK ALERTS
-                var lowStockItems = await _stockRepo.GetLowStockProductsAsync(5);
+                var lowStockItems = await _stockRepo.GetLowStockProductsAsync(5); // Default threshold fallback
                 LowStockList.Clear();
                 foreach (var p in lowStockItems) LowStockList.Add(p);
 
@@ -120,7 +111,6 @@ namespace InventorySystem.UI.ViewModels
             }
             catch (Exception ex)
             {
-                // CRASH PROTECTION: If DB fails, show message but keep app running
                 MessageBox.Show($"Failed to load dashboard data.\n\nError: {ex.Message}", "System Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -128,10 +118,7 @@ namespace InventorySystem.UI.ViewModels
         private void BuildChartData(List<StockMovement> moves)
         {
             WeeklySalesData.Clear();
-
-            // Filter moves strictly for chart display logic (last 7 days from EndDate)
             var relevantMoves = moves.Where(m => m.Date.Date <= EndDate.Date && m.Date.Date >= EndDate.Date.AddDays(-6)).ToList();
-
             var grouped = relevantMoves.GroupBy(m => m.Date.Date).ToDictionary(g => g.Key, g => g.Sum(x => x.Quantity * x.UnitPrice));
 
             decimal maxVal = grouped.Values.DefaultIfEmpty(0).Max();

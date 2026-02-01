@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows; // Required for MessageBox
+using System.Windows;
 using System.Windows.Input;
 
 namespace InventorySystem.UI.ViewModels
@@ -45,7 +45,6 @@ namespace InventorySystem.UI.ViewModels
             _stockRepo = stockRepo;
 
             RefreshCommand = new RelayCommand(async () => await LoadData());
-
             VoidLastSaleCommand = new RelayCommand(async () => await ExecuteVoidLastSale());
 
             ViewDetailsCommand = new RelayCommand<TodaySaleGroup>((sale) => {
@@ -68,16 +67,14 @@ namespace InventorySystem.UI.ViewModels
                 var end = DateTime.Today.AddDays(1).AddTicks(-1);
 
                 var allMoves = await _stockRepo.GetSalesByDateRangeAsync(start, end);
-
-                // Filter: Active Sales Only (Not Voided)
                 var activeSales = allMoves.Where(m => m.Type == Core.Enums.StockMovementType.Out && !m.IsVoided);
 
-                // --- 1. CALCULATE DASHBOARD STATS ---
+                // 1. STATS
                 DailyRevenue = activeSales.Sum(s => s.Quantity * s.UnitPrice);
                 decimal totalCost = activeSales.Sum(s => s.Quantity * s.UnitCost);
                 DailyProfit = DailyRevenue - totalCost;
 
-                // --- 2. GROUP BY RECEIPT ID ---
+                // 2. GROUPING
                 var grouped = activeSales
                     .GroupBy(s => s.ReceiptId)
                     .Select(g => new TodaySaleGroup(g.First().Date, g.ToList()))
@@ -94,19 +91,15 @@ namespace InventorySystem.UI.ViewModels
             }
         }
 
-        // --- SMART VOID LOGIC ---
         private async Task ExecuteVoidLastSale()
         {
-            // 1. Check if there is anything to void
             var lastGroup = TodayTransactions.FirstOrDefault();
-
             if (lastGroup == null)
             {
                 MessageBox.Show("No active sales found today to void.", "List Empty", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
-            // 2. High-Alert Warning (Financial Impact)
             string warningMsg = $"⚠ SECURITY WARNING: VOIDING TRANSACTION\n\n" +
                                 $"You are about to undo the last sale:\n" +
                                 $"--------------------------------------\n" +
@@ -118,19 +111,13 @@ namespace InventorySystem.UI.ViewModels
                                 $"• Items will be returned to Stock.\n\n" +
                                 $"Are you sure you want to proceed?";
 
-            var result = MessageBox.Show(warningMsg, "Confirm Refund / Void", MessageBoxButton.YesNo, MessageBoxImage.Warning);
-
-            if (result == MessageBoxResult.Yes)
+            if (MessageBox.Show(warningMsg, "Confirm Refund / Void", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
                 try
                 {
-                    // Use the ReceiptId from the first item to void the whole group
                     var receiptId = lastGroup.Items.First().ReceiptId;
-
                     await _stockRepo.VoidReceiptAsync(receiptId);
-
-                    await LoadData(); // Refresh UI
-
+                    await LoadData();
                     MessageBox.Show("Transaction Voided Successfully.\nStock has been restored.", "Void Complete", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
@@ -141,7 +128,6 @@ namespace InventorySystem.UI.ViewModels
         }
     }
 
-    // --- WRAPPER CLASSES ---
     public class TodaySaleGroup
     {
         public DateTime Date { get; }
@@ -149,7 +135,7 @@ namespace InventorySystem.UI.ViewModels
 
         public string ReferenceId => Date.ToString("HHmmss");
         public string SummaryText => Items.Count == 1 ? Items.First().ProductName : $"{Items.Count} Items";
-        public int TotalItems => Items.Sum(i => i.Quantity);
+        public decimal TotalItems => Items.Sum(i => i.Quantity);
         public decimal TotalAmount => Items.Sum(i => i.Total);
 
         public TodaySaleGroup(DateTime date, List<StockMovement> raw)
@@ -160,6 +146,7 @@ namespace InventorySystem.UI.ViewModels
                 ProductName = m.Product?.Name ?? "?",
                 Barcode = m.Product?.Barcode ?? "-",
                 Quantity = m.Quantity,
+                Unit = m.Product?.Unit ?? "", // Map the Unit here
                 UnitPrice = m.UnitPrice,
                 Total = m.Quantity * m.UnitPrice,
                 ReceiptId = m.ReceiptId
@@ -171,7 +158,8 @@ namespace InventorySystem.UI.ViewModels
     {
         public string ProductName { get; set; } = string.Empty;
         public string Barcode { get; set; } = string.Empty;
-        public int Quantity { get; set; }
+        public decimal Quantity { get; set; }
+        public string Unit { get; set; } = ""; // New Property
         public decimal UnitPrice { get; set; }
         public decimal Total { get; set; }
         public string ReceiptId { get; set; } = string.Empty;

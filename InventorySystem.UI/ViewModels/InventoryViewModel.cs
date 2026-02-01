@@ -29,8 +29,15 @@ namespace InventorySystem.UI.ViewModels
         public Product? ViewingProduct
         {
             get => _viewingProduct;
-            set { _viewingProduct = value; OnPropertyChanged(); }
+            set
+            {
+                _viewingProduct = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(CurrentUnit));
+            }
         }
+
+        public string CurrentUnit => ViewingProduct?.Unit ?? "";
 
         private bool _isDetailVisible;
         public bool IsDetailVisible
@@ -113,7 +120,6 @@ namespace InventorySystem.UI.ViewModels
                 OpenAddEditWindow(vm);
             });
 
-            // --- SMART DELETE COMMAND ---
             DeleteProductCommand = new RelayCommand<Product>(async (p) => await AttemptDeleteProduct(p));
 
             EditBatchCommand = new RelayCommand<StockBatch>(OpenEditBatchWindow);
@@ -122,37 +128,24 @@ namespace InventorySystem.UI.ViewModels
             LoadTree();
         }
 
-        // --- 1. SMART PRODUCT DELETION LOGIC ---
+        // ... [SMART DELETE LOGIC] ... (Same as ProductViewModel)
         private async Task AttemptDeleteProduct(Product p)
         {
             if (p == null) return;
 
-            // CHECK 1: STOCK (Blocking Error)
             if (p.Quantity > 0)
             {
-                MessageBox.Show(
-                    $"Deletion Blocked:\n\nYou cannot delete '{p.Name}' because it still has stock ({p.Quantity}).\n\nPlease remove all stock using the Adjustment tab first.",
-                    "Active Stock Detected",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Stop);
+                MessageBox.Show($"Deletion Blocked:\n\nYou cannot delete '{p.Name}' because it still has stock ({p.Quantity}).\n\nPlease remove all stock using the Adjustment tab first.", "Active Stock Detected", MessageBoxButton.OK, MessageBoxImage.Stop);
                 return;
             }
 
-            // CHECK 2: HISTORY (Integrity Warning)
             var allHistory = await _stockRepo.GetHistoryAsync();
-            bool hasHistory = allHistory.Any(x => x.ProductId == p.Id);
-
-            if (hasHistory)
+            if (allHistory.Any(x => x.ProductId == p.Id))
             {
-                MessageBox.Show(
-                    $"Restricted Action:\n\nThe product '{p.Name}' has sales or movement history.\nDeleting it will create 'Unknown Product' entries in your past reports.\n\nIt is better to just keep it with 0 stock.",
-                    "Data Integrity Warning",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
+                MessageBox.Show($"Restricted Action:\n\nThe product '{p.Name}' has linked sales records.\nDeleting it will corrupt your past Sales Reports.", "Data Integrity Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            // CHECK 3: FINAL CONFIRMATION
             if (MessageBox.Show($"Are you sure you want to delete '{p.Name}'?\nThis cannot be undone.", "Confirm Deletion", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
                 await _productRepo.DeleteAsync(p.Id);
@@ -161,37 +154,24 @@ namespace InventorySystem.UI.ViewModels
             }
         }
 
-        // --- 2. SMART CATEGORY DELETION LOGIC ---
+        // ... [CATEGORY LOGIC] ... (Same as before)
         private async Task DeleteCategoryAsync()
         {
             if (SelectedCategory == null) return;
 
-            // CHECK 1: Sub-Categories
             if (SelectedCategory.SubCategories.Count > 0)
             {
-                MessageBox.Show(
-                    $"Cannot delete '{SelectedCategory.Name}'.\n\nIt contains {SelectedCategory.SubCategories.Count} sub-folders. Please delete them first.",
-                    "Folder Not Empty",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                MessageBox.Show($"Cannot delete '{SelectedCategory.Name}'.\n\nIt contains sub-folders.", "Folder Not Empty", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
-            // CHECK 2: Products Inside
             var allProducts = await _productRepo.GetAllAsync();
-            int productCount = allProducts.Count(p => p.CategoryId == SelectedCategory.Id);
-
-            if (productCount > 0)
+            if (allProducts.Any(p => p.CategoryId == SelectedCategory.Id))
             {
-                MessageBox.Show(
-                    $"Cannot delete '{SelectedCategory.Name}'.\n\nIt contains {productCount} products. Please move or delete the products first.",
-                    "Folder Not Empty",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                MessageBox.Show($"Cannot delete '{SelectedCategory.Name}'.\n\nIt contains products.", "Folder Not Empty", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
-            // CHECK 3: Confirm
             if (MessageBox.Show($"Delete category '{SelectedCategory.Name}'?", "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
                 await _categoryRepo.DeleteAsync(SelectedCategory);
@@ -200,7 +180,6 @@ namespace InventorySystem.UI.ViewModels
             }
         }
 
-        // --- 3. SMART ADD CATEGORY LOGIC ---
         private async Task AddCategoryAsync(int? parentId)
         {
             if (string.IsNullOrWhiteSpace(NewCategoryName))
@@ -209,7 +188,6 @@ namespace InventorySystem.UI.ViewModels
                 return;
             }
 
-            // Check Duplicates
             var exists = _allCategoriesCache.Any(c => c.Name.ToLower() == NewCategoryName.ToLower() && c.ParentId == parentId);
             if (exists)
             {
@@ -237,16 +215,15 @@ namespace InventorySystem.UI.ViewModels
         {
             if (p == null) return;
             ViewingProduct = p;
-            LoadBatchesForViewingProduct();
+            await LoadBatchesForViewingProduct();
             IsDetailVisible = true;
         }
 
-        private async void LoadBatchesForViewingProduct()
+        private async Task LoadBatchesForViewingProduct()
         {
             if (ViewingProduct == null) return;
             var allBatches = await _stockRepo.GetAllBatchesAsync();
-            var specificBatches = allBatches.Where(b => b.ProductId == ViewingProduct.Id)
-                                            .OrderByDescending(b => b.ReceivedDate).ToList();
+            var specificBatches = allBatches.Where(b => b.ProductId == ViewingProduct.Id).OrderByDescending(b => b.ReceivedDate).ToList();
 
             ProductBatches.Clear();
             foreach (var b in specificBatches) ProductBatches.Add(b);
@@ -306,25 +283,22 @@ namespace InventorySystem.UI.ViewModels
             if (batch == null) return;
             var vm = new EditBatchViewModel(_stockRepo, batch);
             var win = new EditBatchWindow { DataContext = vm };
-            vm.CloseAction = () => { win.Close(); LoadBatchesForViewingProduct(); };
+            vm.CloseAction = () => { win.Close(); _ = LoadBatchesForViewingProduct(); }; // Using discard for async
             win.ShowDialog();
         }
 
         private async Task DeleteBatchAsync(StockBatch batch)
         {
             if (batch == null) return;
-
-            // Batch Delete Confirmation
-            if (MessageBox.Show("Are you sure you want to delete this specific batch record?\nStock quantity will be deducted.", "Confirm Batch Delete", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            if (MessageBox.Show("Delete this batch permanently?", "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
                 await _stockRepo.DeleteBatchAsync(batch);
                 if (ViewingProduct != null)
                 {
                     ViewingProduct.Quantity -= batch.RemainingQuantity;
-                    if (ViewingProduct.Quantity < 0) ViewingProduct.Quantity = 0;
                     await _productRepo.UpdateAsync(ViewingProduct);
                 }
-                LoadBatchesForViewingProduct();
+                await LoadBatchesForViewingProduct();
             }
         }
     }

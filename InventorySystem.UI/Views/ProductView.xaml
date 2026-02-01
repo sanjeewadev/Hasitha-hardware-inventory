@@ -64,15 +64,6 @@
                 <DataGrid.RowStyle>
                     <Style TargetType="DataGridRow">
                         <Setter Property="Cursor" Value="Hand"/>
-                        <Style.Triggers>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#E0F2F1"/>
-                                <Setter Property="BorderBrush" Value="Transparent"/>
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#F8FAFC"/>
-                            </Trigger>
-                        </Style.Triggers>
                     </Style>
                 </DataGrid.RowStyle>
 
@@ -89,6 +80,12 @@
                                 </ControlTemplate>
                             </Setter.Value>
                         </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="#E0F2F1"/>
+                                <Setter Property="Foreground" Value="#009688"/>
+                            </Trigger>
+                        </Style.Triggers>
                     </Style>
                 </DataGrid.CellStyle>
 
@@ -106,8 +103,12 @@
                     <DataGridTemplateColumn Header="Product Name" Width="1.8*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#1E293B" FontSize="14" 
-                                           VerticalAlignment="Center" Margin="20,0"/>
+                                <StackPanel VerticalAlignment="Center" Margin="20,0">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#1E293B" FontSize="14"/>
+                                    <TextBlock Text="{Binding Description}" FontSize="11" Foreground="Gray" 
+                                               TextTrimming="CharacterEllipsis" MaxWidth="250" HorizontalAlignment="Left"
+                                               Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
+                                </StackPanel>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
@@ -144,11 +145,14 @@
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
 
-                    <DataGridTemplateColumn Header="Total Qty" Width="110">
+                    <DataGridTemplateColumn Header="Total Qty" Width="130">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <Border Background="#F0FDF4" CornerRadius="4" Padding="12,4" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="20,0">
-                                    <TextBlock Text="{Binding Quantity}" FontWeight="Bold" Foreground="#166534" FontSize="12"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Quantity}" FontWeight="Bold" Foreground="#166534" FontSize="12"/>
+                                        <TextBlock Text="{Binding Unit}" Foreground="#166534" FontSize="10" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                                    </StackPanel>
                                 </Border>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
@@ -168,7 +172,6 @@
                                             </Style>
                                         </Button.Resources>
                                     </Button>
-
                                 </StackPanel>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
@@ -178,16 +181,17 @@
         </Grid>
 
         <Grid Background="#7F000000" Visibility="{Binding IsDetailVisible, Converter={StaticResource BoolToVis}}" Panel.ZIndex="50">
-            <Border Background="White" Width="800" Height="550" CornerRadius="8" Padding="30" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <Border Background="White" Width="800" Height="600" CornerRadius="8" Padding="30" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <Grid>
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <DockPanel Grid.Row="0" Margin="0,0,0,25" LastChildFill="False">
+                    <DockPanel Grid.Row="0" Margin="0,0,0,15" LastChildFill="False">
                         <StackPanel>
                             <TextBlock Text="{Binding ViewingProduct.Name}" FontSize="24" FontWeight="Bold" Foreground="#1E293B"/>
                             <TextBlock Text="{Binding ViewingProduct.Category.Name, StringFormat='Category: {0}'}" Foreground="Gray" Margin="0,2,0,0"/>
@@ -195,14 +199,22 @@
                         <Border DockPanel.Dock="Right" BorderBrush="#009688" BorderThickness="2" CornerRadius="6" Padding="15,5" Margin="0,0,15,0">
                             <StackPanel>
                                 <TextBlock Text="Total Quantity" FontSize="10" Foreground="#009688" HorizontalAlignment="Center"/>
-                                <TextBlock Text="{Binding ViewingProduct.Quantity}" FontSize="20" FontWeight="Bold" Foreground="#009688" HorizontalAlignment="Center"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                    <TextBlock Text="{Binding ViewingProduct.Quantity}" FontSize="20" FontWeight="Bold" Foreground="#009688"/>
+                                    <TextBlock Text="{Binding CurrentUnit}" FontSize="12" Foreground="#009688" Margin="4,0,0,2" VerticalAlignment="Bottom"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
                     </DockPanel>
 
+                    <TextBlock Grid.Row="1" Text="{Binding ViewingProduct.Description}" 
+                               FontSize="12" Foreground="#64748B" FontStyle="Italic" TextWrapping="Wrap" 
+                               Margin="0,0,0,20" MaxWidth="700" HorizontalAlignment="Left"
+                               Visibility="{Binding ViewingProduct.Description, Converter={StaticResource StringToVis}}"/>
+
                     <TextBlock Grid.Row="2" Text="Inventory Batches (History &amp; Cost Variations)" FontWeight="SemiBold" Margin="0,0,0,10"/>
 
-                    <DataGrid Grid.Row="2" ItemsSource="{Binding ProductBatches}" Margin="0,25,0,0" 
+                    <DataGrid Grid.Row="3" ItemsSource="{Binding ProductBatches}" Margin="0,0,0,0" 
                               AutoGenerateColumns="False" IsReadOnly="True" 
                               BorderThickness="1" BorderBrush="#E2E8F0"
                               GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9"
@@ -247,7 +259,7 @@
                         </DataGrid.Columns>
                     </DataGrid>
 
-                    <Button Grid.Row="3" Content="CLOSE" Command="{Binding CloseDetailCommand}" Background="#94A3B8" Padding="20,10" HorizontalAlignment="Right" Margin="0,20,0,0">
+                    <Button Grid.Row="4" Content="CLOSE" Command="{Binding CloseDetailCommand}" Background="#94A3B8" Padding="20,10" HorizontalAlignment="Right" Margin="0,20,0,0">
                         <Button.Resources>
                             <Style TargetType="Border">
                                 <Setter Property="CornerRadius" Value="6"/>

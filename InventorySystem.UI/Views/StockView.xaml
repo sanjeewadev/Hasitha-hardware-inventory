@@ -5,13 +5,53 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignHeight="700" d:DesignWidth="1000">
 
+    <UserControl.Resources>
+        <Style x:Key="StandardExpanderStyle" TargetType="ToggleButton">
+            <Setter Property="Focusable" Value="False"/>
+            <Setter Property="Width" Value="16"/>
+            <Setter Property="Height" Value="16"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border Background="Transparent" Width="16" Height="16">
+                            <Path x:Name="ExpandPath" 
+                                  Data="M0,0 L0,6 L6,0 z" 
+                                  Fill="#94A3B8" 
+                                  Margin="1,1,1,1"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center"
+                                  RenderTransformOrigin="0.5,0.5">
+                                <Path.RenderTransform>
+                                    <RotateTransform Angle="225"/>
+                                </Path.RenderTransform>
+                            </Path>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="ExpandPath" Property="RenderTransform">
+                                    <Setter.Value>
+                                        <RotateTransform Angle="135"/>
+                                    </Setter.Value>
+                                </Setter>
+                                <Setter TargetName="ExpandPath" Property="Fill" Value="#334155"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ExpandPath" Property="Fill" Value="#009688"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
     <Grid Background="#F8FAFC">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="320"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Background="White" BorderBrush="#E2E8F0" BorderThickness="0,0,1,0" Padding="20">
+        <Border Grid.Column="0" Background="White" BorderBrush="#E2E8F0" BorderThickness="0,0,1,0" Padding="0,20,0,20">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -20,14 +60,17 @@
                     <RowDefinition Height="1.5*"/>
                 </Grid.RowDefinitions>
 
-                <TextBlock Text="Stock Manager" FontSize="20" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,15"/>
+                <StackPanel Grid.Row="0" Margin="20,0,20,15">
+                    <TextBlock Text="Stock Manager" FontSize="20" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,15"/>
+                </StackPanel>
 
                 <Grid Grid.Row="1">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <Border Background="#F1F5F9" CornerRadius="6" Padding="8,6" Margin="0,0,0,10">
+
+                    <Border Background="#F1F5F9" CornerRadius="6" Padding="8,6" Margin="20,0,20,10">
                         <Grid>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto"/>
@@ -39,19 +82,110 @@
                                      Tag="Search Categories..."/>
                         </Grid>
                     </Border>
-                    <TreeView Grid.Row="1" ItemsSource="{Binding CategoryTree}" BorderThickness="0" SelectedItemChanged="TreeView_SelectedItemChanged">
+
+                    <TreeView Grid.Row="1" ItemsSource="{Binding CategoryTree}" 
+                              BorderThickness="0" Background="Transparent" 
+                              SelectedItemChanged="TreeView_SelectedItemChanged"
+                              ClipToBounds="True" >
+
+                        <TreeView.Resources>
+                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="Transparent"/>
+                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="Black"/>
+                            <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="Transparent"/>
+                            <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="Black"/>
+                        </TreeView.Resources>
+
                         <TreeView.ItemTemplate>
                             <HierarchicalDataTemplate ItemsSource="{Binding SubCategories}">
-                                <StackPanel Orientation="Horizontal" Margin="0,3">
-                                    <TextBlock Text="📁" FontSize="16" Foreground="#F59E0B" Margin="0,0,8,0"/>
-                                    <TextBlock Text="{Binding Name}" FontWeight="Medium" Foreground="#334155"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,5">
+                                    <TextBlock Text="📁" FontSize="16" Foreground="#F59E0B" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                    <TextBlock Text="{Binding Name}" FontWeight="Medium" Foreground="#334155" VerticalAlignment="Center"/>
                                 </StackPanel>
                             </HierarchicalDataTemplate>
                         </TreeView.ItemTemplate>
+
+                        <TreeView.ItemContainerStyle>
+                            <Style TargetType="TreeViewItem">
+                                <Setter Property="IsExpanded" Value="True"/>
+                                <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}"/>
+                                <Setter Property="Background" Value="Transparent"/>
+                                <Setter Property="Foreground" Value="#334155"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                                <Setter Property="VerticalContentAlignment" Value="Center"/>
+                                <Setter Property="Padding" Value="5"/>
+
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="TreeViewItem">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="*"/>
+                                                </Grid.RowDefinitions>
+
+                                                <Border x:Name="Bd" Grid.Row="0"
+                                                        Background="{TemplateBinding Background}"
+                                                        SnapsToDevicePixels="true"
+                                                        MinHeight="32"
+                                                        Margin="0,0,0,0" 
+                                                        Padding="0"/>
+
+                                                <Grid Grid.Row="0" Margin="0,0,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="19"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+
+                                                    <ToggleButton x:Name="Expander" 
+                                                                  Style="{StaticResource StandardExpanderStyle}" 
+                                                                  ClickMode="Press"
+                                                                  IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"/>
+
+                                                    <ContentPresenter x:Name="PART_Header" 
+                                                                      Grid.Column="1"
+                                                                      ContentSource="Header" 
+                                                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                                                      Margin="2,0,0,0"/>
+                                                </Grid>
+
+                                                <ItemsPresenter x:Name="ItemsHost" Grid.Row="1" Margin="15,0,0,0"/>
+                                            </Grid>
+
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="HasItems" Value="False">
+                                                    <Setter TargetName="Expander" Property="Visibility" Value="Hidden"/>
+                                                </Trigger>
+                                                <Trigger Property="IsExpanded" Value="False">
+                                                    <Setter TargetName="ItemsHost" Property="Visibility" Value="Collapsed"/>
+                                                </Trigger>
+
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="#E0F2F1"/>
+                                                    <Setter Property="Foreground" Value="#009688"/>
+                                                </Trigger>
+
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background" Value="#F1F5F9"/>
+                                                </Trigger>
+
+                                                <MultiTrigger>
+                                                    <MultiTrigger.Conditions>
+                                                        <Condition Property="IsSelected" Value="True"/>
+                                                        <Condition Property="IsMouseOver" Value="True"/>
+                                                    </MultiTrigger.Conditions>
+                                                    <Setter TargetName="Bd" Property="Background" Value="#E0F2F1"/>
+                                                </MultiTrigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </TreeView.ItemContainerStyle>
                     </TreeView>
                 </Grid>
 
-                <StackPanel Grid.Row="2" Margin="0,15,0,10">
+                <StackPanel Grid.Row="2" Margin="20,15,20,10">
                     <Border Background="#F1F5F9" CornerRadius="6" Padding="8,6">
                         <Grid>
                             <Grid.ColumnDefinitions>
@@ -68,7 +202,7 @@
 
                 <ListBox Grid.Row="3" ItemsSource="{Binding ProductsInSelectedCategory}" SelectedItem="{Binding SelectedProduct}"
                          BorderThickness="1" BorderBrush="#E2E8F0" Background="White"
-                         HorizontalContentAlignment="Stretch">
+                         HorizontalContentAlignment="Stretch" Margin="20,0,0,0">
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -88,7 +222,10 @@
                                     <TextBlock Text="{Binding Barcode}" FontSize="11" Foreground="#94A3B8"/>
                                 </StackPanel>
                                 <Border Grid.Column="1" Background="#E0F2F1" CornerRadius="4" Padding="8,4" VerticalAlignment="Center">
-                                    <TextBlock Text="{Binding Quantity, StringFormat='Qty: {0}'}" FontSize="11" FontWeight="Bold" Foreground="#009688"/>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Quantity}" FontSize="11" FontWeight="Bold" Foreground="#009688"/>
+                                        <TextBlock Text="{Binding Unit}" FontSize="10" Foreground="#009688" Margin="2,0,0,0" VerticalAlignment="Center"/>
+                                    </StackPanel>
                                 </Border>
                             </Grid>
                         </DataTemplate>
@@ -143,6 +280,7 @@
                             <TextBlock Text="Total Stock: " FontSize="12" Foreground="#009688" VerticalAlignment="Center"/>
                             <TextBlock Text="{Binding SelectedProduct.Quantity, TargetNullValue='-'}" 
                                        FontSize="14" FontWeight="Bold" Foreground="#009688" VerticalAlignment="Center" Margin="5,0,0,0"/>
+                            <TextBlock Text="{Binding CurrentUnit}" FontSize="12" Foreground="#009688" VerticalAlignment="Center" Margin="3,0,0,0"/>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -185,17 +323,20 @@
                                 </Grid.RowDefinitions>
                                 <UniformGrid Grid.Row="0" Columns="2" Margin="0,0,0,20">
                                     <StackPanel Margin="0,0,20,0">
-                                        <TextBlock Text="Quantity Arrived" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                            <TextBlock Text="Quantity Arrived" Foreground="#64748B" FontSize="13"/>
+                                            <TextBlock Text="{Binding CurrentUnit, StringFormat=' ({0})'}" Foreground="#94A3B8" FontSize="11" VerticalAlignment="Center"/>
+                                        </StackPanel>
                                         <TextBox Text="{Binding StockInQty}" Padding="10,8" FontSize="14" FontWeight="Bold" BorderBrush="#009688"/>
                                     </StackPanel>
                                     <StackPanel>
-                                        <TextBlock Text="Buying Cost (Per Item)" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
+                                        <TextBlock Text="Buying Cost (Per Unit)" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
                                         <TextBox Text="{Binding StockInCost}" Padding="10,8" FontSize="14"/>
                                     </StackPanel>
                                 </UniformGrid>
                                 <UniformGrid Grid.Row="1" Columns="2" Margin="0,0,0,25">
                                     <StackPanel Margin="0,0,20,0">
-                                        <TextBlock Text="Selling Price (Shelf)" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
+                                        <TextBlock Text="Selling Price (Per Unit)" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
                                         <TextBox Text="{Binding StockInSellingPrice}" Padding="10,8" FontSize="14" Background="#F0FDF4"/>
                                     </StackPanel>
                                     <StackPanel>
@@ -256,7 +397,10 @@
                                     </StackPanel>
 
                                     <StackPanel Grid.Column="1" Margin="0,0,15,0">
-                                        <TextBlock Text="Quantity to Remove" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                                            <TextBlock Text="Quantity to Remove" Foreground="#64748B" FontSize="13"/>
+                                            <TextBlock Text="{Binding CurrentUnit, StringFormat=' ({0})'}" Foreground="#94A3B8" FontSize="11" VerticalAlignment="Center"/>
+                                        </StackPanel>
                                         <TextBox Text="{Binding StockOutQty}" Padding="10,8" FontSize="14" FontWeight="Bold" BorderBrush="#EF4444"/>
                                     </StackPanel>
 
@@ -303,7 +447,7 @@
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Date" Binding="{Binding ReceivedDate, StringFormat='dd MMM yyyy'}" Width="120" Foreground="#475569"/>
                             <DataGridTextColumn Header="Original" Binding="{Binding InitialQuantity}" Width="80"/>
-                            <DataGridTextColumn Header="Remaining" Binding="{Binding RemainingQuantity}" Width="100" FontWeight="Bold"/>
+                            <DataGridTextColumn Header="Remaining" Binding="{Binding RemainingQuantity, StringFormat={}{0:0.###}}" Width="100" FontWeight="Bold"/>
                             <DataGridTextColumn Header="Cost Price" Binding="{Binding CostPrice, StringFormat=N2}" Width="100"/>
                             <DataGridTextColumn Header="Cost Code" Binding="{Binding DiscountCode}" Width="*" FontWeight="Bold" Foreground="#B45309"/>
                         </DataGrid.Columns>

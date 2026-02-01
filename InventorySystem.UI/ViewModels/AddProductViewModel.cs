@@ -17,11 +17,13 @@ namespace InventorySystem.UI.ViewModels
 
         public Product EditingProduct { get; set; }
 
-        // We don't need the list of categories for a dropdown anymore, 
-        // but we keep it internally to lookup names.
+        public ObservableCollection<string> UnitOptions { get; } = new ObservableCollection<string>
+        {
+            "Pcs", "Kg", "M", "L", "Ft", "Box", "Set"
+        };
+
         private ObservableCollection<Category> _allCategories = new();
 
-        // NEW: Property to display "Main > Sub" as text
         private string _categoryDisplayPath = "Loading...";
         public string CategoryDisplayPath
         {
@@ -35,20 +37,18 @@ namespace InventorySystem.UI.ViewModels
         public ICommand CancelCommand { get; }
         public ICommand GenerateCodeCommand { get; }
 
-        // --- CONSTRUCTOR ---
         public AddProductViewModel(IProductRepository pRepo, ICategoryRepository cRepo, Product? productToEdit = null, int? preSelectedCategoryId = null)
         {
             _productRepo = pRepo;
             _categoryRepo = cRepo;
 
-            // Initialize Commands
             SaveCommand = new RelayCommand(Save);
             CancelCommand = new RelayCommand(Cancel);
             GenerateCodeCommand = new RelayCommand(() => EditingProduct.Barcode = GenerateSimpleCode());
 
             if (productToEdit != null)
             {
-                // EDIT MODE
+                // EDIT MODE - Copy existing data
                 EditingProduct = new Product
                 {
                     Id = productToEdit.Id,
@@ -56,14 +56,22 @@ namespace InventorySystem.UI.ViewModels
                     Barcode = productToEdit.Barcode,
                     Description = productToEdit.Description,
                     CategoryId = productToEdit.CategoryId,
-                    Quantity = productToEdit.Quantity
+                    Quantity = productToEdit.Quantity,
+                    Unit = productToEdit.Unit,
+                    // Keep existing prices in background, even if UI doesn't show them
+                    BuyingPrice = productToEdit.BuyingPrice,
+                    SellingPrice = productToEdit.SellingPrice,
+                    DiscountLimit = productToEdit.DiscountLimit,
+                    LowStockThreshold = productToEdit.LowStockThreshold
                 };
             }
             else
             {
-                // NEW MODE
+                // NEW MODE - Prices default to 0
                 EditingProduct = new Product();
-                EditingProduct.Barcode = GenerateSimpleCode(); // Auto-fill Barcode
+                EditingProduct.Barcode = GenerateSimpleCode();
+                EditingProduct.Unit = "Pcs";
+                EditingProduct.LowStockThreshold = 5;
 
                 if (preSelectedCategoryId.HasValue)
                 {
@@ -71,7 +79,6 @@ namespace InventorySystem.UI.ViewModels
                 }
             }
 
-            // Load category data to build the display path
             LoadCategoryPath();
         }
 
@@ -81,14 +88,11 @@ namespace InventorySystem.UI.ViewModels
             _allCategories.Clear();
             foreach (var c in cats) _allCategories.Add(c);
 
-            // Find the category for this product
             var currentCat = _allCategories.FirstOrDefault(c => c.Id == EditingProduct.CategoryId);
 
             if (currentCat != null)
             {
-                // Check if it has a parent to make a pretty path like "Tools > Hammers"
                 var parentCat = _allCategories.FirstOrDefault(c => c.Id == currentCat.ParentId);
-
                 if (parentCat != null)
                     CategoryDisplayPath = $"{parentCat.Name} / {currentCat.Name}";
                 else
@@ -120,6 +124,8 @@ namespace InventorySystem.UI.ViewModels
                 MessageBox.Show("Product must have a Barcode or SKU.", "Missing Info", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
+
+            // Note: Pricing validation removed because prices are set via Batches now.
 
             try
             {

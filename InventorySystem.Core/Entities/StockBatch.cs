@@ -9,17 +9,15 @@ namespace InventorySystem.Core.Entities
         public int ProductId { get; set; }
         public Product Product { get; set; } = null!;
 
-        public int InitialQuantity { get; set; }
-        public int RemainingQuantity { get; set; }
+        // --- UPDATED: Changed from int to decimal ---
+        public decimal InitialQuantity { get; set; }
+        public decimal RemainingQuantity { get; set; }
 
-        // --- PRICING PER BATCH ---
-        public decimal CostPrice { get; set; }       // Buying Price
-        public decimal SellingPrice { get; set; }    // Selling Price
+        // Pricing
+        public decimal CostPrice { get; set; }
+        public decimal SellingPrice { get; set; }
+        public decimal Discount { get; set; }
 
-        // --- FIX: Use decimal for financial math ---
-        public decimal Discount { get; set; }        // Discount %
-
-        // Owner-Only secret code
         public string DiscountCode { get; set; } = "";
 
         public DateTime ReceivedDate { get; set; } = DateTime.Now;

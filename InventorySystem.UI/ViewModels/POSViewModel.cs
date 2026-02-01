@@ -1,5 +1,5 @@
 ﻿using InventorySystem.Core.Entities;
-using InventorySystem.Core.Enums; // Ensure this exists or remove enum refs
+using InventorySystem.Core.Enums;
 using InventorySystem.Data.Repositories;
 using InventorySystem.UI.Commands;
 using System;
@@ -19,7 +19,7 @@ namespace InventorySystem.UI.ViewModels
         private readonly IProductRepository _productRepo;
         private readonly IStockRepository _stockRepo;
 
-        // --- POPUP / NOTIFICATION STATE ---
+        // --- POPUP STATE ---
         private bool _isNotificationVisible;
         public bool IsNotificationVisible { get => _isNotificationVisible; set { _isNotificationVisible = value; OnPropertyChanged(); } }
 
@@ -29,7 +29,7 @@ namespace InventorySystem.UI.ViewModels
         private string _notificationMessage = "";
         public string NotificationMessage { get => _notificationMessage; set { _notificationMessage = value; OnPropertyChanged(); } }
 
-        private string _notificationColor = "#1E293B"; // Default Dark
+        private string _notificationColor = "#1E293B";
         public string NotificationColor { get => _notificationColor; set { _notificationColor = value; OnPropertyChanged(); } }
 
         private string _notificationIcon = "ℹ️";
@@ -37,7 +37,7 @@ namespace InventorySystem.UI.ViewModels
 
         public ICommand CloseNotificationCommand { get; }
 
-        // --- EXISTING PROPERTIES ---
+        // --- PROPERTIES ---
         private string _searchText = "";
         public string SearchText
         {
@@ -99,7 +99,7 @@ namespace InventorySystem.UI.ViewModels
             LoadProducts();
         }
 
-        // --- HELPER: SHOW CUSTOM POPUP ---
+        // --- METHODS ---
         private void ShowNotification(string title, string message, NotificationType type)
         {
             NotificationTitle = title;
@@ -109,21 +109,13 @@ namespace InventorySystem.UI.ViewModels
             switch (type)
             {
                 case NotificationType.Success:
-                    NotificationColor = "#10B981"; // Green
-                    NotificationIcon = "✅";
-                    break;
+                    NotificationColor = "#10B981"; NotificationIcon = "✅"; break;
                 case NotificationType.Error:
-                    NotificationColor = "#EF4444"; // Red
-                    NotificationIcon = "⛔";
-                    break;
+                    NotificationColor = "#EF4444"; NotificationIcon = "⛔"; break;
                 case NotificationType.Warning:
-                    NotificationColor = "#F59E0B"; // Orange
-                    NotificationIcon = "⚠️";
-                    break;
+                    NotificationColor = "#F59E0B"; NotificationIcon = "⚠️"; break;
                 default:
-                    NotificationColor = "#3B82F6"; // Blue
-                    NotificationIcon = "ℹ️";
-                    break;
+                    NotificationColor = "#3B82F6"; NotificationIcon = "ℹ️"; break;
             }
         }
 
@@ -154,10 +146,9 @@ namespace InventorySystem.UI.ViewModels
             var allBatches = await _stockRepo.GetActiveBatchesAsync();
             var validBatches = allBatches.Where(b => b.ProductId == p.Id).OrderBy(b => b.ReceivedDate).ToList();
 
-            // FIX: If no batches, just show error popup, don't crash
             if (!validBatches.Any())
             {
-                ShowNotification("Stock Error", "Product Quantity > 0, but no active batches found in database.", NotificationType.Error);
+                ShowNotification("Stock Error", "Product Quantity > 0, but no active batches found.", NotificationType.Error);
                 return;
             }
 
@@ -174,8 +165,10 @@ namespace InventorySystem.UI.ViewModels
             var existing = Cart.FirstOrDefault(c => c.BatchId == batch.Id);
             if (existing != null)
             {
-                if (existing.Quantity < batch.RemainingQuantity) existing.Quantity++;
-                else ShowNotification("Limit Reached", $"You cannot add more of this batch. Only {batch.RemainingQuantity} in stock.", NotificationType.Warning);
+                if (existing.Quantity < batch.RemainingQuantity)
+                    existing.Quantity += 1;
+                else
+                    ShowNotification("Limit Reached", $"Only {batch.RemainingQuantity} {_selectedProductForBatch.Unit} available.", NotificationType.Warning);
             }
             else
             {
@@ -184,6 +177,8 @@ namespace InventorySystem.UI.ViewModels
                     ProductId = _selectedProductForBatch.Id,
                     BatchId = batch.Id,
                     Name = _selectedProductForBatch.Name,
+                    Unit = _selectedProductForBatch.Unit,
+
                     StockLimit = batch.RemainingQuantity,
                     CostPrice = batch.CostPrice,
                     StandardPrice = batch.SellingPrice > 0 ? batch.SellingPrice : _selectedProductForBatch.SellingPrice,
@@ -206,17 +201,9 @@ namespace InventorySystem.UI.ViewModels
 
         private async Task ExecuteCheckout()
         {
-            // 1. Check Empty Cart
             if (Cart.Count == 0)
             {
-                ShowNotification("Cart is Empty", "Please scan or select products before charging.", NotificationType.Warning);
-                return;
-            }
-
-            // 2. Check Zero Price
-            if (Cart.Any(item => item.UnitPrice <= 0))
-            {
-                ShowNotification("Invalid Pricing", "One or more items have a price of 0.00. Please correct this.", NotificationType.Error);
+                ShowNotification("Cart is Empty", "Scan items first.", NotificationType.Warning);
                 return;
             }
 
@@ -252,8 +239,7 @@ namespace InventorySystem.UI.ViewModels
                     await _stockRepo.SellStockAsync(sale);
                 }
 
-                // 3. SUCCESS POPUP (The Perfect One)
-                ShowNotification("Sale Complete!", $"Transaction #{receiptId}\nTotal Amount: Rs {GrandTotal:N2}", NotificationType.Success);
+                ShowNotification("Sale Complete!", $"Transaction #{receiptId}\nTotal: Rs {GrandTotal:N2}", NotificationType.Success);
 
                 Cart.Clear();
                 RecalculateTotal();
@@ -262,35 +248,112 @@ namespace InventorySystem.UI.ViewModels
             }
             catch (Exception ex)
             {
-                ShowNotification("System Error", $"The sale failed: {ex.Message}", NotificationType.Error);
+                ShowNotification("Error", $"Sale failed: {ex.Message}", NotificationType.Error);
                 LoadProducts();
             }
         }
     }
 
+    // --- UPDATED CART ITEM (Fixes Calculation Lag) ---
     public class CartItem : ViewModelBase
     {
-        // (Keep your existing CartItem code exactly as it was, no changes needed there)
         private readonly Action _recalcCallback;
-        public CartItem(Action recalcCallback) { _recalcCallback = recalcCallback; IncreaseQuantityCommand = new RelayCommand(() => Quantity++); DecreaseQuantityCommand = new RelayCommand(() => Quantity--); }
+
+        public CartItem(Action recalcCallback)
+        {
+            _recalcCallback = recalcCallback;
+            // Initialize string representation
+            _quantityStr = "1";
+            _quantity = 1;
+        }
+
         public CartItem() { }
+
         public int ProductId { get; set; }
         public int BatchId { get; set; }
         public string Name { get; set; } = "";
-        public int StockLimit { get; set; }
+        public string Unit { get; set; } = "";
+
+        public decimal StockLimit { get; set; }
         public decimal CostPrice { get; set; }
         public string DiscountCode { get; set; } = "";
         public decimal StandardPrice { get; set; }
         public decimal MaxDiscountPercent { get; set; }
+
         public ICommand IncreaseQuantityCommand { get; }
         public ICommand DecreaseQuantityCommand { get; }
-        private int _quantity;
-        public int Quantity { get => _quantity; set { if (value > StockLimit) value = StockLimit; if (value < 1) value = 1; _quantity = value; OnPropertyChanged(); OnPropertyChanged(nameof(Total)); _recalcCallback?.Invoke(); } }
+
+        // --- NEW: String property for Live Typing ---
+        private string _quantityStr = "";
+        public string QuantityStr
+        {
+            get => _quantityStr;
+            set
+            {
+                if (_quantityStr != value)
+                {
+                    _quantityStr = value;
+                    OnPropertyChanged();
+
+                    // LIVE PARSING
+                    if (decimal.TryParse(value, out decimal result))
+                    {
+                        if (result > StockLimit) result = StockLimit; // Enforce Limit
+                        if (result < 0) result = 0;
+
+                        // Only update internal math if valid
+                        _quantity = result;
+                        OnPropertyChanged(nameof(Total));    // Update Row Total
+                        _recalcCallback?.Invoke();           // Update Grand Total
+                    }
+                }
+            }
+        }
+
+        // Internal Logic uses this
+        private decimal _quantity;
+        public decimal Quantity
+        {
+            get => _quantity;
+            set
+            {
+                _quantity = value;
+                _quantityStr = value.ToString("0.###"); // Sync UI
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(QuantityStr)); // Notify UI
+                OnPropertyChanged(nameof(Total));
+                _recalcCallback?.Invoke();
+            }
+        }
+
         private decimal _unitPrice;
-        public decimal UnitPrice { get => _unitPrice; set { _unitPrice = value; OnPropertyChanged(); OnPropertyChanged(nameof(Total)); CheckPriceSafety(); _recalcCallback?.Invoke(); } }
+        public decimal UnitPrice
+        {
+            get => _unitPrice;
+            set
+            {
+                _unitPrice = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(Total));
+                CheckPriceSafety();
+                _recalcCallback?.Invoke();
+            }
+        }
+
         private string _priceTextColor = "#059669";
-        public string PriceTextColor { get => _priceTextColor; set { _priceTextColor = value; OnPropertyChanged(); } }
-        private void CheckPriceSafety() { decimal minSafePrice = StandardPrice - (StandardPrice * (MaxDiscountPercent / 100m)); if (UnitPrice < minSafePrice || UnitPrice <= 0) { PriceTextColor = "#EF4444"; } else { PriceTextColor = "#059669"; } }
+        public string PriceTextColor
+        {
+            get => _priceTextColor;
+            set { _priceTextColor = value; OnPropertyChanged(); }
+        }
+
+        private void CheckPriceSafety()
+        {
+            decimal minSafePrice = StandardPrice - (StandardPrice * (MaxDiscountPercent / 100m));
+            if (UnitPrice < minSafePrice || UnitPrice <= 0) PriceTextColor = "#EF4444";
+            else PriceTextColor = "#059669";
+        }
+
         public decimal Total => Quantity * UnitPrice;
     }
 }

@@ -9,23 +9,25 @@ namespace InventorySystem.Core.Entities
         public int ProductId { get; set; }
         public Product Product { get; set; } = null!;
 
-        public int Quantity { get; set; }
+        // --- UPDATED: Changed from int to decimal ---
+        public decimal Quantity { get; set; }
+
         public StockMovementType Type { get; set; }
         public DateTime Date { get; set; } = DateTime.Now;
         public string Note { get; set; } = "";
 
-        // --- FINANCIALS ---
+        // Financials
         public decimal UnitCost { get; set; }
         public decimal UnitPrice { get; set; }
 
-        // --- TRACKING ---
+        // Tracking
         public string ReceiptId { get; set; } = "";
         public int? StockBatchId { get; set; }
         public StockBatch? StockBatch { get; set; }
 
-        // --- AUDIT (Vulnerability 4 Fix) ---
-        public AdjustmentReason Reason { get; set; } // <--- NEW
-        public int? UserId { get; set; }             // <--- NEW (Who did it?)
+        // Audit
+        public AdjustmentReason Reason { get; set; }
+        public int? UserId { get; set; }
 
         public bool IsVoided { get; set; } = false;
     }
