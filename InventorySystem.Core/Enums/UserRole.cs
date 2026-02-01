@@ -1,14 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace InventorySystem.Core.Enums
+﻿namespace InventorySystem.Core.Enums
 {
     public enum UserRole
-        {
-            Admin = 1,
-            Employee = 2
-        }
+    {
+        SuperAdmin = 0, // Hard-coded God mode
+        Admin = 1,      // Can manage users and settings
+        Employee = 2    // Restricted access (POS only)
+    }
 }

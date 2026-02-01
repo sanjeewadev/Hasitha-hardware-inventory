@@ -3,8 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:views="clr-namespace:InventorySystem.UI.Views"
              xmlns:vm="clr-namespace:InventorySystem.UI.ViewModels"
-             xmlns:converters="clr-namespace:InventorySystem.UI.Converters" 
-             StartupUri="MainWindow.xaml">
+             xmlns:converters="clr-namespace:InventorySystem.UI.Converters">
     <Application.Resources>
         
         <converters:StringToVisibilityConverter x:Key="StringToVis"/>
@@ -197,6 +196,9 @@
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:TodaySalesViewModel}">
             <views:TodaySalesView />
+        </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:UsersViewModel}">
+            <views:UsersView/>
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
             <views:SettingsView />

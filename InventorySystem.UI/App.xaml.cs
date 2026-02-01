@@ -1,11 +1,12 @@
 ﻿using InventorySystem.Core.Entities;
 using InventorySystem.Data.Repositories;
 using InventorySystem.Infrastructure.Services;
-using InventorySystem.Infrastructure.Startup;
-using InventorySystem.UI.ViewModels; // Added for SettingsViewModel
+using InventorySystem.UI.ViewModels;
+using InventorySystem.UI.Views;
 using System.Linq;
-using System.Threading.Tasks; // Added for Task.Run
+using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Threading; // Needed for Global Exception Handling
 
 namespace InventorySystem.UI
 {
@@ -13,39 +14,79 @@ namespace InventorySystem.UI
     {
         protected override async void OnStartup(StartupEventArgs e)
         {
+            // 1. Hook up Global Error Handling (Prevents "Crash to Desktop")
+            this.DispatcherUnhandledException += App_DispatcherUnhandledException;
+
             base.OnStartup(e);
 
-            // 1. Initialize Infrastructure
-            // await AppInitializer.InitializeAsync(); // Uncomment if you use this
+            // 2. Initialize Database (Creates tables if missing)
+            var dbService = new DatabaseService();
+            dbService.Initialize();
 
-            // 2. Create Database & Seed Data
-            using var db = DatabaseService.CreateDbContext();
-            await db.Database.EnsureCreatedAsync();
-
-            var categoryRepo = new CategoryRepository(db);
-            var categories = await categoryRepo.GetAllAsync();
-
-            // 3. Seed Default Categories if empty
-            if (!categories.Any())
+            // 3. Database & Seeding (Cleaned up for Production)
+            // We no longer seed "Tools" or "Hardware" automatically. 
+            // The user must create their own categories.
+            using (var db = DatabaseService.CreateDbContext())
             {
-                await categoryRepo.AddAsync(new Category { Name = "Tools" });
-                await categoryRepo.AddAsync(new Category { Name = "Hardware" });
+                // You can add critical system data here if needed in the future,
+                // but for now, we leave it empty so the client starts fresh.
             }
 
-            // --- 4. START BACKGROUND BACKUP CHECK ---
-            // We create a temporary Settings VM just to run the check logic.
-            // Using Task.Run prevents this from slowing down the app launch.
+            // 4. Start Background Backup (Fire and Forget)
             _ = Task.Run(async () =>
             {
                 var settingsVm = new SettingsViewModel();
                 await settingsVm.CheckAndRunAutoBackup();
             });
 
-            // 5. Show Main Window
-            // (Assuming MainWindow is set as StartupUri in App.xaml)
-            // If not, uncomment below:
-            // var mainWindow = new MainWindow();
-            // mainWindow.Show();
+            // 5. Prepare Login Dependencies
+            var dbContext = DatabaseService.CreateDbContext();
+            var userRepo = new UserRepository(dbContext);
+            var authService = new AuthenticationService(userRepo);
+            var sessionManager = SessionManager.Instance;
+
+            var loginVm = new LoginViewModel(authService, sessionManager);
+
+            // 6. Show Login Window
+            var loginWindow = new LoginWindow();
+            loginWindow.DataContext = loginVm;
+
+            // Handle Login Flow
+            loginVm.CloseAction = () =>
+            {
+                // Check success BEFORE closing the login window
+                if (sessionManager.IsLoggedIn)
+                {
+                    // A. Open the Main Window FIRST
+                    var mainWindow = new MainWindow();
+                    mainWindow.Show();
+
+                    // B. NOW close the Login Window
+                    // (The app stays alive because MainWindow is open)
+                    loginWindow.Close();
+                }
+                else
+                {
+                    // If simply closing without login, shut down
+                    loginWindow.Close();
+                    Shutdown();
+                }
+            };
+
+            loginWindow.Show();
+        }
+
+        // --- GLOBAL ERROR HANDLER ---
+        private void App_DispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+        {
+            // Log this error or show a friendly message
+            MessageBox.Show($"An unexpected error occurred: {e.Exception.Message}\n\nIf this persists, please contact support.",
+                            "System Error",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Error);
+
+            // Prevent the app from crashing entirely
+            e.Handled = true;
         }
     }
 }

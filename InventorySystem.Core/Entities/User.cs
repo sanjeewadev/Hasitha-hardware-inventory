@@ -1,4 +1,5 @@
-﻿using InventorySystem.Core.Enums; // <--- Make sure this is here
+﻿using InventorySystem.Core.Enums;
+using System;
 
 namespace InventorySystem.Core.Entities
 {
@@ -6,8 +7,16 @@ namespace InventorySystem.Core.Entities
     {
         public int Id { get; set; }
         public string Username { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
 
-        public UserRole Role { get; set; } // Uses your Admin/Employee enum
+        // SECURITY: We store the hash (e.g. "a5f3..."), NEVER the real password.
+        public string PasswordHash { get; set; } = string.Empty;
+
+        public string FullName { get; set; } = string.Empty; // Optional: "John Doe"
+
+        public UserRole Role { get; set; }
+
+        public bool IsActive { get; set; } = true; // If false, user cannot log in.
+
+        public DateTime CreatedAt { get; set; } = DateTime.Now;
     }
 }

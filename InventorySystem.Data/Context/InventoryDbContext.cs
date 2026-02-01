@@ -1,8 +1,7 @@
 ﻿using InventorySystem.Core.Entities;
 using InventorySystem.Core.Enums;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion; // Needed for the fix
-using System.Linq; // Needed for LINQ queries
+using System.Linq;
 
 namespace InventorySystem.Data.Context
 {
@@ -21,9 +20,6 @@ namespace InventorySystem.Data.Context
             base.OnModelCreating(modelBuilder);
 
             // --- 0. CRITICAL FIX: SQLite Decimal Conversion ---
-            // SQLite doesn't support decimal natively. It stores them as strings (TEXT) by default.
-            // This breaks sorting (e.g., "10.0" comes before "2.0").
-            // We force it to store as DOUBLE (REAL) for accurate sorting and math.
             if (Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
             {
                 foreach (var entityType in modelBuilder.Model.GetEntityTypes())
@@ -35,15 +31,24 @@ namespace InventorySystem.Data.Context
                     {
                         modelBuilder.Entity(entityType.Name)
                             .Property(property.Name)
-                            .HasConversion<double>(); // Store as REAL in SQLite
+                            .HasConversion<double>();
                     }
                 }
             }
 
-            // 1. Seed Users
+            // 1. Seed Users (Updated to use PasswordHash)
+            // Note: '8c69...' is the SHA256 hash for "admin123"
             modelBuilder.Entity<User>().HasData(
-                new User { Id = 1, Username = "admin", Password = "123", Role = UserRole.Admin },
-                new User { Id = 2, Username = "user", Password = "123", Role = UserRole.Employee }
+                new User
+                {
+                    Id = 1,
+                    Username = "admin",
+                    PasswordHash = "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
+                    Role = UserRole.SuperAdmin,
+                    FullName = "Super Admin",
+                    IsActive = true,
+                    CreatedAt = System.DateTime.Now
+                }
             );
 
             // 2. Unique Barcode Index
@@ -75,10 +80,10 @@ namespace InventorySystem.Data.Context
                 .HasForeignKey(b => b.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // 4. Precision (Still good to keep for other DB providers)
+            // 4. Precision
             modelBuilder.Entity<Product>().Property(p => p.BuyingPrice).HasPrecision(18, 2);
             modelBuilder.Entity<Product>().Property(p => p.SellingPrice).HasPrecision(18, 2);
-            modelBuilder.Entity<Product>().Property(p => p.Quantity).HasPrecision(18, 3); // Support 3 decimals (e.g. 1.500 kg)
+            modelBuilder.Entity<Product>().Property(p => p.Quantity).HasPrecision(18, 3);
 
             modelBuilder.Entity<StockBatch>().Property(b => b.CostPrice).HasPrecision(18, 2);
             modelBuilder.Entity<StockBatch>().Property(b => b.InitialQuantity).HasPrecision(18, 3);

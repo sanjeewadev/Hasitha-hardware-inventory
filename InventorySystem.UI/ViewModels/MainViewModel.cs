@@ -1,6 +1,7 @@
 ﻿using InventorySystem.Data.Repositories;
 using InventorySystem.Infrastructure.Services;
 using InventorySystem.UI.Commands;
+using System.Windows; // Needed for Visibility
 
 namespace InventorySystem.UI.ViewModels
 {
@@ -13,6 +14,15 @@ namespace InventorySystem.UI.ViewModels
             set { _currentView = value; OnPropertyChanged(); }
         }
 
+        // --- 1. Session Data for UI (Header Info) ---
+        public string CurrentUserName => SessionManager.Instance.Username;
+        public string CurrentUserRole => SessionManager.Instance.UserRoleDisplay;
+        public string CurrentUserInitial => !string.IsNullOrEmpty(CurrentUserName) ? CurrentUserName.Substring(0, 1).ToUpper() : "?";
+
+        // --- 2. The Gatekeeper Logic (Sidebar Visibility) ---
+        // If IsAdmin is true, Visible. If false, Collapsed.
+        public Visibility AdminVisibility => SessionManager.Instance.IsAdmin ? Visibility.Visible : Visibility.Collapsed;
+
         // --- NAVIGATION COMMANDS ---
         public RelayCommand NavigateToProductsCommand { get; }
         public RelayCommand NavigateToInventoryCommand { get; }
@@ -22,58 +32,55 @@ namespace InventorySystem.UI.ViewModels
         public RelayCommand NavigateToHistoryCommand { get; }
         public RelayCommand NavigateToTodaySalesCommand { get; }
         public RelayCommand NavigateToSettingsCommand { get; }
+        public RelayCommand NavigateToUsersCommand { get; } // <--- Added This
 
         public MainViewModel()
         {
+            // --- 3. Listen for Login/Logout ---
+            SessionManager.Instance.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(SessionManager.CurrentUser))
+                {
+                    // Refresh all UI properties when user changes
+                    OnPropertyChanged(nameof(CurrentUserName));
+                    OnPropertyChanged(nameof(CurrentUserRole));
+                    OnPropertyChanged(nameof(CurrentUserInitial));
+                    OnPropertyChanged(nameof(AdminVisibility));
+                }
+            };
+
+            // Create the shared Database Context
             var db = DatabaseService.CreateDbContext();
 
-            // 1. Products
+            // Create Services for User Management
+            var userRepo = new UserRepository(db);
+            var authService = new AuthenticationService(userRepo);
+
+            // --- Initialize Commands ---
+
             NavigateToProductsCommand = new RelayCommand(() =>
             {
-                CurrentView = new ProductViewModel(
-                    new ProductRepository(db),
-                    new CategoryRepository(db),
-                    new StockRepository(db)
-                );
+                CurrentView = new ProductViewModel(new ProductRepository(db), new CategoryRepository(db), new StockRepository(db));
             });
 
-            // 2. Inventory Catalog
             NavigateToInventoryCommand = new RelayCommand(() =>
             {
-                CurrentView = new InventoryViewModel(
-                    new ProductRepository(db),
-                    new CategoryRepository(db),
-                    new StockRepository(db)
-                );
+                CurrentView = new InventoryViewModel(new ProductRepository(db), new CategoryRepository(db), new StockRepository(db));
             });
 
-            // 3. Stock
             NavigateToStockCommand = new RelayCommand(() =>
             {
-                CurrentView = new StockViewModel(
-                    new ProductRepository(db),
-                    new CategoryRepository(db),
-                    new StockRepository(db)
-                );
+                CurrentView = new StockViewModel(new ProductRepository(db), new CategoryRepository(db), new StockRepository(db));
             });
 
-            // 4. POS
             NavigateToPOSCommand = new RelayCommand(() =>
             {
-                CurrentView = new POSViewModel(
-                    new ProductRepository(db),
-                    new StockRepository(db)
-                );
+                CurrentView = new POSViewModel(new ProductRepository(db), new StockRepository(db));
             });
 
-            // 5. Analytics & Dashboard (UPDATED)
             NavigateToDashboardCommand = new RelayCommand(() =>
             {
-                // Now passing BOTH StockRepository and ProductRepository
-                CurrentView = new DashboardViewModel(
-                    new StockRepository(db),
-                    new ProductRepository(db)
-                );
+                CurrentView = new DashboardViewModel(new StockRepository(db), new ProductRepository(db));
             });
 
             NavigateToHistoryCommand = new RelayCommand(() =>
@@ -86,14 +93,19 @@ namespace InventorySystem.UI.ViewModels
                 CurrentView = new TodaySalesViewModel(new StockRepository(db));
             });
 
-            // 6. Settings
             NavigateToSettingsCommand = new RelayCommand(() =>
             {
                 CurrentView = new SettingsViewModel();
             });
 
-            // Default Startup View
-            NavigateToPOSCommand.Execute(null); // Changed default to Dashboard (optional, usually better for admins)
+            // --- 4. NEW: Navigate to User Manager ---
+            NavigateToUsersCommand = new RelayCommand(() =>
+            {
+                CurrentView = new UsersViewModel(userRepo, authService);
+            });
+
+            // Default Startup View (POS is safe for everyone)
+            NavigateToPOSCommand.Execute(null);
         }
     }
 }
