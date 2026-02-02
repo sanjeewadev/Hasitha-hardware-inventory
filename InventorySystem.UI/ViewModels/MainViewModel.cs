@@ -1,7 +1,7 @@
 ﻿using InventorySystem.Data.Repositories;
 using InventorySystem.Infrastructure.Services;
 using InventorySystem.UI.Commands;
-using System.Windows; // Needed for Visibility
+using System.Windows;
 
 namespace InventorySystem.UI.ViewModels
 {
@@ -20,7 +20,6 @@ namespace InventorySystem.UI.ViewModels
         public string CurrentUserInitial => !string.IsNullOrEmpty(CurrentUserName) ? CurrentUserName.Substring(0, 1).ToUpper() : "?";
 
         // --- 2. The Gatekeeper Logic (Sidebar Visibility) ---
-        // If IsAdmin is true, Visible. If false, Collapsed.
         public Visibility AdminVisibility => SessionManager.Instance.IsAdmin ? Visibility.Visible : Visibility.Collapsed;
 
         // --- NAVIGATION COMMANDS ---
@@ -32,7 +31,8 @@ namespace InventorySystem.UI.ViewModels
         public RelayCommand NavigateToHistoryCommand { get; }
         public RelayCommand NavigateToTodaySalesCommand { get; }
         public RelayCommand NavigateToSettingsCommand { get; }
-        public RelayCommand NavigateToUsersCommand { get; } // <--- Added This
+        public RelayCommand NavigateToUsersCommand { get; }
+        public RelayCommand NavigateToCreditsCommand { get; } // <--- 1. NEW COMMAND
 
         public MainViewModel()
         {
@@ -41,7 +41,6 @@ namespace InventorySystem.UI.ViewModels
             {
                 if (e.PropertyName == nameof(SessionManager.CurrentUser))
                 {
-                    // Refresh all UI properties when user changes
                     OnPropertyChanged(nameof(CurrentUserName));
                     OnPropertyChanged(nameof(CurrentUserRole));
                     OnPropertyChanged(nameof(CurrentUserInitial));
@@ -52,9 +51,10 @@ namespace InventorySystem.UI.ViewModels
             // Create the shared Database Context
             var db = DatabaseService.CreateDbContext();
 
-            // Create Services for User Management
+            // Create Services
             var userRepo = new UserRepository(db);
             var authService = new AuthenticationService(userRepo);
+            var creditService = new CreditService(db); // <--- 2. NEW SERVICE
 
             // --- Initialize Commands ---
 
@@ -98,13 +98,18 @@ namespace InventorySystem.UI.ViewModels
                 CurrentView = new SettingsViewModel();
             });
 
-            // --- 4. NEW: Navigate to User Manager ---
             NavigateToUsersCommand = new RelayCommand(() =>
             {
                 CurrentView = new UsersViewModel(userRepo, authService);
             });
 
-            // Default Startup View (POS is safe for everyone)
+            // --- 3. NEW: Navigate to Credit Manager ---
+            NavigateToCreditsCommand = new RelayCommand(() =>
+            {
+                CurrentView = new CreditManagerViewModel(creditService);
+            });
+
+            // Default Startup View
             NavigateToPOSCommand.Execute(null);
         }
     }

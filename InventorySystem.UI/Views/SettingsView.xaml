@@ -13,8 +13,8 @@
         </Grid.RowDefinitions>
 
         <StackPanel Grid.Row="0" Margin="0,0,0,25">
-            <TextBlock Text="Data &amp; Backup Manager" FontSize="26" FontWeight="Bold" Foreground="{StaticResource SidebarBrush}"/>
-            <TextBlock Text="Manage local database snapshots and restoration points." Foreground="{StaticResource TextSecondaryBrush}" Margin="0,5,0,0"/>
+            <TextBlock Text="System Settings" FontSize="26" FontWeight="Bold" Foreground="{StaticResource SidebarBrush}"/>
+            <TextBlock Text="Manage backups, printers, and cloud sync." Foreground="{StaticResource TextSecondaryBrush}" Margin="0,5,0,0"/>
         </StackPanel>
 
         <Grid Grid.Row="1">
@@ -44,23 +44,11 @@
 
                             <TextBox Text="{Binding BackupFolderPath}" IsReadOnly="True" 
                                      Padding="12" Height="42" VerticalContentAlignment="Center"
-                                     BorderBrush="#E2E8F0" Background="#F8FAFC" Foreground="{StaticResource TextSecondaryBrush}">
-                                <TextBox.Resources>
-                                    <Style TargetType="Border">
-                                        <Setter Property="CornerRadius" Value="6,0,0,6"/>
-                                    </Style>
-                                </TextBox.Resources>
-                            </TextBox>
+                                     BorderBrush="#E2E8F0" Background="#F8FAFC" Foreground="{StaticResource TextSecondaryBrush}"/>
 
-                            <Button Grid.Column="1" Content="BROWSE FOLDER" Command="{Binding BrowseFolderCommand}"
+                            <Button Grid.Column="1" Content="BROWSE" Command="{Binding BrowseFolderCommand}"
                                     Background="{StaticResource SidebarBrush}" Foreground="White" 
-                                    Height="42" Padding="20,0" FontWeight="Bold" FontSize="11" Cursor="Hand">
-                                <Button.Resources>
-                                    <Style TargetType="Border">
-                                        <Setter Property="CornerRadius" Value="0,6,6,0"/>
-                                    </Style>
-                                </Button.Resources>
-                            </Button>
+                                    Height="42" Padding="20,0" FontWeight="Bold" FontSize="11" Cursor="Hand"/>
                         </Grid>
                     </StackPanel>
 
@@ -68,37 +56,14 @@
                               BorderThickness="0" Background="White" RowHeight="55"
                               GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9" HeadersVisibility="Column">
 
-                        <DataGrid.ColumnHeaderStyle>
-                            <Style TargetType="DataGridColumnHeader">
-                                <Setter Property="Background" Value="White"/>
-                                <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}"/>
-                                <Setter Property="FontWeight" Value="SemiBold"/>
-                                <Setter Property="Padding" Value="10"/>
-                                <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                                <Setter Property="BorderBrush" Value="#E2E8F0"/>
-                                <Setter Property="Height" Value="45"/>
-                            </Style>
-                        </DataGrid.ColumnHeaderStyle>
-
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Date Created" Binding="{Binding CreatedDate, StringFormat='dd MMM yyyy - hh:mm tt'}" Width="200" Foreground="{StaticResource TextPrimaryBrush}"/>
-                            <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="*" Foreground="{StaticResource TextSecondaryBrush}"/>
-
+                            <DataGridTextColumn Header="Date Created" Binding="{Binding CreatedDate, StringFormat='dd MMM yyyy - hh:mm tt'}" Width="200"/>
+                            <DataGridTextColumn Header="File Name" Binding="{Binding FileName}" Width="*"/>
                             <DataGridTemplateColumn Header="Actions" Width="100">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,10,0">
-                                            <Button Content="Restore" Command="{Binding DataContext.RestoreCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                    CommandParameter="{Binding}" 
-                                                    Background="#3B82F6" Foreground="White" FontSize="11" FontWeight="SemiBold" 
-                                                    Padding="12,6" Margin="0" Height="30">
-                                                <Button.Resources>
-                                                    <Style TargetType="Border">
-                                                        <Setter Property="CornerRadius" Value="4"/>
-                                                    </Style>
-                                                </Button.Resources>
-                                            </Button>
-                                        </StackPanel>
+                                        <Button Content="Restore" Command="{Binding DataContext.RestoreCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                CommandParameter="{Binding}" Background="#3B82F6" Foreground="White" Padding="10,5"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
@@ -109,68 +74,30 @@
 
             <StackPanel Grid.Column="1">
 
-                <Border Background="White" CornerRadius="10" Padding="25" Margin="0,0,0,20">
-                    <Border.Effect>
-                        <DropShadowEffect Color="#10B981" BlurRadius="15" Opacity="0.1" ShadowDepth="4"/>
-                    </Border.Effect>
+                <Border Background="White" CornerRadius="10" Padding="25" Margin="0,0,0,20" BorderBrush="#E2E8F0" BorderThickness="1">
                     <StackPanel>
-                        <Grid Margin="0,0,0,15">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel>
-                                <TextBlock Text="Create Backup" FontSize="16" FontWeight="Bold" Foreground="{StaticResource SidebarBrush}"/>
-                                <TextBlock Text="Manual Snapshot" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
-                            </StackPanel>
-                            <Border Background="#DCFCE7" CornerRadius="20" Width="40" Height="40">
-                                <TextBlock Text="💾" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="18"/>
-                            </Border>
-                        </Grid>
+                        <TextBlock Text="Printer Configuration" FontSize="16" FontWeight="Bold" Foreground="{StaticResource SidebarBrush}" Margin="0,0,0,15"/>
 
-                        <TextBlock Text="Save a complete copy of your current inventory database to the selected folder." 
-                                   TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,0,20" LineHeight="20"/>
+                        <TextBlock Text="Select Receipt Printer" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,5"/>
+                        <ComboBox ItemsSource="{Binding InstalledPrinters}" SelectedItem="{Binding SelectedPrinter}" Height="40" Margin="0,0,0,15"/>
 
-                        <Button Content="+ CREATE NEW BACKUP" Command="{Binding CreateBackupCommand}" 
-                                Background="{StaticResource PrimaryBrush}" Foreground="White" 
-                                Padding="15" FontSize="13" FontWeight="Bold" Cursor="Hand">
-                            <Button.Resources>
-                                <Style TargetType="Border">
-                                    <Setter Property="CornerRadius" Value="6"/>
-                                </Style>
-                            </Button.Resources>
-                        </Button>
+                        <TextBlock Text="Number of Copies" FontSize="12" Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding CopyCount}" Height="40" VerticalContentAlignment="Center" Padding="5" Margin="0,0,0,20"/>
+
+                        <Button Content="SAVE PRINTER SETTINGS" Command="{Binding SavePrinterSettingsCommand}" 
+                                Background="{StaticResource PrimaryBrush}" Foreground="White" Padding="15" FontWeight="Bold" Cursor="Hand"/>
                     </StackPanel>
                 </Border>
 
                 <Border Background="White" CornerRadius="10" Padding="25" BorderBrush="#E2E8F0" BorderThickness="1">
                     <StackPanel>
-                        <Grid Margin="0,0,0,15">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <StackPanel>
-                                <TextBlock Text="Cloud Sync" FontSize="16" FontWeight="Bold" Foreground="{StaticResource SidebarBrush}"/>
-                                <TextBlock Text="Google Drive" FontSize="11" Foreground="{StaticResource TextSecondaryBrush}"/>
-                            </StackPanel>
-                            <Border Background="#F1F5F9" CornerRadius="20" Width="40" Height="40">
-                                <TextBlock Text="☁️" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="18"/>
-                            </Border>
-                        </Grid>
+                        <TextBlock Text="Quick Actions" FontSize="16" FontWeight="Bold" Foreground="{StaticResource SidebarBrush}" Margin="0,0,0,15"/>
 
-                        <TextBlock Text="Automatically upload your backups to Google Drive for safety." 
-                                   TextWrapping="Wrap" Foreground="{StaticResource TextSecondaryBrush}" FontSize="13" Margin="0,0,0,20" LineHeight="20"/>
+                        <Button Content="+ CREATE NEW BACKUP" Command="{Binding CreateBackupCommand}" 
+                                Background="#10B981" Foreground="White" Padding="15" FontWeight="Bold" Cursor="Hand" Margin="0,0,0,10"/>
 
-                        <Button Content="TEST CONNECTION" Command="{Binding TestCloudUploadCommand}" 
-                                Background="White" BorderBrush="#E2E8F0" BorderThickness="1" 
-                                Foreground="{StaticResource TextSecondaryBrush}" Padding="15" FontSize="12" FontWeight="SemiBold" Cursor="Hand">
-                            <Button.Resources>
-                                <Style TargetType="Border">
-                                    <Setter Property="CornerRadius" Value="6"/>
-                                </Style>
-                            </Button.Resources>
-                        </Button>
+                        <Button Content="TEST CLOUD UPLOAD" Command="{Binding TestCloudUploadCommand}" 
+                                Background="White" BorderBrush="#E2E8F0" BorderThickness="1" Foreground="#64748B" Padding="15" FontWeight="Bold" Cursor="Hand"/>
                     </StackPanel>
                 </Border>
 

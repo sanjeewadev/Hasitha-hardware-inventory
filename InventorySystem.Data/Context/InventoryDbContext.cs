@@ -15,6 +15,10 @@ namespace InventorySystem.Data.Context
         public DbSet<StockMovement> StockMovements => Set<StockMovement>();
         public DbSet<StockBatch> StockBatches => Set<StockBatch>();
 
+        // --- NEW TABLES FOR CREDIT SYSTEM ---
+        public DbSet<SalesTransaction> SalesTransactions => Set<SalesTransaction>();
+        public DbSet<CreditPaymentLog> CreditPaymentLogs => Set<CreditPaymentLog>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -36,8 +40,7 @@ namespace InventorySystem.Data.Context
                 }
             }
 
-            // 1. Seed Users (Updated to use PasswordHash)
-            // Note: '8c69...' is the SHA256 hash for "admin123"
+            // 1. Seed Users
             modelBuilder.Entity<User>().HasData(
                 new User
                 {
@@ -80,7 +83,16 @@ namespace InventorySystem.Data.Context
                 .HasForeignKey(b => b.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // 4. Precision
+            // --- 4. NEW: Credit System Configuration ---
+
+            // Link Payment Logs to the main Transaction via ReceiptId
+            modelBuilder.Entity<CreditPaymentLog>()
+                .HasOne(l => l.SalesTransaction)
+                .WithMany()
+                .HasForeignKey(l => l.ReceiptId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // 5. Precision Configuration
             modelBuilder.Entity<Product>().Property(p => p.BuyingPrice).HasPrecision(18, 2);
             modelBuilder.Entity<Product>().Property(p => p.SellingPrice).HasPrecision(18, 2);
             modelBuilder.Entity<Product>().Property(p => p.Quantity).HasPrecision(18, 3);
@@ -92,6 +104,15 @@ namespace InventorySystem.Data.Context
             modelBuilder.Entity<StockMovement>().Property(m => m.UnitCost).HasPrecision(18, 2);
             modelBuilder.Entity<StockMovement>().Property(m => m.UnitPrice).HasPrecision(18, 2);
             modelBuilder.Entity<StockMovement>().Property(m => m.Quantity).HasPrecision(18, 3);
+
+            // New Tables Precision
+            modelBuilder.Entity<SalesTransaction>().Property(t => t.TotalAmount).HasPrecision(18, 2);
+            modelBuilder.Entity<SalesTransaction>().Property(t => t.PaidAmount).HasPrecision(18, 2);
+            modelBuilder.Entity<CreditPaymentLog>().Property(l => l.AmountPaid).HasPrecision(18, 2);
+
+            // --- IGNORE CALCULATED PROPERTIES (Fixes InvalidOperationException) ---
+            modelBuilder.Entity<SalesTransaction>().Ignore(t => t.RemainingBalance);
+            modelBuilder.Entity<StockMovement>().Ignore(m => m.LineTotal);
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

@@ -7,17 +7,17 @@ namespace InventorySystem.Data.Repositories
 {
     public interface IStockRepository
     {
+        // --- NEW: The Master Transaction Method (Replaces simple SellStock loops) ---
+        Task ProcessCompleteSaleAsync(SalesTransaction transaction, List<StockMovement> movements);
+
         // Core Actions
         Task ReceiveStockAsync(StockMovement movement);
-        Task SellStockAsync(StockMovement sale);
+        Task SellStockAsync(StockMovement sale); // Kept for legacy/single item support
         Task AdjustStockAsync(StockMovement adjustment);
 
         // Data Retrieval
         Task<IEnumerable<StockBatch>> GetAllBatchesAsync();
-
-        // --- FIX VULNERABILITY 2: NEW METHOD ---
-        Task<IEnumerable<StockBatch>> GetActiveBatchesAsync(); // Only batches with Qty > 0
-
+        Task<IEnumerable<StockBatch>> GetActiveBatchesAsync();
         Task<IEnumerable<StockMovement>> GetHistoryAsync();
 
         // Batch Management

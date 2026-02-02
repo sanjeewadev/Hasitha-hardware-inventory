@@ -7,6 +7,8 @@
              Background="#F8FAFC">
 
     <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
         <Style TargetType="DataGridColumnHeader">
             <Setter Property="Background" Value="White"/>
             <Setter Property="Foreground" Value="#64748B"/>
@@ -147,7 +149,6 @@
                           HeadersVisibility="Column" RowHeight="55" VerticalGridLinesBrush="Transparent">
 
                     <DataGrid.Columns>
-
                         <DataGridTemplateColumn Header="Item" Width="*">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
@@ -170,7 +171,6 @@
                                     <Setter Property="HorizontalContentAlignment" Value="Center"/>
                                 </Style>
                             </DataGridTemplateColumn.HeaderStyle>
-
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Border Background="#F8FAFC" CornerRadius="4" BorderBrush="#E2E8F0" BorderThickness="1" 
@@ -180,12 +180,10 @@
                                                 <ColumnDefinition Width="*"/>
                                                 <ColumnDefinition Width="Auto"/>
                                             </Grid.ColumnDefinitions>
-
                                             <TextBox Grid.Column="0" Text="{Binding QuantityStr, UpdateSourceTrigger=PropertyChanged}" 
                                                      IsReadOnly="False" BorderThickness="0" Background="Transparent"
                                                      TextAlignment="Center" VerticalContentAlignment="Center" 
                                                      FontWeight="Bold" Foreground="#334155" FontSize="14"/>
-
                                             <TextBlock Grid.Column="1" Text="{Binding Unit}" 
                                                        Foreground="#94A3B8" FontSize="11" FontWeight="SemiBold" 
                                                        VerticalAlignment="Center" Margin="2,0,0,0"/>
@@ -202,12 +200,10 @@
                                     <Setter Property="HorizontalContentAlignment" Value="Right"/>
                                 </Style>
                             </DataGridTemplateColumn.HeaderStyle>
-
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Border Background="White" CornerRadius="4" BorderBrush="#E2E8F0" BorderThickness="1" 
                                             Height="32" Width="85" HorizontalAlignment="Right">
-
                                         <TextBox Text="{Binding PriceStr, UpdateSourceTrigger=PropertyChanged}" 
                                                  TextAlignment="Right" VerticalContentAlignment="Center" Padding="0,0,5,0" FontSize="13"
                                                  BorderThickness="0" Background="Transparent" 
@@ -225,7 +221,6 @@
                                     <Setter Property="HorizontalContentAlignment" Value="Right"/>
                                 </Style>
                             </DataGridTextColumn.HeaderStyle>
-
                             <DataGridTextColumn.ElementStyle>
                                 <Style TargetType="TextBlock">
                                     <Setter Property="TextAlignment" Value="Right"/>
@@ -265,15 +260,38 @@
                                            FontSize="26" FontWeight="Bold" Foreground="#0F172A" HorizontalAlignment="Right"/>
                             </Grid>
 
-                            <Button Command="{Binding CheckoutCommand}" Content="CHARGE &amp; COMPLETE"
-                                    Background="#009688" Foreground="White" FontSize="14" FontWeight="Bold"
-                                    Height="55" Cursor="Hand">
-                                <Button.Resources>
-                                    <Style TargetType="Border">
-                                        <Setter Property="CornerRadius" Value="6"/>
-                                    </Style>
-                                </Button.Resources>
-                            </Button>
+                            <UniformGrid Columns="3" Rows="1" Height="55">
+
+                                <Button Command="{Binding PayAndPrintCommand}" Content="PAY &amp; PRINT"
+                                        Background="#6366F1" Foreground="White" FontSize="13" FontWeight="Bold"
+                                        Margin="0,0,5,0" Cursor="Hand">
+                                    <Button.Resources>
+                                        <Style TargetType="Border">
+                                            <Setter Property="CornerRadius" Value="6"/>
+                                        </Style>
+                                    </Button.Resources>
+                                </Button>
+
+                                <Button Command="{Binding InitCreditCheckoutCommand}" Content="CREDIT SALE"
+                                        Background="#F59E0B" Foreground="White" FontSize="13" FontWeight="Bold"
+                                        Margin="5,0,5,0" Cursor="Hand">
+                                    <Button.Resources>
+                                        <Style TargetType="Border">
+                                            <Setter Property="CornerRadius" Value="6"/>
+                                        </Style>
+                                    </Button.Resources>
+                                </Button>
+
+                                <Button Command="{Binding CheckoutCommand}" Content="CHECKOUT"
+                                        Background="#009688" Foreground="White" FontSize="13" FontWeight="Bold"
+                                        Margin="5,0,0,0" Cursor="Hand">
+                                    <Button.Resources>
+                                        <Style TargetType="Border">
+                                            <Setter Property="CornerRadius" Value="6"/>
+                                        </Style>
+                                    </Button.Resources>
+                                </Button>
+                            </UniformGrid>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -374,6 +392,40 @@
                         </Button.Resources>
                     </Button>
                 </Grid>
+            </Border>
+        </Grid>
+
+        <Grid Grid.Column="0" Grid.ColumnSpan="2" Panel.ZIndex="1000" 
+              Background="#99000000" Visibility="{Binding IsCustomerPopupVisible, Converter={StaticResource BoolToVis}}">
+            <Border Background="White" Width="350" CornerRadius="10" Padding="25" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="20" ShadowDepth="5" Opacity="0.3" Color="Black"/>
+                </Border.Effect>
+                <StackPanel>
+                    <TextBlock Text="Credit Sale Details" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,5"/>
+                    <TextBlock Text="Enter the customer name to record this debt." FontSize="13" Foreground="#64748B" Margin="0,0,0,20"/>
+
+                    <TextBlock Text="Customer Name" FontSize="12" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,5"/>
+                    <TextBox Text="{Binding CustomerNameInput, UpdateSourceTrigger=PropertyChanged}" 
+                             Height="40" VerticalContentAlignment="Center" Padding="5" 
+                             BorderBrush="#CBD5E1" BorderThickness="1"/>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                        <Button Command="{Binding CancelCreditPopupCommand}" Content="Cancel" 
+                                Background="Transparent" Foreground="#64748B" FontWeight="SemiBold" Margin="0,0,10,0"
+                                BorderThickness="0" Cursor="Hand"/>
+
+                        <Button Command="{Binding ConfirmCreditSaleCommand}" Content="CONFIRM &amp; SAVE" 
+                                Background="#F59E0B" Foreground="White" FontWeight="Bold" Padding="15,10"
+                                Cursor="Hand">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
             </Border>
         </Grid>
 

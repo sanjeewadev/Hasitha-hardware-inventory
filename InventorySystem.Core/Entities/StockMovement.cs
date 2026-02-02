@@ -30,5 +30,7 @@ namespace InventorySystem.Core.Entities
         public int? UserId { get; set; }
 
         public bool IsVoided { get; set; } = false;
+
+        public decimal LineTotal => Quantity * UnitPrice;
     }
 }

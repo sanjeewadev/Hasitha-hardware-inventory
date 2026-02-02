@@ -197,6 +197,9 @@
         <DataTemplate DataType="{x:Type vm:TodaySalesViewModel}">
             <views:TodaySalesView />
         </DataTemplate>
+        <DataTemplate DataType="{x:Type vm:CreditManagerViewModel}">
+            <views:CreditManagerView/>
+        </DataTemplate>
         <DataTemplate DataType="{x:Type vm:UsersViewModel}">
             <views:UsersView/>
         </DataTemplate>

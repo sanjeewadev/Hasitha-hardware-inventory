@@ -1,0 +1,226 @@
+﻿<UserControl x:Class="InventorySystem.UI.Views.CreditManagerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignHeight="700" d:DesignWidth="1100"
+             Background="#F8FAFC">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid Margin="25">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="0,0,0,20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Credit Management" FontSize="24" FontWeight="Bold" Foreground="#1E293B"/>
+                    <TextBlock Text="Track unpaid bills and record payments." Foreground="#64748B" Margin="0,5,0,0"/>
+                </StackPanel>
+
+                <Border Grid.Column="1" Background="White" CornerRadius="6" BorderBrush="#E2E8F0" BorderThickness="1" 
+                        Width="300" Height="40" Padding="10,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="🔍" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#94A3B8"/>
+                        <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" 
+                                 Tag="Search by Customer or Receipt..."
+                                 BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"
+                                 FontSize="13"/>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <DataGrid Grid.Row="1" ItemsSource="{Binding UnpaidTransactions}" AutoGenerateColumns="False" 
+                      IsReadOnly="True" BorderThickness="0" Background="White"
+                      GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9"
+                      HeadersVisibility="Column" RowHeight="50">
+
+                <DataGrid.Resources>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="White"/>
+                        <Setter Property="Foreground" Value="#64748B"/>
+                        <Setter Property="FontWeight" Value="SemiBold"/>
+                        <Setter Property="Padding" Value="10"/>
+                        <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                    </Style>
+                </DataGrid.Resources>
+
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Date" Binding="{Binding TransactionDate, StringFormat='dd MMM yyyy'}" Width="120"/>
+                    <DataGridTextColumn Header="Receipt #" Binding="{Binding ReceiptId}" Width="140" Foreground="#94A3B8"/>
+
+                    <DataGridTemplateColumn Header="Customer" Width="*">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding CustomerName}" FontWeight="Bold" Foreground="#1E293B" VerticalAlignment="Center" Padding="10,0"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridTextColumn Header="Total Bill" Binding="{Binding TotalAmount, StringFormat='Rs {0:N2}'}" Width="120"/>
+                    <DataGridTextColumn Header="Already Paid" Binding="{Binding PaidAmount, StringFormat='Rs {0:N2}'}" Width="120" Foreground="#10B981"/>
+
+                    <DataGridTemplateColumn Header="Balance Due" Width="120">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding RemainingBalance, StringFormat='Rs {0:N2}'}" 
+                                           Foreground="#EF4444" FontWeight="Bold" VerticalAlignment="Center" Padding="10,0"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridTemplateColumn Width="60">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Command="{Binding DataContext.ViewDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                        CommandParameter="{Binding}"
+                                        Content="VIEW" Background="#F1F5F9" Foreground="#64748B" FontWeight="Bold" 
+                                        FontSize="10" Padding="0" BorderThickness="0" Cursor="Hand"
+                                        Height="30" Width="50" HorizontalAlignment="Center">
+                                    <Button.Resources>
+                                        <Style TargetType="Border">
+                                            <Setter Property="CornerRadius" Value="4"/>
+                                        </Style>
+                                    </Button.Resources>
+                                </Button>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
+                    <DataGridTemplateColumn Width="90">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Command="{Binding DataContext.OpenPaymentPopupCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                        CommandParameter="{Binding}"
+                                        Content="PAY" Background="#F59E0B" Foreground="White" FontWeight="Bold" 
+                                        FontSize="11" Padding="0" BorderThickness="0" Cursor="Hand"
+                                        Height="30" Width="70" HorizontalAlignment="Center">
+                                    <Button.Resources>
+                                        <Style TargetType="Border">
+                                            <Setter Property="CornerRadius" Value="4"/>
+                                        </Style>
+                                    </Button.Resources>
+                                </Button>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+
+        <Grid Background="#99000000" Visibility="{Binding IsPaymentPopupVisible, Converter={StaticResource BoolToVis}}" Panel.ZIndex="200">
+            <Border Background="White" Width="400" CornerRadius="10" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="25">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="20" Opacity="0.4"/>
+                </Border.Effect>
+
+                <StackPanel>
+                    <TextBlock Text="Record Payment" FontSize="20" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,20"/>
+                    <Grid Margin="0,0,0,15">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Customer" FontSize="12" Foreground="#64748B"/>
+                            <TextBlock Text="{Binding SelectedTransaction.CustomerName}" FontSize="16" FontWeight="SemiBold"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                            <TextBlock Text="Balance Due" FontSize="12" Foreground="#64748B" HorizontalAlignment="Right"/>
+                            <TextBlock Text="{Binding SelectedTransaction.RemainingBalance, StringFormat='Rs {0:N2}'}" 
+                                       FontSize="16" FontWeight="Bold" Foreground="#EF4444" HorizontalAlignment="Right"/>
+                        </StackPanel>
+                    </Grid>
+                    <CheckBox IsChecked="{Binding IsFullPayment}" Content="Pay Full Balance" Margin="0,0,0,10" Foreground="#1E293B"/>
+                    <TextBlock Text="Amount to Pay" FontSize="12" Foreground="#64748B" Margin="0,0,0,5"/>
+                    <TextBox Text="{Binding PaymentAmountInput, StringFormat=N2}" FontSize="16" Padding="8" BorderBrush="#E2E8F0" BorderThickness="1"/>
+                    <TextBlock Text="Note (Optional)" FontSize="12" Foreground="#64748B" Margin="0,15,0,5"/>
+                    <TextBox Text="{Binding PaymentNote}" Height="60" Padding="5" BorderBrush="#E2E8F0" BorderThickness="1" TextWrapping="Wrap"/>
+                    <Grid Margin="0,25,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Command="{Binding ClosePaymentPopupCommand}" Content="Cancel" 
+                                Background="#F1F5F9" Foreground="#64748B" FontWeight="SemiBold" Height="40" Margin="0,0,5,0" BorderThickness="0"/>
+                        <Button Grid.Column="1" Command="{Binding SubmitPaymentCommand}" Content="CONFIRM PAYMENT" 
+                                Background="#10B981" Foreground="White" FontWeight="Bold" Height="40" Margin="5,0,0,0" BorderThickness="0"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Grid Background="#99000000" Visibility="{Binding IsDetailsPopupVisible, Converter={StaticResource BoolToVis}}" Panel.ZIndex="300">
+            <Border Background="White" Width="500" MaxHeight="600" CornerRadius="10" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="25">
+                <Border.Effect>
+                    <DropShadowEffect BlurRadius="20" Opacity="0.4"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0">
+                        <TextBlock Text="Transaction Details" FontSize="20" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,5"/>
+                        <TextBlock Text="{Binding SelectedTransaction.CustomerName, StringFormat='Customer: {0}'}" Foreground="#64748B" Margin="0,0,0,15"/>
+                    </StackPanel>
+
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding SelectedSaleItems}" AutoGenerateColumns="False" 
+                              IsReadOnly="True" BorderThickness="0" Background="White"
+                              GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9"
+                              HeadersVisibility="Column" RowHeight="45">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Item" Binding="{Binding Product.Name}" Width="*"/>
+                            <DataGridTextColumn Header="Qty" Binding="{Binding Quantity}" Width="60" FontWeight="Bold"/>
+                            <DataGridTextColumn Header="Price" Binding="{Binding UnitPrice, StringFormat=N2}" Width="90"/>
+                            <DataGridTextColumn Header="Total" Binding="{Binding LineTotal, StringFormat=N2}" Width="90" FontWeight="Bold" Foreground="#0F172A"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <Grid Grid.Row="2" Margin="0,20,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0" Command="{Binding PrintReceiptCommand}" Content="🖨 PRINT RECEIPT" 
+                                Background="#6366F1" Foreground="White" FontWeight="Bold" Height="40" Margin="0,0,5,0" BorderThickness="0">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+
+                        <Button Grid.Column="1" Command="{Binding CloseDetailsCommand}" Content="CLOSE" 
+                                Background="#F1F5F9" Foreground="#64748B" FontWeight="Bold" Height="40" Margin="5,0,0,0" BorderThickness="0">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+
+    </Grid>
+</UserControl>

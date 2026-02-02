@@ -18,6 +18,64 @@ namespace InventorySystem.Data.Repositories
             _context = context;
         }
 
+        // --- NEW: MASTER TRANSACTION LOGIC (POS V2.0) ---
+        public async Task ProcessCompleteSaleAsync(SalesTransaction transaction, List<StockMovement> movements)
+        {
+            // 1. Start a Database Transaction (Safety Net)
+            // If anything fails (e.g., Internet cuts, error), NOTHING is saved.
+            using var dbTrans = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                // A. Save the Receipt Header (Money/Credit Info)
+                await _context.SalesTransactions.AddAsync(transaction);
+
+                // B. Process Every Item in the Cart
+                foreach (var move in movements)
+                {
+                    // 1. Link the item to the Receipt
+                    move.ReceiptId = transaction.ReceiptId;
+
+                    // 2. Deduct Physical Stock from the Batch
+                    // We load the batch fresh from DB to ensure numbers are correct
+                    var batch = await _context.StockBatches.FindAsync(move.StockBatchId);
+                    if (batch != null)
+                    {
+                        // Deduct from the specific batch
+                        batch.RemainingQuantity -= move.Quantity;
+
+                        // Safety check (optional): Ensure we don't go negative
+                        // if (batch.RemainingQuantity < 0) throw new Exception($"Batch #{batch.Id} has insufficient stock.");
+
+                        _context.StockBatches.Update(batch);
+                    }
+
+                    // 3. Deduct from the Main Product Total (Quick View)
+                    var product = await _context.Products.FindAsync(move.ProductId);
+                    if (product != null)
+                    {
+                        product.Quantity -= move.Quantity;
+                        _context.Products.Update(product);
+                    }
+
+                    // 4. Add the movement record log
+                    await _context.StockMovements.AddAsync(move);
+                }
+
+                // C. Save Everything to DB
+                await _context.SaveChangesAsync();
+
+                // D. Commit (Make it permanent)
+                await dbTrans.CommitAsync();
+            }
+            catch
+            {
+                // If error, Undo everything
+                await dbTrans.RollbackAsync();
+                throw; // Send error back to POS to show user
+            }
+        }
+
         // --- 1. RECEIVE STOCK ---
         public async Task ReceiveStockAsync(StockMovement movement)
         {
@@ -44,7 +102,7 @@ namespace InventorySystem.Data.Repositories
             await _context.SaveChangesAsync();
         }
 
-        // --- 2. SELL STOCK ---
+        // --- 2. SELL STOCK (Legacy / Single Item Logic) ---
         public async Task SellStockAsync(StockMovement sale)
         {
             var product = await _context.Products.FindAsync(sale.ProductId);
@@ -85,28 +143,21 @@ namespace InventorySystem.Data.Repositories
             if (product.Quantity < 0) product.Quantity = 0;
             _context.Products.Update(product);
 
-            // D. FINANCIAL LOGIC (The Fix)
+            // D. FINANCIAL LOGIC
+            adjustment.UnitPrice = 0; // Revenue is 0 for adjustments
 
-            // Always set Revenue to 0 (Adjustments are never Sales)
-            adjustment.UnitPrice = 0;
-
-            // Conditional Cost Logic
             if (adjustment.Reason == AdjustmentReason.Correction)
             {
                 // Correction: No financial impact.
-                // We assume the items essentially "never existed" or we simply want to fix the count without taking a loss.
                 adjustment.UnitCost = 0;
             }
             else
             {
                 // Lost / Damaged / Theft: Real financial loss.
-                // We record the cost so Gross Profit (Revenue - Cost) decreases.
                 adjustment.UnitCost = batch.CostPrice;
             }
 
-            // Ensure Type is Adjustment
             adjustment.Type = StockMovementType.Adjustment;
-
             _context.StockMovements.Add(adjustment);
 
             await _context.SaveChangesAsync();
@@ -137,7 +188,6 @@ namespace InventorySystem.Data.Repositories
         public async Task<IEnumerable<StockMovement>> GetSalesByDateRangeAsync(DateTime start, DateTime end) =>
             await _context.StockMovements
                 .Include(m => m.Product)
-                // Filter: Include Out (Sales) AND Adjustments so Dashboard calculates true profit
                 .Where(m => (m.Type == StockMovementType.Out || m.Type == StockMovementType.Adjustment) && m.Date >= start && m.Date <= end)
                 .OrderByDescending(m => m.Date)
                 .ToListAsync();
