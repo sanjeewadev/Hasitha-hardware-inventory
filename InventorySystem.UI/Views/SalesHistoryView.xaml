@@ -77,11 +77,11 @@
 
         <DataGrid Grid.Row="2" ItemsSource="{Binding SalesHistory}" AutoGenerateColumns="False" IsReadOnly="True"
                   Background="White" BorderThickness="0" RowHeight="55"
-                  GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9" HeadersVisibility="Column">
+                  GridLinesVisibility="None" HorizontalGridLinesBrush="Transparent" HeadersVisibility="Column">
 
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat='dd MMM yyyy HH:mm'}" Width="160" Foreground="#64748B"/>
-                <DataGridTextColumn Header="Ref #" Binding="{Binding ReferenceId}" Width="120" Foreground="#94A3B8"/>
+                <!--<DataGridTextColumn Header="Ref #" Binding="{Binding ReferenceId}" Width="120" Foreground="#94A3B8"/>-->
 
                 <DataGridTemplateColumn Header="Sale Summary" Width="*">
                     <DataGridTemplateColumn.CellTemplate>
@@ -117,7 +117,7 @@
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
 
-                <DataGridTemplateColumn Width="70">
+                <DataGridTemplateColumn Width="140">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Button Command="{Binding DataContext.ViewDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
@@ -151,7 +151,7 @@
                     </StackPanel>
 
                     <DataGrid Grid.Row="1" ItemsSource="{Binding SelectedSale.Items}" AutoGenerateColumns="False" IsReadOnly="True"
-                              BorderThickness="0" Background="White" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9"
+                              BorderThickness="0" Background="White" GridLinesVisibility="None" HorizontalGridLinesBrush="#F1F5F9"
                               HeadersVisibility="Column" Margin="0,0,0,20" RowHeight="45">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Item" Binding="{Binding ProductName}" Width="*"/>

@@ -186,7 +186,10 @@ namespace InventorySystem.UI.ViewModels
                     DiscountCode = batch.DiscountCode,
                     Quantity = 1
                 };
+
+                // Triggers the PriceStr sync automatically
                 item.UnitPrice = item.StandardPrice;
+
                 Cart.Add(item);
             }
 
@@ -254,7 +257,7 @@ namespace InventorySystem.UI.ViewModels
         }
     }
 
-    // --- UPDATED CART ITEM (Fixes Calculation Lag) ---
+    // --- UPDATED CART ITEM (Live Typing Fixes) ---
     public class CartItem : ViewModelBase
     {
         private readonly Action _recalcCallback;
@@ -283,7 +286,7 @@ namespace InventorySystem.UI.ViewModels
         public ICommand IncreaseQuantityCommand { get; }
         public ICommand DecreaseQuantityCommand { get; }
 
-        // --- NEW: String property for Live Typing ---
+        // --- Quantity Logic (Live Typing) ---
         private string _quantityStr = "";
         public string QuantityStr
         {
@@ -295,22 +298,19 @@ namespace InventorySystem.UI.ViewModels
                     _quantityStr = value;
                     OnPropertyChanged();
 
-                    // LIVE PARSING
                     if (decimal.TryParse(value, out decimal result))
                     {
-                        if (result > StockLimit) result = StockLimit; // Enforce Limit
+                        if (result > StockLimit) result = StockLimit;
                         if (result < 0) result = 0;
 
-                        // Only update internal math if valid
                         _quantity = result;
-                        OnPropertyChanged(nameof(Total));    // Update Row Total
-                        _recalcCallback?.Invoke();           // Update Grand Total
+                        OnPropertyChanged(nameof(Total));
+                        _recalcCallback?.Invoke();
                     }
                 }
             }
         }
 
-        // Internal Logic uses this
         private decimal _quantity;
         public decimal Quantity
         {
@@ -318,11 +318,40 @@ namespace InventorySystem.UI.ViewModels
             set
             {
                 _quantity = value;
-                _quantityStr = value.ToString("0.###"); // Sync UI
+                _quantityStr = value.ToString("0.###");
                 OnPropertyChanged();
-                OnPropertyChanged(nameof(QuantityStr)); // Notify UI
+                OnPropertyChanged(nameof(QuantityStr));
                 OnPropertyChanged(nameof(Total));
                 _recalcCallback?.Invoke();
+            }
+        }
+
+        // --- NEW: Price Logic (Live Typing) ---
+        private string _priceStr = "";
+        public string PriceStr
+        {
+            get => _priceStr;
+            set
+            {
+                if (_priceStr != value)
+                {
+                    _priceStr = value;
+                    OnPropertyChanged();
+
+                    // LIVE PARSING: Convert text to decimal immediately
+                    if (decimal.TryParse(value, out decimal result))
+                    {
+                        if (result < 0) result = 0;
+
+                        // Update internal math without re-formatting the string yet
+                        _unitPrice = result;
+
+                        // Trigger updates
+                        OnPropertyChanged(nameof(Total));
+                        CheckPriceSafety();
+                        _recalcCallback?.Invoke();
+                    }
+                }
             }
         }
 
@@ -333,8 +362,14 @@ namespace InventorySystem.UI.ViewModels
             set
             {
                 _unitPrice = value;
+
+                // Sync UI String (formatted nicely with 2 decimal places)
+                _priceStr = value.ToString("N2");
+
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(PriceStr)); // Update the text box
                 OnPropertyChanged(nameof(Total));
+
                 CheckPriceSafety();
                 _recalcCallback?.Invoke();
             }

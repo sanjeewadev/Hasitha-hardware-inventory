@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:vm="clr-namespace:InventorySystem.UI.ViewModels"
         mc:Ignorable="d"
+        Icon="/app.ico"
         Title="H &amp; J Inventory" Height="768" Width="1366"
         WindowStartupLocation="CenterScreen" 
         WindowState="Maximized"
