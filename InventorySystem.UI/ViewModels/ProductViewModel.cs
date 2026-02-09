@@ -2,6 +2,7 @@
 using InventorySystem.Data.Repositories;
 using InventorySystem.UI.Commands;
 using InventorySystem.UI.Views;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -47,7 +48,7 @@ namespace InventorySystem.UI.ViewModels
             {
                 _viewingProduct = value;
                 OnPropertyChanged();
-                OnPropertyChanged(nameof(CurrentUnit)); // Notify unit change
+                OnPropertyChanged(nameof(CurrentUnit));
             }
         }
 
@@ -138,12 +139,21 @@ namespace InventorySystem.UI.ViewModels
             IsDetailVisible = true;
         }
 
+        // --- UPDATED: 7-Day Retention Logic ---
         private async Task LoadBatchesForViewingProduct()
         {
             if (ViewingProduct == null) return;
 
             var allBatches = await _stockRepo.GetAllBatchesAsync();
-            var specificBatches = allBatches.Where(b => b.ProductId == ViewingProduct.Id).OrderByDescending(b => b.ReceivedDate).ToList();
+
+            // LOGIC: Keep if Quantity > 0 OR if created within last 7 days
+            var cutoffDate = DateTime.Now.AddDays(-7);
+
+            var specificBatches = allBatches
+                .Where(b => b.ProductId == ViewingProduct.Id)
+                .Where(b => b.RemainingQuantity > 0 || b.ReceivedDate >= cutoffDate)
+                .OrderByDescending(b => b.ReceivedDate)
+                .ToList();
 
             ProductBatches.Clear();
             foreach (var b in specificBatches) ProductBatches.Add(b);

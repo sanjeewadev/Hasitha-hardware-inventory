@@ -113,6 +113,7 @@ namespace InventorySystem.Data.Context
             // --- IGNORE CALCULATED PROPERTIES (Fixes InvalidOperationException) ---
             modelBuilder.Entity<SalesTransaction>().Ignore(t => t.RemainingBalance);
             modelBuilder.Entity<StockMovement>().Ignore(m => m.LineTotal);
+            modelBuilder.Entity<StockBatch>().Ignore(b => b.MinSellingPrice);
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

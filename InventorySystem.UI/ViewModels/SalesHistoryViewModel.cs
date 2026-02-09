@@ -1,5 +1,6 @@
 ﻿using InventorySystem.Core.Entities;
 using InventorySystem.Data.Repositories;
+using InventorySystem.Infrastructure.Services; // For PrintService
 using InventorySystem.UI.Commands;
 using System;
 using System.Collections.Generic;
@@ -38,6 +39,7 @@ namespace InventorySystem.UI.ViewModels
         public ICommand ResetFilterCommand { get; }
         public ICommand ViewDetailsCommand { get; }
         public ICommand CloseDetailsCommand { get; }
+        public ICommand PrintReceiptCommand { get; } // <--- NEW
 
         public SalesHistoryViewModel(IStockRepository stockRepo)
         {
@@ -55,8 +57,37 @@ namespace InventorySystem.UI.ViewModels
             ViewDetailsCommand = new RelayCommand<SalesHistoryItem>(item => SelectedSale = item);
             CloseDetailsCommand = new RelayCommand(() => SelectedSale = null);
 
+            // New Print Command
+            PrintReceiptCommand = new RelayCommand(PrintCurrentReceipt);
+
             // Load initial data
             _ = ExecuteSearch();
+        }
+
+        private void PrintCurrentReceipt()
+        {
+            if (SelectedSale == null) return;
+
+            try
+            {
+                string printerName = Properties.Settings.Default.PrinterName;
+
+                string receiptText = $"HISTORICAL RECEIPT\nDate: {SelectedSale.Date}\nRef: {SelectedSale.ReferenceId}\n----------------\n";
+                foreach (var item in SelectedSale.Items)
+                {
+                    receiptText += $"{item.ProductName} x{item.Quantity}  {item.Total:N2}\n";
+                }
+                receiptText += $"----------------\nTotal: {SelectedSale.TotalAmount:N2}\n\n(Reprinted Copy)";
+
+                var printService = new PrintService();
+                printService.PrintReceipt(SelectedSale.ReferenceId, receiptText, printerName, 1);
+
+                MessageBox.Show("Sent to printer.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Print Failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private async Task ExecuteSearch()
@@ -89,7 +120,7 @@ namespace InventorySystem.UI.ViewModels
                             ProductName = x.Product?.Name ?? "Unknown",
                             Barcode = x.Product?.Barcode ?? "-",
                             Quantity = x.Quantity,
-                            Unit = x.Product?.Unit ?? "", // Capture Unit
+                            Unit = x.Product?.Unit ?? "",
                             UnitPrice = x.UnitPrice
                         }).ToList()
                     })
@@ -106,13 +137,13 @@ namespace InventorySystem.UI.ViewModels
         }
     }
 
-    // --- DTO CLASSES ---
+    // --- (Keep DTOs same as before) ---
     public class SalesHistoryItem
     {
         public string ReferenceId { get; set; } = "";
         public DateTime Date { get; set; }
         public bool IsVoided { get; set; }
-        public decimal TotalItems { get; set; } // Decimal
+        public decimal TotalItems { get; set; }
         public decimal TotalAmount { get; set; }
         public List<SaleDetailItem> Items { get; set; } = new();
 
@@ -122,7 +153,6 @@ namespace InventorySystem.UI.ViewModels
             {
                 if (IsVoided) return "[VOIDED / REFUNDED]";
                 if (Items.Count == 1) return Items[0].ProductName;
-                // Format: "5.5 Items"
                 return $"{TotalItems:0.###} Items (Combined)";
             }
         }
@@ -133,7 +163,7 @@ namespace InventorySystem.UI.ViewModels
         public string ProductName { get; set; } = "";
         public string Barcode { get; set; } = "";
         public decimal Quantity { get; set; }
-        public string Unit { get; set; } = ""; // Unit Property
+        public string Unit { get; set; } = "";
         public decimal UnitPrice { get; set; }
         public decimal Total => Quantity * UnitPrice;
     }

@@ -2,6 +2,7 @@
 using InventorySystem.Data.Repositories;
 using InventorySystem.UI.Commands;
 using InventorySystem.UI.Views;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -128,7 +129,7 @@ namespace InventorySystem.UI.ViewModels
             LoadTree();
         }
 
-        // ... [SMART DELETE LOGIC] ... (Same as ProductViewModel)
+        // ... [SMART DELETE LOGIC] ...
         private async Task AttemptDeleteProduct(Product p)
         {
             if (p == null) return;
@@ -154,7 +155,7 @@ namespace InventorySystem.UI.ViewModels
             }
         }
 
-        // ... [CATEGORY LOGIC] ... (Same as before)
+        // ... [CATEGORY LOGIC] ...
         private async Task DeleteCategoryAsync()
         {
             if (SelectedCategory == null) return;
@@ -219,11 +220,20 @@ namespace InventorySystem.UI.ViewModels
             IsDetailVisible = true;
         }
 
+        // --- UPDATED: 7-Day Retention Logic ---
         private async Task LoadBatchesForViewingProduct()
         {
             if (ViewingProduct == null) return;
             var allBatches = await _stockRepo.GetAllBatchesAsync();
-            var specificBatches = allBatches.Where(b => b.ProductId == ViewingProduct.Id).OrderByDescending(b => b.ReceivedDate).ToList();
+
+            // Logic: Keep if Quantity > 0 OR newer than 7 days
+            var cutoffDate = DateTime.Now.AddDays(-7);
+
+            var specificBatches = allBatches
+                .Where(b => b.ProductId == ViewingProduct.Id)
+                .Where(b => b.RemainingQuantity > 0 || b.ReceivedDate >= cutoffDate)
+                .OrderByDescending(b => b.ReceivedDate)
+                .ToList();
 
             ProductBatches.Clear();
             foreach (var b in specificBatches) ProductBatches.Add(b);

@@ -12,12 +12,25 @@ namespace InventorySystem.UI.Views
             InitializeComponent();
         }
 
-        // This handles the Single Click Selection on the TreeView
+        // --- THIS IS THE CRITICAL LOGIC ---
+        // This method runs whenever you click a folder in the TreeView.
         private void TreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
+            // 1. Get the ViewModel connected to this page
             if (DataContext is InventoryViewModel vm)
             {
-                vm.SelectedCategory = e.NewValue as Category;
+                // 2. Check if the clicked item is actually a Category
+                if (e.NewValue is Category selectedCategory)
+                {
+                    // 3. Tell the ViewModel: "The user selected this category!"
+                    // This triggers the product list to reload.
+                    vm.SelectedCategory = selectedCategory;
+                }
+                else
+                {
+                    // If selection is cleared or invalid
+                    vm.SelectedCategory = null;
+                }
             }
         }
     }

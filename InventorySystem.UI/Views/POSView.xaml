@@ -193,7 +193,7 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-                        <DataGridTemplateColumn Width="100">
+                        <DataGridTemplateColumn Width="140">
                             <DataGridTemplateColumn.HeaderStyle>
                                 <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
                                     <Setter Property="Content" Value="Price"/>
@@ -202,18 +202,32 @@
                             </DataGridTemplateColumn.HeaderStyle>
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <Border Background="White" CornerRadius="4" BorderBrush="#E2E8F0" BorderThickness="1" 
-                                            Height="32" Width="85" HorizontalAlignment="Right">
-                                        <TextBox Text="{Binding PriceStr, UpdateSourceTrigger=PropertyChanged}" 
-                                                 TextAlignment="Right" VerticalContentAlignment="Center" Padding="0,0,5,0" FontSize="13"
-                                                 BorderThickness="0" Background="Transparent" 
-                                                 Foreground="{Binding PriceTextColor}" FontWeight="Bold"/>
-                                    </Border>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                        <Button Content="FD" Command="{Binding ApplyMaxDiscountCommand}" 
+                                                Background="#FFF7ED" Foreground="#F97316" FontSize="10" FontWeight="Bold"
+                                                BorderThickness="1" BorderBrush="#FFEDD5"
+                                                Width="25" Height="25" Margin="0,0,8,0" Cursor="Hand"
+                                                ToolTip="Apply Full Discount">
+                                            <Button.Resources>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="CornerRadius" Value="4"/>
+                                                </Style>
+                                            </Button.Resources>
+                                        </Button>
+
+                                        <Border Background="White" CornerRadius="4" BorderBrush="#E2E8F0" BorderThickness="1" 
+                                                Height="32" Width="85">
+                                            <TextBox Text="{Binding PriceStr, UpdateSourceTrigger=PropertyChanged}" 
+                                                     TextAlignment="Right" VerticalContentAlignment="Center" Padding="0,0,5,0" FontSize="13"
+                                                     BorderThickness="0" Background="Transparent" 
+                                                     Foreground="{Binding PriceTextColor}" FontWeight="Bold"/>
+                                        </Border>
+                                    </StackPanel>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-                        <DataGridTextColumn Binding="{Binding Total, StringFormat=N2}" Width="100" IsReadOnly="True" 
+                        <DataGridTextColumn Binding="{Binding Total, StringFormat=N2}" Width="90" IsReadOnly="True" 
                                             FontWeight="Bold" Foreground="#334155" FontSize="13">
                             <DataGridTextColumn.HeaderStyle>
                                 <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
@@ -230,7 +244,7 @@
                             </DataGridTextColumn.ElementStyle>
                         </DataGridTextColumn>
 
-                        <DataGridTemplateColumn Width="45">
+                        <DataGridTemplateColumn Width="40">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <Button Command="{Binding DataContext.RemoveFromCartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
@@ -273,7 +287,7 @@
                                 </Button>
 
                                 <Button Command="{Binding InitCreditCheckoutCommand}" Content="CREDIT SALE"
-                                        Background="#F59E0B" Foreground="White" FontSize="13" FontWeight="Bold"
+                                        Background="#EF4444" Foreground="White" FontSize="13" FontWeight="Bold"
                                         Margin="5,0,5,0" Cursor="Hand">
                                     <Button.Resources>
                                         <Style TargetType="Border">
@@ -397,35 +411,45 @@
 
         <Grid Grid.Column="0" Grid.ColumnSpan="2" Panel.ZIndex="1000" 
               Background="#99000000" Visibility="{Binding IsCustomerPopupVisible, Converter={StaticResource BoolToVis}}">
-            <Border Background="White" Width="350" CornerRadius="10" Padding="25" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <Border Background="White" Width="350" CornerRadius="12" Padding="0" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="20" ShadowDepth="5" Opacity="0.3" Color="Black"/>
                 </Border.Effect>
-                <StackPanel>
-                    <TextBlock Text="Credit Sale Details" FontSize="18" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,5"/>
-                    <TextBlock Text="Enter the customer name to record this debt." FontSize="13" Foreground="#64748B" Margin="0,0,0,20"/>
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
 
-                    <TextBlock Text="Customer Name" FontSize="12" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding CustomerNameInput, UpdateSourceTrigger=PropertyChanged}" 
-                             Height="40" VerticalContentAlignment="Center" Padding="5" 
-                             BorderBrush="#CBD5E1" BorderThickness="1"/>
+                    <Border Grid.Row="0" Background="{Binding PopupHeaderColor}" CornerRadius="12,12,0,0" Padding="25,20">
+                        <TextBlock Text="{Binding PopupTitleText}" FontSize="18" FontWeight="Bold" Foreground="White"/>
+                    </Border>
 
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
-                        <Button Command="{Binding CancelCreditPopupCommand}" Content="Cancel" 
-                                Background="Transparent" Foreground="#64748B" FontWeight="SemiBold" Margin="0,0,10,0"
-                                BorderThickness="0" Cursor="Hand"/>
+                    <StackPanel Grid.Row="1" Margin="25">
+                        <TextBlock Text="Enter the customer name to record this transaction." FontSize="13" Foreground="#64748B" Margin="0,0,0,20"/>
 
-                        <Button Command="{Binding ConfirmCreditSaleCommand}" Content="CONFIRM &amp; SAVE" 
-                                Background="#F59E0B" Foreground="White" FontWeight="Bold" Padding="15,10"
-                                Cursor="Hand">
-                            <Button.Resources>
-                                <Style TargetType="Border">
-                                    <Setter Property="CornerRadius" Value="6"/>
-                                </Style>
-                            </Button.Resources>
-                        </Button>
+                        <TextBlock Text="Customer Name" FontSize="12" FontWeight="SemiBold" Foreground="#475569" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding CustomerNameInput, UpdateSourceTrigger=PropertyChanged}" 
+                                 Height="40" VerticalContentAlignment="Center" Padding="5" 
+                                 BorderBrush="#CBD5E1" BorderThickness="1"/>
+
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                            <Button Command="{Binding CancelCreditPopupCommand}" Content="Cancel" 
+                                    Background="Transparent" Foreground="#64748B" FontWeight="SemiBold" Margin="0,0,10,0"
+                                    BorderThickness="0" Cursor="Hand"/>
+
+                            <Button Command="{Binding ConfirmCreditSaleCommand}" Content="CONFIRM &amp; SAVE" 
+                                    Background="{Binding PopupHeaderColor}" Foreground="White" FontWeight="Bold" Padding="15,10"
+                                    Cursor="Hand">
+                                <Button.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="6"/>
+                                    </Style>
+                                </Button.Resources>
+                            </Button>
+                        </StackPanel>
                     </StackPanel>
-                </StackPanel>
+                </Grid>
             </Border>
         </Grid>
 

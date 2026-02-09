@@ -5,37 +5,6 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" d:DesignHeight="700" d:DesignWidth="1000"
              Background="Transparent">
-    <UserControl.Resources>
-        <Style TargetType="DataGridColumnHeader">
-            <Setter Property="Background" Value="White"/>
-            <Setter Property="Foreground" Value="#64748B"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Padding" Value="10"/>
-            <Setter Property="BorderThickness" Value="0,0,0,1"/>
-            <Setter Property="BorderBrush" Value="#E2E8F0"/>
-            <Setter Property="Height" Value="45"/>
-        </Style>
-
-        <Style TargetType="DataGridCell">
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="DataGridCell">
-                        <Border BorderThickness="0" Background="{TemplateBinding Background}" Padding="10,0">
-                            <ContentPresenter VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsSelected" Value="True">
-                    <Setter Property="Background" Value="Transparent"/>
-                    <Setter Property="Foreground" Value="Black"/>
-                </Trigger>
-            </Style.Triggers>
-        </Style>
-    </UserControl.Resources>
 
     <Grid Margin="15">
         <Grid.RowDefinitions>
@@ -48,6 +17,7 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
+
             <StackPanel>
                 <TextBlock Text="Today's Live Transactions" FontSize="26" FontWeight="Bold" Foreground="#1E293B"/>
                 <TextBlock Text="Manage sales made during the current shift." Foreground="#94A3B8" Margin="0,5,0,0"/>
@@ -56,7 +26,7 @@
             <Button Grid.Column="1" Command="{Binding VoidLastSaleCommand}" 
                     Background="#FEF2F2" BorderBrush="#FECACA" BorderThickness="1" Padding="15,0" Height="40" Cursor="Hand">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="↩" Foreground="#EF4444" FontSize="16" Margin="0,0,8,0" FontWeight="Bold"/>
+                    <TextBlock Text="↩" Foreground="#EF4444" FontSize="16" Margin="0,0,8,0" FontWeight="Bold" VerticalAlignment="Center"/>
                     <TextBlock Text="UNDO LAST SALE" Foreground="#EF4444" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
                 </StackPanel>
                 <Button.Resources>
@@ -71,59 +41,36 @@
                   IsReadOnly="True" Background="White" BorderThickness="0" RowHeight="50"
                   GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9">
 
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Setter Property="Cursor" Value="Hand"/>
+                    <Style.Triggers>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter Property="Background" Value="#F1F5F9"/>
+                            <Setter Property="BorderBrush" Value="Transparent"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="#F8FAFC"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
+
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Time" Binding="{Binding Date, StringFormat='hh:mm tt'}" Width="100" Foreground="#64748B"/>
-
-                <DataGridTextColumn Binding="{Binding ReferenceId}" Width="120" Foreground="#94A3B8">
-                    <DataGridTextColumn.HeaderStyle>
-                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                            <Setter Property="Content" Value="Ref #"/>
-                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                        </Style>
-                    </DataGridTextColumn.HeaderStyle>
-                    <DataGridTextColumn.ElementStyle>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="TextAlignment" Value="Center"/>
-                            <Setter Property="VerticalAlignment" Value="Center"/>
-                        </Style>
-                    </DataGridTextColumn.ElementStyle>
-                </DataGridTextColumn>
-
+                <DataGridTextColumn Binding="{Binding ReferenceId}" Width="120" Foreground="#94A3B8"/>
                 <DataGridTextColumn Header="Sale Summary" Binding="{Binding SummaryText}" Width="*" FontWeight="SemiBold" Foreground="#334155"/>
 
-                <DataGridTemplateColumn Width="90">
-                    <DataGridTemplateColumn.HeaderStyle>
-                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                            <Setter Property="Content" Value="Total Qty"/>
-                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                        </Style>
-                    </DataGridTemplateColumn.HeaderStyle>
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <Border Background="#F1F5F9" CornerRadius="4" Padding="8,4" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                <TextBlock Text="{Binding TotalItems}" FontWeight="Bold" Foreground="#64748B"/>
-                            </Border>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-
                 <DataGridTextColumn Binding="{Binding TotalAmount, StringFormat='Rs {0:N2}'}" Width="160" FontWeight="Bold" Foreground="#009688">
-                    <DataGridTextColumn.HeaderStyle>
-                        <Style TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
-                            <Setter Property="Content" Value="Amount"/>
-                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                        </Style>
-                    </DataGridTextColumn.HeaderStyle>
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="TextAlignment" Value="Right"/>
-                            <Setter Property="VerticalAlignment" Value="Center"/>
                             <Setter Property="Padding" Value="0,0,15,0"/>
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
 
-                <DataGridTemplateColumn Width="100">
+                <DataGridTemplateColumn Width="80">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Button Command="{Binding DataContext.ViewDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
@@ -139,6 +86,7 @@
 
         <Grid Grid.Row="0" Grid.RowSpan="2" Background="#99000000" Panel.ZIndex="100"
               Visibility="{Binding IsDetailsVisible, Converter={StaticResource BoolToVis}}">
+
             <Border Background="White" Width="500" MaxHeight="600" CornerRadius="10" Padding="30" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <Grid>
                     <Grid.RowDefinitions>
@@ -156,29 +104,14 @@
                               BorderThickness="0" Background="White" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9"
                               HeadersVisibility="Column" Margin="0,0,0,20" RowHeight="45">
 
-                        <DataGrid.ColumnHeaderStyle>
-                            <Style TargetType="DataGridColumnHeader">
-                                <Setter Property="Background" Value="#F8FAFC"/>
-                                <Setter Property="Foreground" Value="#64748B"/>
-                                <Setter Property="FontWeight" Value="SemiBold"/>
-                                <Setter Property="Padding" Value="10,5"/>
-                                <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                                <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="IsHitTestVisible" Value="False"/>
                             </Style>
-                        </DataGrid.ColumnHeaderStyle>
+                        </DataGrid.RowStyle>
 
                         <DataGrid.Columns>
-                            <DataGridTemplateColumn Header="Item" Width="*">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <StackPanel VerticalAlignment="Center" Margin="5,0,0,0">
-                                            <TextBlock Text="{Binding ProductName}" FontWeight="Medium" Foreground="#334155"/>
-                                            <TextBlock Text="{Binding Barcode}" FontSize="10" Foreground="#94A3B8"/>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
-
+                            <DataGridTextColumn Header="Item" Binding="{Binding ProductName}" Width="*"/>
                             <DataGridTemplateColumn Header="Qty" Width="80">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
@@ -189,37 +122,37 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-
-                            <DataGridTextColumn Header="Price" Binding="{Binding UnitPrice, StringFormat=N2}" Width="90">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="HorizontalAlignment" Value="Right"/>
-                                        <Setter Property="VerticalAlignment" Value="Center"/>
-                                        <Setter Property="Padding" Value="0,0,5,0"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
-
-                            <DataGridTextColumn Header="Total" Binding="{Binding Total, StringFormat=N2}" Width="90" FontWeight="Bold">
-                                <DataGridTextColumn.ElementStyle>
-                                    <Style TargetType="TextBlock">
-                                        <Setter Property="HorizontalAlignment" Value="Right"/>
-                                        <Setter Property="VerticalAlignment" Value="Center"/>
-                                        <Setter Property="Padding" Value="0,0,5,0"/>
-                                    </Style>
-                                </DataGridTextColumn.ElementStyle>
-                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="Price" Binding="{Binding UnitPrice, StringFormat=N2}" Width="90"/>
+                            <DataGridTextColumn Header="Total" Binding="{Binding Total, StringFormat=N2}" Width="90" FontWeight="Bold"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
-                    <Button Grid.Row="2" Content="Close" Command="{Binding CloseDetailsCommand}" 
-                            Background="#F1F5F9" Foreground="#64748B" FontWeight="SemiBold" Padding="10" Margin="0,10,0,0">
-                        <Button.Resources>
-                            <Style TargetType="Border">
-                                <Setter Property="CornerRadius" Value="6"/>
-                            </Style>
-                        </Button.Resources>
-                    </Button>
+                    <Grid Grid.Row="2" Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button Grid.Column="0" Content="🖨 PRINT RECEIPT" Command="{Binding PrintReceiptCommand}" 
+                                Background="#009688" Foreground="White" FontWeight="Bold" Height="40" 
+                                HorizontalAlignment="Left" Padding="15,0" Cursor="Hand" BorderThickness="0">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+
+                        <Button Grid.Column="1" Content="Close" Command="{Binding CloseDetailsCommand}" 
+                                Background="#F1F5F9" Foreground="#64748B" FontWeight="SemiBold" Height="40" 
+                                Padding="20,0" Cursor="Hand" BorderThickness="0">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+                    </Grid>
                 </Grid>
             </Border>
         </Grid>
