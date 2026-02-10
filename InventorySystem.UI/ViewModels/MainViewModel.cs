@@ -14,12 +14,12 @@ namespace InventorySystem.UI.ViewModels
             set { _currentView = value; OnPropertyChanged(); }
         }
 
-        // --- 1. Session Data for UI (Header Info) ---
+        // --- Session Data ---
         public string CurrentUserName => SessionManager.Instance.Username;
         public string CurrentUserRole => SessionManager.Instance.UserRoleDisplay;
         public string CurrentUserInitial => !string.IsNullOrEmpty(CurrentUserName) ? CurrentUserName.Substring(0, 1).ToUpper() : "?";
 
-        // --- 2. The Gatekeeper Logic (Sidebar Visibility) ---
+        // --- Gatekeeper Logic ---
         public Visibility AdminVisibility => SessionManager.Instance.IsAdmin ? Visibility.Visible : Visibility.Collapsed;
 
         // --- NAVIGATION COMMANDS ---
@@ -32,11 +32,14 @@ namespace InventorySystem.UI.ViewModels
         public RelayCommand NavigateToTodaySalesCommand { get; }
         public RelayCommand NavigateToSettingsCommand { get; }
         public RelayCommand NavigateToUsersCommand { get; }
-        public RelayCommand NavigateToCreditsCommand { get; } // <--- 1. NEW COMMAND
+        public RelayCommand NavigateToCreditsCommand { get; }
+
+        // --- NEW COMMANDS ---
+        public RelayCommand NavigateToSuppliersCommand { get; }
+        public RelayCommand NavigateToStockInCommand { get; }
 
         public MainViewModel()
         {
-            // --- 3. Listen for Login/Logout ---
             SessionManager.Instance.PropertyChanged += (s, e) =>
             {
                 if (e.PropertyName == nameof(SessionManager.CurrentUser))
@@ -48,49 +51,51 @@ namespace InventorySystem.UI.ViewModels
                 }
             };
 
-            // Create the shared Database Context
             var db = DatabaseService.CreateDbContext();
 
-            // Create Services
+            // Repositories
             var userRepo = new UserRepository(db);
+            var productRepo = new ProductRepository(db);
+            var categoryRepo = new CategoryRepository(db);
+            var stockRepo = new StockRepository(db);
             var authService = new AuthenticationService(userRepo);
-            var creditService = new CreditService(db); // <--- 2. NEW SERVICE
+            var creditService = new CreditService(db);
 
-            // --- Initialize Commands ---
+            // --- Commands ---
 
             NavigateToProductsCommand = new RelayCommand(() =>
             {
-                CurrentView = new ProductViewModel(new ProductRepository(db), new CategoryRepository(db), new StockRepository(db));
+                CurrentView = new ProductViewModel(productRepo, categoryRepo, stockRepo);
             });
 
             NavigateToInventoryCommand = new RelayCommand(() =>
             {
-                CurrentView = new InventoryViewModel(new ProductRepository(db), new CategoryRepository(db), new StockRepository(db));
+                CurrentView = new InventoryViewModel(productRepo, categoryRepo, stockRepo);
             });
 
             NavigateToStockCommand = new RelayCommand(() =>
             {
-                CurrentView = new StockViewModel(new ProductRepository(db), new CategoryRepository(db), new StockRepository(db));
+                CurrentView = new StockViewModel(productRepo, categoryRepo, stockRepo);
             });
 
             NavigateToPOSCommand = new RelayCommand(() =>
             {
-                CurrentView = new POSViewModel(new ProductRepository(db), new StockRepository(db));
+                CurrentView = new POSViewModel(productRepo, stockRepo);
             });
 
             NavigateToDashboardCommand = new RelayCommand(() =>
             {
-                CurrentView = new DashboardViewModel(new StockRepository(db), new ProductRepository(db));
+                CurrentView = new DashboardViewModel(stockRepo, productRepo);
             });
 
             NavigateToHistoryCommand = new RelayCommand(() =>
             {
-                CurrentView = new SalesHistoryViewModel(new StockRepository(db));
+                CurrentView = new SalesHistoryViewModel(stockRepo);
             });
 
             NavigateToTodaySalesCommand = new RelayCommand(() =>
             {
-                CurrentView = new TodaySalesViewModel(new StockRepository(db));
+                CurrentView = new TodaySalesViewModel(stockRepo);
             });
 
             NavigateToSettingsCommand = new RelayCommand(() =>
@@ -103,13 +108,25 @@ namespace InventorySystem.UI.ViewModels
                 CurrentView = new UsersViewModel(userRepo, authService);
             });
 
-            // --- 3. NEW: Navigate to Credit Manager ---
             NavigateToCreditsCommand = new RelayCommand(() =>
             {
                 CurrentView = new CreditManagerViewModel(creditService);
             });
 
-            // Default Startup View
+            // --- NEW NAVIGATION LOGIC ---
+            NavigateToSuppliersCommand = new RelayCommand(() =>
+            {
+                // Supplier View handles its own repository inside the VM for now
+                CurrentView = new SupplierViewModel();
+            });
+
+            NavigateToStockInCommand = new RelayCommand(() =>
+            {
+                // Stock In handles its own logic
+                CurrentView = new StockInViewModel();
+            });
+
+            // Default Startup
             NavigateToPOSCommand.Execute(null);
         }
     }

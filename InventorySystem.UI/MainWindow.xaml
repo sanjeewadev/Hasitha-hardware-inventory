@@ -42,69 +42,70 @@
 
                     <RadioButton GroupName="Nav" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateToPOSCommand}" IsChecked="True">
                         <StackPanel Orientation="Horizontal">
-                            <Path Data="{StaticResource Icon_POS}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,15,0"
-                                  Fill="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
+                            <Path Data="{StaticResource Icon_POS}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,15,0" Fill="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
                             <TextBlock Text="Point of Sale" VerticalAlignment="Center"/>
                         </StackPanel>
                     </RadioButton>
 
-                    <RadioButton GroupName="Nav" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateToProductsCommand}"
-                                 Visibility="{Binding AdminVisibility}">
+                    <RadioButton GroupName="Nav" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateToProductsCommand}" Visibility="{Binding AdminVisibility}">
                         <StackPanel Orientation="Horizontal">
-                            <Path Data="{StaticResource Icon_Products}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,15,0"
-                                  Fill="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
+                            <Path Data="{StaticResource Icon_Products}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,15,0" Fill="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
                             <TextBlock Text="Products" VerticalAlignment="Center"/>
                         </StackPanel>
                     </RadioButton>
 
-                    <RadioButton GroupName="Nav" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateToInventoryCommand}"
-                                 Visibility="{Binding AdminVisibility}">
+                    <RadioButton GroupName="Nav" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateToInventoryCommand}" Visibility="{Binding AdminVisibility}">
                         <StackPanel Orientation="Horizontal">
-                            <Path Data="{StaticResource Icon_Categories}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,15,0"
-                                  Fill="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
+                            <Path Data="{StaticResource Icon_Categories}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,15,0" Fill="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
                             <TextBlock Text="Inventory Catalog" VerticalAlignment="Center"/>
                         </StackPanel>
                     </RadioButton>
 
-                    <RadioButton GroupName="Nav" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateToStockCommand}"
-                                 Visibility="{Binding AdminVisibility}">
+                    <RadioButton GroupName="Nav" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateToSuppliersCommand}" Visibility="{Binding AdminVisibility}">
                         <StackPanel Orientation="Horizontal">
-                            <Path Data="{StaticResource Icon_Stock}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,15,0"
-                                  Fill="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
-                            <TextBlock Text="Stock In / Out" VerticalAlignment="Center"/>
+                            <Path Data="{StaticResource Icon_Truck}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,15,0" Fill="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
+                            <TextBlock Text="Suppliers" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </RadioButton>
+
+                    <RadioButton GroupName="Nav" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateToStockInCommand}" Visibility="{Binding AdminVisibility}">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource Icon_Input}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,15,0" Fill="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
+                            <TextBlock Text="Stock In (GRN)" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </RadioButton>
+
+                    <RadioButton GroupName="Nav" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateToStockCommand}" Visibility="{Binding AdminVisibility}">
+                        <StackPanel Orientation="Horizontal">
+                            <Path Data="{StaticResource Icon_Stock}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,15,0" Fill="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
+                            <TextBlock Text="Adjust / Transfer" VerticalAlignment="Center"/>
                         </StackPanel>
                     </RadioButton>
 
                     <TextBlock Text="ANALYTICS" FontSize="11" Foreground="#64748B" FontWeight="Bold" Margin="25,30,0,10"/>
 
-                    <RadioButton GroupName="Nav" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateToDashboardCommand}"
-                                 Visibility="{Binding AdminVisibility}">
+                    <RadioButton GroupName="Nav" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateToDashboardCommand}" Visibility="{Binding AdminVisibility}">
                         <StackPanel Orientation="Horizontal">
-                            <Path Data="{StaticResource Icon_Dashboard}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,15,0"
-                                  Fill="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
+                            <Path Data="{StaticResource Icon_Dashboard}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,15,0" Fill="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
                             <TextBlock Text="Dashboard" VerticalAlignment="Center"/>
                         </StackPanel>
                     </RadioButton>
 
                     <RadioButton GroupName="Nav" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateToTodaySalesCommand}">
                         <StackPanel Orientation="Horizontal">
-                            <Path Data="{StaticResource Icon_Today}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,15,0"
-                                  Fill="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
+                            <Path Data="{StaticResource Icon_Today}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,15,0" Fill="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
                             <TextBlock Text="Today's Sales" VerticalAlignment="Center"/>
                         </StackPanel>
                     </RadioButton>
 
-                    <RadioButton GroupName="Nav" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateToHistoryCommand}"
-                                 Visibility="{Binding AdminVisibility}">
+                    <RadioButton GroupName="Nav" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateToHistoryCommand}" Visibility="{Binding AdminVisibility}">
                         <StackPanel Orientation="Horizontal">
-                            <Path Data="{StaticResource Icon_History}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,15,0"
-                                  Fill="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
+                            <Path Data="{StaticResource Icon_History}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,15,0" Fill="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
                             <TextBlock Text="Sales History" VerticalAlignment="Center"/>
                         </StackPanel>
                     </RadioButton>
-                    <RadioButton GroupName="Nav" Style="{StaticResource NavButtonStyle}" 
-                             Command="{Binding NavigateToCreditsCommand}"
-                             Visibility="{Binding AdminVisibility}">
+
+                    <RadioButton GroupName="Nav" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateToCreditsCommand}" Visibility="{Binding AdminVisibility}">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="💳" FontSize="16" Margin="0,0,15,0" VerticalAlignment="Center"/>
                             <TextBlock Text="Credit / Debtors" VerticalAlignment="Center"/>
@@ -113,19 +114,15 @@
                 </StackPanel>
 
                 <StackPanel Grid.Row="2" Margin="0,0,0,20">
-                    <RadioButton GroupName="Nav" Style="{StaticResource NavButtonStyle}" 
-                     Command="{Binding NavigateToUsersCommand}"
-                     Visibility="{Binding AdminVisibility}">
+                    <RadioButton GroupName="Nav" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateToUsersCommand}" Visibility="{Binding AdminVisibility}">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="👥" FontSize="16" Margin="0,0,15,0" VerticalAlignment="Center"/>
                             <TextBlock Text="User Management" VerticalAlignment="Center"/>
                         </StackPanel>
                     </RadioButton>
-                    <RadioButton GroupName="Nav" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateToSettingsCommand}"
-                                 Visibility="{Binding AdminVisibility}">
+                    <RadioButton GroupName="Nav" Style="{StaticResource NavButtonStyle}" Command="{Binding NavigateToSettingsCommand}" Visibility="{Binding AdminVisibility}">
                         <StackPanel Orientation="Horizontal">
-                            <Path Data="{StaticResource Icon_Settings}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,15,0"
-                                  Fill="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
+                            <Path Data="{StaticResource Icon_Settings}" Width="16" Height="16" Stretch="Uniform" Margin="0,0,15,0" Fill="{Binding RelativeSource={RelativeSource AncestorType=RadioButton}, Path=Foreground}"/>
                             <TextBlock Text="Settings &amp; Backup" VerticalAlignment="Center"/>
                         </StackPanel>
                     </RadioButton>
@@ -141,8 +138,6 @@
 
             <Border Grid.Row="0" Background="White" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1">
                 <Grid Margin="25,10">
-                    <TextBlock Text="" VerticalAlignment="Center" Foreground="#64748B" FontSize="13"/>
-
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Right">
                         <Border Width="32" Height="32" CornerRadius="16" Background="{StaticResource PrimaryBrush}" Margin="0,0,10,0">
                             <TextBlock Text="{Binding CurrentUserInitial}" Foreground="White" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center"/>

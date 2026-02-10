@@ -1,0 +1,120 @@
+﻿<UserControl x:Class="InventorySystem.UI.Views.SupplierView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignHeight="700" d:DesignWidth="1100"
+             Background="#F8FAFC">
+
+    <Grid Margin="30">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="350"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Background="White" CornerRadius="10" Padding="25" Margin="0,0,25,0">
+            <Border.Effect>
+                <DropShadowEffect Color="Black" BlurRadius="10" Opacity="0.05"/>
+            </Border.Effect>
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+
+                    <TextBlock FontSize="20" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,20">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Text" Value="Add New Supplier"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsEditMode}" Value="True">
+                                        <Setter Property="Text" Value="Edit Supplier"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+
+                    <TextBlock Text="Company / Name *" Foreground="#64748B" Margin="0,0,0,5"/>
+                    <TextBox Text="{Binding Name}" Height="40" Padding="5" VerticalContentAlignment="Center" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,0,0,15"/>
+
+                    <TextBlock Text="Phone Number" Foreground="#64748B" Margin="0,0,0,5"/>
+                    <TextBox Text="{Binding Phone}" Height="40" Padding="5" VerticalContentAlignment="Center" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,0,0,15"/>
+
+                    <TextBlock Text="Email (Optional)" Foreground="#64748B" Margin="0,0,0,5"/>
+                    <TextBox Text="{Binding Email}" Height="40" Padding="5" VerticalContentAlignment="Center" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,0,0,15"/>
+
+                    <TextBlock Text="Address" Foreground="#64748B" Margin="0,0,0,5"/>
+                    <TextBox Text="{Binding Address}" Height="60" Padding="5" BorderBrush="#E2E8F0" BorderThickness="1" TextWrapping="Wrap" Margin="0,0,0,15"/>
+
+                    <TextBlock Text="Extra Note" Foreground="#64748B" Margin="0,0,0,5"/>
+                    <TextBox Text="{Binding Note}" Height="60" Padding="5" BorderBrush="#E2E8F0" BorderThickness="1" TextWrapping="Wrap" Margin="0,0,0,20"/>
+
+                    <Button Command="{Binding SaveCommand}" Content="SAVE SUPPLIER" Background="#10B981" Foreground="White" Height="45" FontWeight="Bold" Cursor="Hand">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="6"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+
+                    <Button Command="{Binding ClearCommand}" Content="Cancel / Clear" Background="Transparent" Foreground="#64748B" Margin="0,10,0,0" BorderThickness="0" Cursor="Hand"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="0,0,0,20">
+                <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Tag="Search suppliers by name or phone..." 
+                         Height="45" Padding="15,0" VerticalContentAlignment="Center" Background="White" BorderBrush="#E2E8F0" BorderThickness="1">
+                    <TextBox.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="6"/>
+                        </Style>
+                    </TextBox.Resources>
+                </TextBox>
+            </Grid>
+
+            <DataGrid Grid.Row="1" ItemsSource="{Binding Suppliers}" SelectedItem="{Binding SelectedSupplier}" 
+                      AutoGenerateColumns="False" IsReadOnly="True" Background="White" BorderThickness="0"
+                      GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9" RowHeight="55" HeadersVisibility="Column">
+
+                <DataGrid.ColumnHeaderStyle>
+                    <Style TargetType="DataGridColumnHeader">
+                        <Setter Property="Background" Value="White"/>
+                        <Setter Property="Foreground" Value="#64748B"/>
+                        <Setter Property="FontWeight" Value="SemiBold"/>
+                        <Setter Property="Padding" Value="10"/>
+                        <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                        <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                        <Setter Property="Height" Value="45"/>
+                    </Style>
+                </DataGrid.ColumnHeaderStyle>
+
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Company" Binding="{Binding Name}" Width="*" FontWeight="SemiBold" Foreground="#334155"/>
+                    <DataGridTextColumn Header="Phone" Binding="{Binding Phone}" Width="140" Foreground="#64748B"/>
+                    <DataGridTextColumn Header="Note" Binding="{Binding Note}" Width="150" Foreground="#94A3B8"/>
+
+                    <DataGridTemplateColumn Width="80">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                        CommandParameter="{Binding}" Content="Del" Background="#FEE2E2" Foreground="#EF4444" 
+                                        BorderThickness="0" Padding="10,5" FontWeight="Bold" Cursor="Hand" HorizontalAlignment="Center">
+                                    <Button.Resources>
+                                        <Style TargetType="Border">
+                                            <Setter Property="CornerRadius" Value="4"/>
+                                        </Style>
+                                    </Button.Resources>
+                                </Button>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -14,16 +14,18 @@ namespace InventorySystem.Data.Context
         public DbSet<Product> Products => Set<Product>();
         public DbSet<StockMovement> StockMovements => Set<StockMovement>();
         public DbSet<StockBatch> StockBatches => Set<StockBatch>();
-
-        // --- NEW TABLES FOR CREDIT SYSTEM ---
         public DbSet<SalesTransaction> SalesTransactions => Set<SalesTransaction>();
         public DbSet<CreditPaymentLog> CreditPaymentLogs => Set<CreditPaymentLog>();
+
+        // --- NEW TABLES ---
+        public DbSet<Supplier> Suppliers => Set<Supplier>();
+        public DbSet<PurchaseInvoice> PurchaseInvoices => Set<PurchaseInvoice>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // --- 0. CRITICAL FIX: SQLite Decimal Conversion ---
+            // --- 0. SQLite Decimal Fix ---
             if (Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
             {
                 foreach (var entityType in modelBuilder.Model.GetEntityTypes())
@@ -33,9 +35,7 @@ namespace InventorySystem.Data.Context
 
                     foreach (var property in properties)
                     {
-                        modelBuilder.Entity(entityType.Name)
-                            .Property(property.Name)
-                            .HasConversion<double>();
+                        modelBuilder.Entity(entityType.Name).Property(property.Name).HasConversion<double>();
                     }
                 }
             }
@@ -54,63 +54,53 @@ namespace InventorySystem.Data.Context
                 }
             );
 
-            // 2. Unique Barcode Index
-            modelBuilder.Entity<Product>()
-                .HasIndex(p => p.Barcode)
-                .IsUnique();
+            // 2. Unique Indexes
+            modelBuilder.Entity<Product>().HasIndex(p => p.Barcode).IsUnique();
+            modelBuilder.Entity<Supplier>().HasIndex(s => s.Name).IsUnique(); // Prevent duplicate Suppliers
 
-            // Default Unit Value
-            modelBuilder.Entity<Product>()
-                .Property(p => p.Unit)
-                .HasDefaultValue("Pcs");
+            // Default Values
+            modelBuilder.Entity<Product>().Property(p => p.Unit).HasDefaultValue("Pcs");
 
-            // 3. Cascade Deletes
-            modelBuilder.Entity<Category>()
-                .HasOne(c => c.Parent)
-                .WithMany(c => c.SubCategories)
-                .HasForeignKey(c => c.ParentId)
-                .OnDelete(DeleteBehavior.Cascade);
+            // 3. Relationships (Cascade Deletes)
+            modelBuilder.Entity<Category>().HasOne(c => c.Parent).WithMany(c => c.SubCategories).HasForeignKey(c => c.ParentId).OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<Product>().HasOne(p => p.Category).WithMany().HasForeignKey(p => p.CategoryId).OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<StockBatch>().HasOne(b => b.Product).WithMany(p => p.Batches).HasForeignKey(b => b.ProductId).OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<CreditPaymentLog>().HasOne(l => l.SalesTransaction).WithMany().HasForeignKey(l => l.ReceiptId).OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<Product>()
-                .HasOne(p => p.Category)
-                .WithMany()
-                .HasForeignKey(p => p.CategoryId)
-                .OnDelete(DeleteBehavior.Cascade);
+            // --- 4. NEW: Supplier & Invoice Relationships ---
 
+            // One Supplier -> Many Invoices (If Supplier deleted, invoices stay? Usually Restricted, but Cascade for now)
+            modelBuilder.Entity<PurchaseInvoice>()
+                .HasOne(i => i.Supplier)
+                .WithMany(s => s.Invoices)
+                .HasForeignKey(i => i.SupplierId)
+                .OnDelete(DeleteBehavior.Restrict); // Safety: Don't accidentally delete a supplier with bills
+
+            // One Invoice -> Many Batches (If Invoice deleted, batches deleted)
             modelBuilder.Entity<StockBatch>()
-                .HasOne(b => b.Product)
-                .WithMany(p => p.Batches)
-                .HasForeignKey(b => b.ProductId)
-                .OnDelete(DeleteBehavior.Cascade);
-
-            // --- 4. NEW: Credit System Configuration ---
-
-            // Link Payment Logs to the main Transaction via ReceiptId
-            modelBuilder.Entity<CreditPaymentLog>()
-                .HasOne(l => l.SalesTransaction)
-                .WithMany()
-                .HasForeignKey(l => l.ReceiptId)
+                .HasOne(b => b.PurchaseInvoice)
+                .WithMany(i => i.Batches)
+                .HasForeignKey(b => b.PurchaseInvoiceId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             // 5. Precision Configuration
             modelBuilder.Entity<Product>().Property(p => p.BuyingPrice).HasPrecision(18, 2);
             modelBuilder.Entity<Product>().Property(p => p.SellingPrice).HasPrecision(18, 2);
             modelBuilder.Entity<Product>().Property(p => p.Quantity).HasPrecision(18, 3);
-
             modelBuilder.Entity<StockBatch>().Property(b => b.CostPrice).HasPrecision(18, 2);
             modelBuilder.Entity<StockBatch>().Property(b => b.InitialQuantity).HasPrecision(18, 3);
             modelBuilder.Entity<StockBatch>().Property(b => b.RemainingQuantity).HasPrecision(18, 3);
-
             modelBuilder.Entity<StockMovement>().Property(m => m.UnitCost).HasPrecision(18, 2);
             modelBuilder.Entity<StockMovement>().Property(m => m.UnitPrice).HasPrecision(18, 2);
             modelBuilder.Entity<StockMovement>().Property(m => m.Quantity).HasPrecision(18, 3);
-
-            // New Tables Precision
             modelBuilder.Entity<SalesTransaction>().Property(t => t.TotalAmount).HasPrecision(18, 2);
             modelBuilder.Entity<SalesTransaction>().Property(t => t.PaidAmount).HasPrecision(18, 2);
             modelBuilder.Entity<CreditPaymentLog>().Property(l => l.AmountPaid).HasPrecision(18, 2);
 
-            // --- IGNORE CALCULATED PROPERTIES (Fixes InvalidOperationException) ---
+            // New Table Precision
+            modelBuilder.Entity<PurchaseInvoice>().Property(i => i.TotalAmount).HasPrecision(18, 2);
+
+            // --- IGNORE CALCULATED PROPERTIES ---
             modelBuilder.Entity<SalesTransaction>().Ignore(t => t.RemainingBalance);
             modelBuilder.Entity<StockMovement>().Ignore(m => m.LineTotal);
             modelBuilder.Entity<StockBatch>().Ignore(b => b.MinSellingPrice);

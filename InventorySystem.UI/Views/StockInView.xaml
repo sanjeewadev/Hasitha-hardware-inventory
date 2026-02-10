@@ -1,0 +1,146 @@
+﻿<UserControl x:Class="InventorySystem.UI.Views.StockInView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d" d:DesignHeight="700" d:DesignWidth="1100"
+             Background="#F8FAFC">
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="White" CornerRadius="8" Padding="20" Margin="0,0,0,20">
+            <Border.Effect>
+                <DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10"/>
+            </Border.Effect>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                    <TextBlock Text="Select Supplier" Foreground="#64748B" FontSize="12" Margin="0,0,0,5"/>
+                    <ComboBox ItemsSource="{Binding Suppliers}" SelectedItem="{Binding SelectedSupplier}" DisplayMemberPath="Name"
+                              IsEditable="True" Height="40" Padding="10,0" VerticalContentAlignment="Center" BorderBrush="#E2E8F0"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Margin="0,0,15,0">
+                    <TextBlock Text="Bill / Invoice Number" Foreground="#64748B" FontSize="12" Margin="0,0,0,5"/>
+                    <TextBox Text="{Binding BillNumber}" Height="40" Padding="10,0" VerticalContentAlignment="Center" BorderBrush="#E2E8F0"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="Invoice Date" Foreground="#64748B" FontSize="12" Margin="0,0,0,5"/>
+                    <DatePicker SelectedDate="{Binding BillDate}" Height="40" Padding="5" VerticalContentAlignment="Center" BorderBrush="#E2E8F0"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <TextBlock Grid.Row="1" Text="ADD ITEMS TO BILL" FontSize="14" FontWeight="Bold" Foreground="#1E293B" Margin="5,0,0,10"/>
+
+        <Border Grid.Row="2" Background="#F1F5F9" CornerRadius="8" Padding="20" Margin="0,0,0,20">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                    <TextBlock Text="Search Product" Foreground="#64748B" FontSize="11" Margin="0,0,0,5"/>
+                    <ComboBox ItemsSource="{Binding ProductSearchResults}" SelectedItem="{Binding SelectedProduct}" 
+                              Text="{Binding ProductSearchText, UpdateSourceTrigger=PropertyChanged}" IsEditable="True"
+                              DisplayMemberPath="Name" Height="40" Padding="10,0" VerticalContentAlignment="Center" BorderBrush="#CBD5E1"/>
+                    <TextBlock Text="{Binding SelectedProduct.Barcode}" Foreground="#009688" FontSize="11" Margin="0,2,0,0"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Margin="0,0,15,0">
+                    <TextBlock Text="Buying Cost" Foreground="#64748B" FontSize="11" Margin="0,0,0,5"/>
+                    <TextBox Text="{Binding CostPrice}" Height="40" Padding="5" VerticalContentAlignment="Center" BorderBrush="#CBD5E1"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" Margin="0,0,15,0">
+                    <TextBlock Text="Selling Price" Foreground="#64748B" FontSize="11" Margin="0,0,0,5"/>
+                    <TextBox Text="{Binding SellingPrice}" Height="40" Padding="5" VerticalContentAlignment="Center" BorderBrush="#CBD5E1"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="3" Margin="0,0,15,0">
+                    <TextBlock Text="Quantity" Foreground="#64748B" FontSize="11" Margin="0,0,0,5"/>
+                    <TextBox Text="{Binding Quantity}" Height="40" Padding="5" VerticalContentAlignment="Center" BorderBrush="#CBD5E1" FontWeight="Bold"/>
+                </StackPanel>
+
+                <Button Grid.Column="4" Command="{Binding AddToDraftCommand}" Content="+ ADD" 
+                        Background="#3B82F6" Foreground="White" Width="80" Height="40" VerticalAlignment="Bottom" FontWeight="Bold" Cursor="Hand">
+                    <Button.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="6"/>
+                        </Style>
+                    </Button.Resources>
+                </Button>
+            </Grid>
+        </Border>
+
+        <DataGrid Grid.Row="3" ItemsSource="{Binding DraftBatches}" AutoGenerateColumns="False" IsReadOnly="True" 
+                  Background="White" BorderThickness="0" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9" RowHeight="50" HeadersVisibility="Column">
+
+            <DataGrid.ColumnHeaderStyle>
+                <Style TargetType="DataGridColumnHeader">
+                    <Setter Property="Background" Value="White"/>
+                    <Setter Property="Foreground" Value="#64748B"/>
+                    <Setter Property="FontWeight" Value="SemiBold"/>
+                    <Setter Property="Padding" Value="10"/>
+                    <Setter Property="Height" Value="45"/>
+                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                    <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                </Style>
+            </DataGrid.ColumnHeaderStyle>
+
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Product Name" Binding="{Binding Product.Name}" Width="*"/>
+                <DataGridTextColumn Header="Cost" Binding="{Binding CostPrice, StringFormat=N2}" Width="100"/>
+                <DataGridTextColumn Header="Sell" Binding="{Binding SellingPrice, StringFormat=N2}" Width="100"/>
+                <DataGridTextColumn Header="Qty" Binding="{Binding InitialQuantity}" Width="80" FontWeight="Bold"/>
+
+                <DataGridTemplateColumn Width="80">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Command="{Binding DataContext.RemoveFromDraftCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                    CommandParameter="{Binding}" Content="Remove" Foreground="#EF4444" Background="Transparent" BorderThickness="0" Cursor="Hand"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+
+        <Border Grid.Row="4" Background="#1E293B" CornerRadius="8" Padding="20" Margin="0,20,0,0">
+            <Grid>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                    <TextBlock Text="Total Invoice Value:" Foreground="White" FontSize="16" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding TotalBillAmount, StringFormat='Rs {0:N2}'}" Foreground="#4ADE80" FontSize="24" FontWeight="Bold" Margin="15,0,0,0" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Command="{Binding ClearAllCommand}" Content="Cancel" Background="Transparent" Foreground="White" Margin="0,0,20,0" BorderThickness="0" Cursor="Hand"/>
+                    <Button Command="{Binding SaveInvoiceCommand}" Content="✔ SAVE &amp; FINISH STOCK IN" 
+                            Background="#10B981" Foreground="White" Padding="25,10" FontWeight="Bold" FontSize="14" Cursor="Hand">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="6"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

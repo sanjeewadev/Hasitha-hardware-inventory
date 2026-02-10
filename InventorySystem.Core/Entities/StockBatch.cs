@@ -7,7 +7,9 @@ namespace InventorySystem.Core.Entities
         public int Id { get; set; }
 
         public int ProductId { get; set; }
-        public Product Product { get; set; } = null!;
+
+        // FIX: Make this Nullable (?) to prevent "Cannot convert null" error
+        public Product? Product { get; set; }
 
         public decimal InitialQuantity { get; set; }
         public decimal RemainingQuantity { get; set; }
@@ -21,7 +23,10 @@ namespace InventorySystem.Core.Entities
 
         public DateTime ReceivedDate { get; set; } = DateTime.Now;
 
-        // --- NEW: Calculated Property ---
+        // Link to the Bill
+        public int? PurchaseInvoiceId { get; set; }
+        public PurchaseInvoice? PurchaseInvoice { get; set; }
+
         public decimal MinSellingPrice
         {
             get
