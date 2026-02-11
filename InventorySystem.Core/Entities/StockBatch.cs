@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace InventorySystem.Core.Entities
 {
@@ -8,7 +9,6 @@ namespace InventorySystem.Core.Entities
 
         public int ProductId { get; set; }
 
-        // FIX: Make this Nullable (?) to prevent "Cannot convert null" error
         public Product? Product { get; set; }
 
         public decimal InitialQuantity { get; set; }
@@ -35,5 +35,9 @@ namespace InventorySystem.Core.Entities
                 return SellingPrice - (SellingPrice * (Discount / 100m));
             }
         }
+
+        // --- NEW: Live Math for UI Grid ---
+        [NotMapped]
+        public decimal TotalLineCost => InitialQuantity * CostPrice;
     }
 }

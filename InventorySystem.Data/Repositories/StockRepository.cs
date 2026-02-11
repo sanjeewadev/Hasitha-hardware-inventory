@@ -166,9 +166,14 @@ namespace InventorySystem.Data.Repositories
         // --- HELPERS ---
         public async Task<IEnumerable<StockBatch>> GetAllBatchesAsync() =>
             await _context.StockBatches.Include(b => b.Product).ToListAsync();
-
+        // --- SECURED: Only fetches batches that have NO invoice, or a POSTED invoice ---
         public async Task<IEnumerable<StockBatch>> GetActiveBatchesAsync() =>
-            await _context.StockBatches.Include(b => b.Product).Where(b => b.RemainingQuantity > 0).ToListAsync();
+            await _context.StockBatches
+                .Include(b => b.Product)
+                .Include(b => b.PurchaseInvoice) // Include invoice to check status
+                .Where(b => b.RemainingQuantity > 0 &&
+                           (b.PurchaseInvoiceId == null || b.PurchaseInvoice!.Status == InvoiceStatus.Posted))
+                .ToListAsync();
 
         public async Task<IEnumerable<StockMovement>> GetHistoryAsync() =>
             await _context.StockMovements.Include(m => m.Product).OrderByDescending(m => m.Date).ToListAsync();
@@ -225,7 +230,7 @@ namespace InventorySystem.Data.Repositories
             }
             await _context.SaveChangesAsync();
         }
-
+        
         public async Task VoidSaleAsync(int movementId, string reason)
         {
             var sale = await _context.StockMovements.FindAsync(movementId);

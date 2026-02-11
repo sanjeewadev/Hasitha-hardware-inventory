@@ -1,10 +1,9 @@
 ﻿using InventorySystem.Core.Entities;
-using InventorySystem.Data.Repositories;
-using InventorySystem.Infrastructure.Services; // Assuming DatabaseService is here
+using InventorySystem.Core.Enums;
+using InventorySystem.Infrastructure.Services;
 using InventorySystem.UI.Commands;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -15,16 +14,19 @@ namespace InventorySystem.UI.ViewModels
 {
     public class StockInViewModel : ViewModelBase
     {
-        private readonly InventorySystem.Data.Context.InventoryDbContext _context;
+        private readonly Data.Context.InventoryDbContext _context;
 
-        // --- COLLECTIONS ---
+        // --- PAGE VISIBILITY LOGIC ---
+        private bool _isPage1Visible = true;
+        public bool IsPage1Visible { get => _isPage1Visible; set { _isPage1Visible = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsPage2Visible)); } }
+        public bool IsPage2Visible => !IsPage1Visible;
+
+        // ==========================================
+        // PAGE 1: DRAFTS & NEW BILL ENTRY
+        // ==========================================
         public ObservableCollection<Supplier> Suppliers { get; } = new();
-        public ObservableCollection<Product> ProductSearchResults { get; } = new();
+        public ObservableCollection<PurchaseInvoice> DraftInvoices { get; } = new();
 
-        // This is the "Draft Bill" - Items waiting to be saved
-        public ObservableCollection<StockBatch> DraftBatches { get; } = new();
-
-        // --- HEADER INPUTS (The Bill) ---
         private Supplier? _selectedSupplier;
         public Supplier? SelectedSupplier { get => _selectedSupplier; set { _selectedSupplier = value; OnPropertyChanged(); } }
 
@@ -34,17 +36,26 @@ namespace InventorySystem.UI.ViewModels
         private DateTime _billDate = DateTime.Now;
         public DateTime BillDate { get => _billDate; set { _billDate = value; OnPropertyChanged(); } }
 
-        // --- ITEM INPUTS (The Workspace) ---
+        public ICommand CreateDraftCommand { get; }
+        public ICommand ResumeDraftCommand { get; }
+        public ICommand DeleteDraftCommand { get; } // NEW
+
+        // ==========================================
+        // PAGE 2: WORKSPACE (ITEM ENTRY)
+        // ==========================================
+        public PurchaseInvoice? CurrentInvoice { get; private set; }
+        public ObservableCollection<StockBatch> CurrentBatches { get; } = new();
+
+        public ObservableCollection<Category> DisplayCategories { get; } = new();
+        public ObservableCollection<Product> DisplayProducts { get; } = new();
+
+        private Category? _currentParentCategory;
+
         private string _productSearchText = "";
         public string ProductSearchText
         {
             get => _productSearchText;
-            set
-            {
-                _productSearchText = value;
-                OnPropertyChanged();
-                SearchProducts();
-            }
+            set { _productSearchText = value; OnPropertyChanged(); SearchProducts(); }
         }
 
         private Product? _selectedProduct;
@@ -55,187 +66,303 @@ namespace InventorySystem.UI.ViewModels
             {
                 _selectedProduct = value;
                 OnPropertyChanged();
+                OnPropertyChanged(nameof(SelectedProductUnit));
                 if (value != null)
                 {
-                    // Auto-fill cost/price from product history if possible
-                    CostPrice = value.BuyingPrice; // Assuming you have this
+                    BuyingPrice = value.BuyingPrice;
                     SellingPrice = value.SellingPrice;
+                    MaxDiscount = value.DiscountLimit;
                 }
             }
         }
 
+        public string SelectedProductUnit => SelectedProduct?.Unit ?? "Units";
+
         private decimal _quantity;
         public decimal Quantity { get => _quantity; set { _quantity = value; OnPropertyChanged(); } }
 
-        private decimal _costPrice;
-        public decimal CostPrice { get => _costPrice; set { _costPrice = value; OnPropertyChanged(); } }
+        private decimal _buyingPrice;
+        public decimal BuyingPrice { get => _buyingPrice; set { _buyingPrice = value; OnPropertyChanged(); } }
 
         private decimal _sellingPrice;
         public decimal SellingPrice { get => _sellingPrice; set { _sellingPrice = value; OnPropertyChanged(); } }
 
-        // --- TOTALS ---
-        public decimal TotalBillAmount => DraftBatches.Sum(b => b.CostPrice * b.InitialQuantity);
+        private decimal _maxDiscount;
+        public decimal MaxDiscount { get => _maxDiscount; set { _maxDiscount = value; OnPropertyChanged(); } }
 
-        // --- COMMANDS ---
-        public ICommand AddToDraftCommand { get; }
-        public ICommand RemoveFromDraftCommand { get; }
-        public ICommand SaveInvoiceCommand { get; }
-        public ICommand ClearAllCommand { get; }
+        public decimal TotalBillAmount => CurrentBatches.Sum(b => b.TotalLineCost);
+
+        public ICommand AddItemCommand { get; }
+        public ICommand RemoveItemCommand { get; } // NEW
+        public ICommand PostInvoiceCommand { get; }
+        public ICommand BackToPage1Command { get; }
+        public ICommand SelectCategoryCommand { get; }
+        public ICommand GoUpCategoryCommand { get; }
 
         public StockInViewModel()
         {
             _context = DatabaseService.CreateDbContext();
 
-            AddToDraftCommand = new RelayCommand(AddToDraft);
-            RemoveFromDraftCommand = new RelayCommand<StockBatch>(RemoveFromDraft);
-            SaveInvoiceCommand = new RelayCommand(async () => await SaveInvoiceAsync());
-            ClearAllCommand = new RelayCommand(ClearAll);
+            CreateDraftCommand = new RelayCommand(async () => await CreateNewDraftAsync());
+            ResumeDraftCommand = new RelayCommand<PurchaseInvoice>(async (inv) => await LoadDraftAsync(inv));
+            DeleteDraftCommand = new RelayCommand<PurchaseInvoice>(async (inv) => await DeleteDraftAsync(inv));
 
-            LoadSuppliers();
+            AddItemCommand = new RelayCommand(async () => await AddItemToBillAsync());
+            RemoveItemCommand = new RelayCommand<StockBatch>(async (batch) => await RemoveItemAsync(batch));
+            PostInvoiceCommand = new RelayCommand(async () => await PostInvoiceAsync());
+            BackToPage1Command = new RelayCommand(() => { IsPage1Visible = true; LoadPage1Data(); });
+
+            SelectCategoryCommand = new RelayCommand<Category>(SelectCategory);
+            GoUpCategoryCommand = new RelayCommand(LoadTopLevelCategories);
+
+            LoadPage1Data();
         }
 
-        private async void LoadSuppliers()
+        private async void LoadPage1Data()
         {
-            var list = await _context.Suppliers.OrderBy(s => s.Name).ToListAsync();
+            var suppliers = await _context.Suppliers.OrderBy(s => s.Name).ToListAsync();
             Suppliers.Clear();
-            foreach (var s in list) Suppliers.Add(s);
+            foreach (var s in suppliers) Suppliers.Add(s);
+
+            var drafts = await _context.PurchaseInvoices
+                .Include(i => i.Supplier)
+                .Include(i => i.Batches)
+                .Where(i => i.Status == InvoiceStatus.Draft)
+                .OrderByDescending(i => i.Date)
+                .ToListAsync();
+
+            DraftInvoices.Clear();
+            foreach (var d in drafts) DraftInvoices.Add(d);
+        }
+
+        private async Task CreateNewDraftAsync()
+        {
+            if (SelectedSupplier == null || string.IsNullOrWhiteSpace(BillNumber))
+            {
+                MessageBox.Show("Please select a supplier and enter a bill number.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            bool exists = await _context.PurchaseInvoices.AnyAsync(i => i.BillNumber == BillNumber && i.SupplierId == SelectedSupplier.Id);
+            if (exists)
+            {
+                MessageBox.Show("This Bill Number already exists for this supplier!", "Duplicate Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            var newInvoice = new PurchaseInvoice
+            {
+                SupplierId = SelectedSupplier.Id,
+                BillNumber = BillNumber,
+                Date = BillDate,
+                Status = InvoiceStatus.Draft,
+                Note = "Created via GRN"
+            };
+
+            _context.PurchaseInvoices.Add(newInvoice);
+            await _context.SaveChangesAsync();
+
+            await LoadDraftAsync(newInvoice);
+            SelectedSupplier = null;
+            BillNumber = "";
+        }
+
+        private async Task LoadDraftAsync(PurchaseInvoice invoice)
+        {
+            if (invoice == null) return;
+
+            CurrentInvoice = await _context.PurchaseInvoices
+                .Include(i => i.Supplier)
+                .Include(i => i.Batches)
+                .ThenInclude(b => b.Product)
+                .FirstOrDefaultAsync(i => i.Id == invoice.Id);
+
+            CurrentBatches.Clear();
+            if (CurrentInvoice?.Batches != null)
+            {
+                foreach (var batch in CurrentInvoice.Batches) CurrentBatches.Add(batch);
+            }
+
+            OnPropertyChanged(nameof(TotalBillAmount));
+            LoadTopLevelCategories();
+            SearchProducts();
+
+            IsPage1Visible = false;
+        }
+
+        // --- NEW: Delete Draft Logic ---
+        private async Task DeleteDraftAsync(PurchaseInvoice invoice)
+        {
+            if (invoice == null) return;
+            if (MessageBox.Show($"Delete the draft bill '{invoice.BillNumber}'?\nThis cannot be undone.", "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            {
+                _context.PurchaseInvoices.Remove(invoice);
+                await _context.SaveChangesAsync();
+                LoadPage1Data();
+            }
+        }
+
+        private async void LoadTopLevelCategories()
+        {
+            _currentParentCategory = null;
+            var topCats = await _context.Categories.Where(c => c.ParentId == null).OrderBy(c => c.Name).ToListAsync();
+
+            DisplayCategories.Clear();
+            foreach (var c in topCats) DisplayCategories.Add(c);
+
+            SearchProducts();
+        }
+
+        private async void SelectCategory(Category cat)
+        {
+            if (cat == null) return;
+            _currentParentCategory = cat;
+
+            var subCats = await _context.Categories.Where(c => c.ParentId == cat.Id).OrderBy(c => c.Name).ToListAsync();
+            DisplayCategories.Clear();
+            foreach (var c in subCats) DisplayCategories.Add(c);
+
+            SearchProducts();
         }
 
         private async void SearchProducts()
         {
-            if (string.IsNullOrWhiteSpace(ProductSearchText))
+            var query = _context.Products.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(ProductSearchText))
             {
-                ProductSearchResults.Clear();
+                var lower = ProductSearchText.ToLower();
+                query = query.Where(p => p.Name.ToLower().Contains(lower) || p.Barcode.Contains(lower));
+            }
+
+            if (_currentParentCategory != null)
+            {
+                query = query.Where(p => p.CategoryId == _currentParentCategory.Id);
+            }
+
+            var results = await query.Take(20).ToListAsync();
+
+            DisplayProducts.Clear();
+            foreach (var p in results) DisplayProducts.Add(p);
+        }
+
+        private async Task AddItemToBillAsync()
+        {
+            if (CurrentInvoice == null) return;
+            if (SelectedProduct == null) { MessageBox.Show("Select a product first."); return; }
+
+            // Validation
+            if (Quantity <= 0) { MessageBox.Show("Quantity must be greater than zero.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+            if (BuyingPrice < 0) { MessageBox.Show("Buying Cost cannot be negative.", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning); return; }
+            if (SellingPrice < BuyingPrice)
+            {
+                if (MessageBox.Show("Warning: Selling Price is lower than Buying Cost. Do you want to proceed?", "Pricing Warning", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.No) return;
+            }
+
+            // Duplicate Check
+            var existingBatch = CurrentBatches.FirstOrDefault(b => b.ProductId == SelectedProduct.Id);
+            if (existingBatch != null)
+            {
+                if (MessageBox.Show($"'{SelectedProduct.Name}' is already in this bill.\nDo you want to add to its quantity and update the prices?", "Duplicate Found", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+                {
+                    existingBatch.InitialQuantity += Quantity;
+                    existingBatch.RemainingQuantity += Quantity;
+                    existingBatch.CostPrice = BuyingPrice;
+                    existingBatch.SellingPrice = SellingPrice;
+                    existingBatch.Discount = MaxDiscount;
+                    _context.StockBatches.Update(existingBatch);
+                    await _context.SaveChangesAsync();
+                    await LoadDraftAsync(CurrentInvoice);
+                    ClearInputs();
+                }
                 return;
             }
 
-            var lower = ProductSearchText.ToLower();
-            var results = await _context.Products
-                .Where(p => p.Name.ToLower().Contains(lower) || p.Barcode.Contains(lower))
-                .Take(10) // Limit results for speed
-                .ToListAsync();
-
-            ProductSearchResults.Clear();
-            foreach (var p in results) ProductSearchResults.Add(p);
-        }
-
-        private void AddToDraft()
-        {
-            if (SelectedProduct == null) { MessageBox.Show("Select a product first."); return; }
-            if (Quantity <= 0) { MessageBox.Show("Quantity must be > 0."); return; }
-
-            // Create a Temporary Batch (In Memory)
             var batch = new StockBatch
             {
+                PurchaseInvoiceId = CurrentInvoice.Id,
                 ProductId = SelectedProduct.Id,
-                Product = SelectedProduct, // Link for display purposes
                 InitialQuantity = Quantity,
                 RemainingQuantity = Quantity,
-                CostPrice = CostPrice,
+                CostPrice = BuyingPrice,
                 SellingPrice = SellingPrice,
-                ReceivedDate = BillDate
+                Discount = MaxDiscount,
+                ReceivedDate = CurrentInvoice.Date
             };
 
-            DraftBatches.Add(batch);
-            OnPropertyChanged(nameof(TotalBillAmount));
+            _context.StockBatches.Add(batch);
+            await _context.SaveChangesAsync();
+            await LoadDraftAsync(CurrentInvoice);
 
-            // Reset Inputs for next item
-            SelectedProduct = null;
-            ProductSearchText = "";
-            Quantity = 0;
-            // Keep Price/Cost as they might be similar for next item
+            ClearInputs();
         }
 
-        private void RemoveFromDraft(StockBatch batch)
+        // --- NEW: Remove Item Logic ---
+        private async Task RemoveItemAsync(StockBatch batch)
         {
-            if (batch != null)
+            if (batch == null || CurrentInvoice == null) return;
+
+            if (MessageBox.Show($"Remove '{batch.Product?.Name}' from this GRN?", "Confirm Removal", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
-                DraftBatches.Remove(batch);
-                OnPropertyChanged(nameof(TotalBillAmount));
+                _context.StockBatches.Remove(batch);
+                await _context.SaveChangesAsync();
+                await LoadDraftAsync(CurrentInvoice); // This auto-refreshes the grid and the Grand Total math
             }
         }
 
-        private async Task SaveInvoiceAsync()
+        private void ClearInputs()
         {
-            // 1. Validation
-            if (SelectedSupplier == null) { MessageBox.Show("Please select a Supplier."); return; }
-            if (string.IsNullOrWhiteSpace(BillNumber)) { MessageBox.Show("Please enter a Bill Number."); return; }
-            if (DraftBatches.Count == 0) { MessageBox.Show("No items in the draft list."); return; }
+            Quantity = 0;
+            ProductSearchText = "";
+            SelectedProduct = null;
+        }
 
-            // 2. Check for Duplicate Bill Number
-            bool exists = await _context.PurchaseInvoices.AnyAsync(i => i.BillNumber == BillNumber && i.SupplierId == SelectedSupplier.Id);
-            if (exists)
+        private async Task PostInvoiceAsync()
+        {
+            if (CurrentInvoice == null || CurrentBatches.Count == 0)
             {
-                MessageBox.Show($"Bill #{BillNumber} already exists for this supplier!", "Duplicate Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Cannot post an empty invoice.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            try
+            if (MessageBox.Show($"Are you sure you want to POST this bill for Rs {TotalBillAmount:N2}?\nThis will lock the bill and update live inventory. You cannot edit prices after posting.", "Confirm Post", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
-                // 3. Create the Parent Invoice
-                var invoice = new PurchaseInvoice
+                CurrentInvoice.Status = InvoiceStatus.Posted;
+                CurrentInvoice.TotalAmount = TotalBillAmount;
+                _context.PurchaseInvoices.Update(CurrentInvoice);
+
+                foreach (var batch in CurrentBatches)
                 {
-                    SupplierId = SelectedSupplier.Id,
-                    BillNumber = BillNumber,
-                    Date = BillDate,
-                    TotalAmount = TotalBillAmount,
-                    Note = "Stock In via GRN"
-                };
-
-                _context.PurchaseInvoices.Add(invoice);
-                await _context.SaveChangesAsync(); // Save to get the Invoice ID
-
-                // 4. Link Batches to Invoice and Save them
-                foreach (var batch in DraftBatches)
-                {
-                    batch.PurchaseInvoiceId = invoice.Id;
-                    batch.Product = null; // Prevent EF from trying to re-create the product
-
-                    _context.StockBatches.Add(batch);
-
-                    // 4.1 Update Product Global Quantity
                     var product = await _context.Products.FindAsync(batch.ProductId);
                     if (product != null)
                     {
                         product.Quantity += batch.InitialQuantity;
-                        product.BuyingPrice = batch.CostPrice; // Update last buying price
-                        product.SellingPrice = batch.SellingPrice; // Update selling price
-                    }
+                        product.BuyingPrice = batch.CostPrice;
+                        product.SellingPrice = batch.SellingPrice;
+                        product.DiscountLimit = batch.Discount;
+                        _context.Products.Update(product);
 
-                    // 4.2 Log Movement
-                    var move = new StockMovement
-                    {
-                        ProductId = batch.ProductId,
-                        Type = Core.Enums.StockMovementType.In,
-                        Quantity = batch.InitialQuantity,
-                        UnitCost = batch.CostPrice,
-                        UnitPrice = batch.SellingPrice,
-                        Date = BillDate,
-                        Note = $"GRN: {BillNumber}"
-                    };
-                    _context.StockMovements.Add(move);
+                        var move = new StockMovement
+                        {
+                            ProductId = batch.ProductId,
+                            StockBatchId = batch.Id,
+                            Type = StockMovementType.In,
+                            Quantity = batch.InitialQuantity,
+                            UnitCost = batch.CostPrice,
+                            UnitPrice = batch.SellingPrice,
+                            Date = CurrentInvoice.Date,
+                            Note = $"GRN: {CurrentInvoice.BillNumber}"
+                        };
+                        _context.StockMovements.Add(move);
+                    }
                 }
 
                 await _context.SaveChangesAsync();
+                MessageBox.Show("Bill successfully POSTED! Stock is now live.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                MessageBox.Show("Stock In Saved Successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                ClearAll();
+                IsPage1Visible = true;
+                LoadPage1Data();
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error saving invoice: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
-        private void ClearAll()
-        {
-            DraftBatches.Clear();
-            SelectedSupplier = null;
-            BillNumber = "";
-            BillDate = DateTime.Now;
-            ProductSearchText = "";
-            SelectedProduct = null;
-            OnPropertyChanged(nameof(TotalBillAmount));
         }
     }
 }

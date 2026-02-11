@@ -14,13 +14,8 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
                         <Border Background="Transparent" Width="16" Height="16">
-                            <Path x:Name="ExpandPath" 
-                                  Data="M0,0 L0,6 L6,0 z" 
-                                  Fill="#94A3B8" 
-                                  Margin="1,1,1,1"
-                                  HorizontalAlignment="Center"
-                                  VerticalAlignment="Center"
-                                  RenderTransformOrigin="0.5,0.5">
+                            <Path x:Name="ExpandPath" Data="M0,0 L0,6 L6,0 z" Fill="#94A3B8" Margin="1,1,1,1"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
                                 <Path.RenderTransform>
                                     <RotateTransform Angle="225"/>
                                 </Path.RenderTransform>
@@ -61,7 +56,7 @@
                 </Grid.RowDefinitions>
 
                 <StackPanel Grid.Row="0" Margin="20,0,20,15">
-                    <TextBlock Text="Stock Manager" FontSize="20" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,15"/>
+                    <TextBlock Text="Stock Adjustments" FontSize="20" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,15"/>
                 </StackPanel>
 
                 <Grid Grid.Row="1">
@@ -83,18 +78,14 @@
                         </Grid>
                     </Border>
 
-                    <TreeView Grid.Row="1" ItemsSource="{Binding CategoryTree}" 
-                              BorderThickness="0" Background="Transparent" 
-                              SelectedItemChanged="TreeView_SelectedItemChanged"
-                              ClipToBounds="True" >
-
+                    <TreeView Grid.Row="1" ItemsSource="{Binding CategoryTree}" BorderThickness="0" Background="Transparent" 
+                              SelectedItemChanged="TreeView_SelectedItemChanged" ClipToBounds="True" >
                         <TreeView.Resources>
                             <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="Transparent"/>
                             <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="Black"/>
                             <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="Transparent"/>
                             <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="Black"/>
                         </TreeView.Resources>
-
                         <TreeView.ItemTemplate>
                             <HierarchicalDataTemplate ItemsSource="{Binding SubCategories}">
                                 <StackPanel Orientation="Horizontal" Margin="0,5">
@@ -103,7 +94,6 @@
                                 </StackPanel>
                             </HierarchicalDataTemplate>
                         </TreeView.ItemTemplate>
-
                         <TreeView.ItemContainerStyle>
                             <Style TargetType="TreeViewItem">
                                 <Setter Property="IsExpanded" Value="True"/>
@@ -113,7 +103,6 @@
                                 <Setter Property="HorizontalContentAlignment" Value="Left"/>
                                 <Setter Property="VerticalContentAlignment" Value="Center"/>
                                 <Setter Property="Padding" Value="5"/>
-
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="TreeViewItem">
@@ -122,36 +111,17 @@
                                                     <RowDefinition Height="Auto"/>
                                                     <RowDefinition Height="*"/>
                                                 </Grid.RowDefinitions>
-
-                                                <Border x:Name="Bd" Grid.Row="0"
-                                                        Background="{TemplateBinding Background}"
-                                                        SnapsToDevicePixels="true"
-                                                        MinHeight="32"
-                                                        Margin="0,0,0,0" 
-                                                        Padding="0"/>
-
-                                                <Grid Grid.Row="0" Margin="0,0,0,0">
+                                                <Border x:Name="Bd" Grid.Row="0" Background="{TemplateBinding Background}" SnapsToDevicePixels="true" MinHeight="32"/>
+                                                <Grid Grid.Row="0">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="19"/>
                                                         <ColumnDefinition Width="*"/>
                                                     </Grid.ColumnDefinitions>
-
-                                                    <ToggleButton x:Name="Expander" 
-                                                                  Style="{StaticResource StandardExpanderStyle}" 
-                                                                  ClickMode="Press"
-                                                                  IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"/>
-
-                                                    <ContentPresenter x:Name="PART_Header" 
-                                                                      Grid.Column="1"
-                                                                      ContentSource="Header" 
-                                                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                                                      VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                                                      Margin="2,0,0,0"/>
+                                                    <ToggleButton x:Name="Expander" Style="{StaticResource StandardExpanderStyle}" ClickMode="Press" IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"/>
+                                                    <ContentPresenter x:Name="PART_Header" Grid.Column="1" ContentSource="Header" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}" Margin="2,0,0,0"/>
                                                 </Grid>
-
                                                 <ItemsPresenter x:Name="ItemsHost" Grid.Row="1" Margin="15,0,0,0"/>
                                             </Grid>
-
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="HasItems" Value="False">
                                                     <Setter TargetName="Expander" Property="Visibility" Value="Hidden"/>
@@ -159,23 +129,13 @@
                                                 <Trigger Property="IsExpanded" Value="False">
                                                     <Setter TargetName="ItemsHost" Property="Visibility" Value="Collapsed"/>
                                                 </Trigger>
-
                                                 <Trigger Property="IsSelected" Value="True">
                                                     <Setter TargetName="Bd" Property="Background" Value="#E0F2F1"/>
                                                     <Setter Property="Foreground" Value="#009688"/>
                                                 </Trigger>
-
                                                 <Trigger Property="IsMouseOver" Value="True">
                                                     <Setter TargetName="Bd" Property="Background" Value="#F1F5F9"/>
                                                 </Trigger>
-
-                                                <MultiTrigger>
-                                                    <MultiTrigger.Conditions>
-                                                        <Condition Property="IsSelected" Value="True"/>
-                                                        <Condition Property="IsMouseOver" Value="True"/>
-                                                    </MultiTrigger.Conditions>
-                                                    <Setter TargetName="Bd" Property="Background" Value="#E0F2F1"/>
-                                                </MultiTrigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
                                     </Setter.Value>
@@ -201,8 +161,7 @@
                 </StackPanel>
 
                 <ListBox Grid.Row="3" ItemsSource="{Binding ProductsInSelectedCategory}" SelectedItem="{Binding SelectedProduct}"
-                         BorderThickness="1" BorderBrush="#E2E8F0" Background="White"
-                         HorizontalContentAlignment="Stretch" Margin="20,0,0,0">
+                         BorderThickness="1" BorderBrush="#E2E8F0" Background="White" HorizontalContentAlignment="Stretch" Margin="20,0,0,0">
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem">
                             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
@@ -235,6 +194,7 @@
         </Border>
 
         <Grid Grid.Column="1" Margin="30,20,30,30">
+
             <Grid VerticalAlignment="Center" HorizontalAlignment="Center">
                 <Grid.Style>
                     <Style TargetType="Grid">
@@ -285,152 +245,71 @@
                     </Border>
                 </StackPanel>
 
-                <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="0,0,0,15">
-                    <TabControl.Resources>
-                        <Style TargetType="TabItem">
-                            <Setter Property="FontSize" Value="14"/>
-                            <Setter Property="FontWeight" Value="SemiBold"/>
-                            <Setter Property="Padding" Value="20,10"/>
-                            <Setter Property="Background" Value="Transparent"/>
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="TabItem">
-                                        <Border Name="Border" BorderThickness="0,0,0,3" BorderBrush="Transparent" Margin="0,0,15,0">
-                                            <ContentPresenter x:Name="ContentSite" VerticalAlignment="Center" HorizontalAlignment="Center" ContentSource="Header" Margin="5,5"/>
-                                        </Border>
-                                        <ControlTemplate.Triggers>
-                                            <Trigger Property="IsSelected" Value="True">
-                                                <Setter TargetName="Border" Property="BorderBrush" Value="#009688"/>
-                                                <Setter Property="Foreground" Value="#009688"/>
-                                            </Trigger>
-                                            <Trigger Property="IsSelected" Value="False">
-                                                <Setter Property="Foreground" Value="#94A3B8"/>
-                                            </Trigger>
-                                        </ControlTemplate.Triggers>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </TabControl.Resources>
+                <Border Grid.Row="1" Background="White" CornerRadius="8" Padding="30" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,0,0,25">
+                    <Border.Effect>
+                        <DropShadowEffect Color="Black" Opacity="0.03" BlurRadius="10"/>
+                    </Border.Effect>
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
 
-                    <TabItem Header="RECEIVE STOCK (IN)">
-                        <Border Background="White" CornerRadius="8" Padding="30" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,5,0,0">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-                                <UniformGrid Grid.Row="0" Columns="2" Margin="0,0,0,20">
-                                    <StackPanel Margin="0,0,20,0">
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                            <TextBlock Text="Quantity Arrived" Foreground="#64748B" FontSize="13"/>
-                                            <TextBlock Text="{Binding CurrentUnit, StringFormat=' ({0})'}" Foreground="#94A3B8" FontSize="11" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                        <TextBox Text="{Binding StockInQty}" Padding="10,8" FontSize="14" FontWeight="Bold" BorderBrush="#009688"/>
-                                    </StackPanel>
-                                    <StackPanel>
-                                        <TextBlock Text="Buying Cost (Per Unit)" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
-                                        <TextBox Text="{Binding StockInCost}" Padding="10,8" FontSize="14"/>
-                                    </StackPanel>
-                                </UniformGrid>
-                                <UniformGrid Grid.Row="1" Columns="2" Margin="0,0,0,25">
-                                    <StackPanel Margin="0,0,20,0">
-                                        <TextBlock Text="Selling Price (Per Unit)" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
-                                        <TextBox Text="{Binding StockInSellingPrice}" Padding="10,8" FontSize="14" Background="#F0FDF4"/>
-                                    </StackPanel>
-                                    <StackPanel>
-                                        <TextBlock Text="Max Discount %" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
-                                        <Grid>
-                                            <TextBox Text="{Binding StockInDiscount, UpdateSourceTrigger=PropertyChanged}" Padding="10,8,60,8" FontSize="14"/>
-                                            <Border HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,5,0" 
-                                                    Background="#FFFBEB" BorderBrush="#FCD34D" BorderThickness="1" CornerRadius="4" Padding="6,2">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Text="CODE:" FontSize="9" Foreground="#D97706" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                                                    <TextBlock Text="{Binding GeneratedSecretCode}" FontSize="12" FontWeight="Bold" Foreground="#B45309" VerticalAlignment="Center"/>
-                                                </StackPanel>
-                                            </Border>
-                                        </Grid>
-                                    </StackPanel>
-                                </UniformGrid>
-                                <Button Grid.Row="2" Content="CONFIRM STOCK IN" Command="{Binding StockInCommand}" 
-                                        Background="#009688" Foreground="White" Width="220" HorizontalAlignment="Right"
-                                        Padding="0,10" FontSize="13" FontWeight="Bold" Cursor="Hand">
-                                    <Button.Resources>
-                                        <Style TargetType="Border">
-                                            <Setter Property="CornerRadius" Value="6"/>
-                                        </Style>
-                                    </Button.Resources>
-                                </Button>
-                            </Grid>
-                        </Border>
-                    </TabItem>
+                        <Grid Grid.Row="0" Margin="0,0,0,25">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="2*"/>
+                                <ColumnDefinition Width="1*"/>
+                                <ColumnDefinition Width="1.5*"/>
+                            </Grid.ColumnDefinitions>
 
-                    <TabItem Header="ADJUSTMENT (OUT)">
-                        <Border Background="White" CornerRadius="8" Padding="30" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,5,0,0">
-                            <Grid>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
+                            <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                                <TextBlock Text="1. Select Batch to Reduce" Foreground="#1E293B" FontWeight="Bold" FontSize="13" Margin="0,0,0,8"/>
+                                <ComboBox ItemsSource="{Binding ActiveBatches}" SelectedItem="{Binding SelectedAdjustmentBatch}"
+                                          Padding="10,8" FontSize="13" Cursor="Hand" BorderBrush="#E2E8F0">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Text="{Binding ReceivedDate, StringFormat='{} {0:dd MMM yyyy}'}" FontWeight="Bold"/>
+                                                <TextBlock Text="{Binding RemainingQuantity, StringFormat=' - Qty: {0}'}" Foreground="Gray"/>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
 
-                                <Grid Grid.Row="0" Margin="0,0,0,25">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="1" Margin="0,0,15,0">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <TextBlock Text="2. Qty to Remove" Foreground="#1E293B" FontWeight="Bold" FontSize="13"/>
+                                    <TextBlock Text="{Binding CurrentUnit, StringFormat=' ({0})'}" Foreground="#94A3B8" FontSize="11" VerticalAlignment="Center"/>
+                                </StackPanel>
+                                <TextBox Text="{Binding StockOutQty}" Padding="10,8" FontSize="14" FontWeight="Bold" BorderBrush="#E2E8F0" Background="#FEF2F2" Foreground="#EF4444"/>
+                            </StackPanel>
 
-                                    <StackPanel Grid.Column="0" Margin="0,0,15,0">
-                                        <TextBlock Text="Select Batch to Reduce" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
-                                        <ComboBox ItemsSource="{Binding ActiveBatches}" SelectedItem="{Binding SelectedAdjustmentBatch}"
-                                                  Padding="10,8" FontSize="13" Cursor="Hand">
-                                            <ComboBox.ItemTemplate>
-                                                <DataTemplate>
-                                                    <StackPanel Orientation="Horizontal">
-                                                        <TextBlock Text="{Binding ReceivedDate, StringFormat='{} {0:dd MMM}'}" FontWeight="Bold"/>
-                                                        <TextBlock Text="{Binding RemainingQuantity, StringFormat=' - Qty: {0}'}" Foreground="Gray"/>
-                                                    </StackPanel>
-                                                </DataTemplate>
-                                            </ComboBox.ItemTemplate>
-                                        </ComboBox>
-                                    </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="3. Reason for Removal" Foreground="#1E293B" FontWeight="Bold" FontSize="13" Margin="0,0,0,8"/>
+                                <ComboBox ItemsSource="{Binding AdjustmentReasons}" SelectedItem="{Binding StockOutReason}"
+                                          Padding="10,8" FontSize="14" Cursor="Hand" BorderBrush="#E2E8F0"/>
+                            </StackPanel>
+                        </Grid>
 
-                                    <StackPanel Grid.Column="1" Margin="0,0,15,0">
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
-                                            <TextBlock Text="Quantity to Remove" Foreground="#64748B" FontSize="13"/>
-                                            <TextBlock Text="{Binding CurrentUnit, StringFormat=' ({0})'}" Foreground="#94A3B8" FontSize="11" VerticalAlignment="Center"/>
-                                        </StackPanel>
-                                        <TextBox Text="{Binding StockOutQty}" Padding="10,8" FontSize="14" FontWeight="Bold" BorderBrush="#EF4444"/>
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Column="2">
-                                        <TextBlock Text="Reason" Foreground="#64748B" FontSize="13" Margin="0,0,0,6"/>
-                                        <ComboBox ItemsSource="{Binding AdjustmentReasons}" SelectedItem="{Binding StockOutReason}"
-                                                  Padding="10,8" FontSize="14" Cursor="Hand"/>
-                                    </StackPanel>
-                                </Grid>
-
-                                <Button Grid.Row="1" Content="CONFIRM REMOVAL" Command="{Binding StockOutCommand}" 
-                                        Background="#EF4444" Foreground="White" Width="220" HorizontalAlignment="Right"
-                                        Padding="0,10" FontSize="13" FontWeight="Bold" Cursor="Hand">
-                                    <Button.Resources>
-                                        <Style TargetType="Border">
-                                            <Setter Property="CornerRadius" Value="6"/>
-                                        </Style>
-                                    </Button.Resources>
-                                </Button>
-                            </Grid>
-                        </Border>
-                    </TabItem>
-                </TabControl>
+                        <Button Grid.Row="1" Content="✔ CONFIRM REMOVAL" Command="{Binding StockOutCommand}" 
+                                Background="#EF4444" Foreground="White" Width="220" HorizontalAlignment="Right"
+                                Padding="0,12" FontSize="13" FontWeight="Bold" Cursor="Hand">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+                    </Grid>
+                </Border>
 
                 <Grid Grid.Row="2">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <TextBlock Text="Batch History" FontWeight="Bold" Margin="0,15,0,10" Foreground="#334155" FontSize="16"/>
+                    <TextBlock Text="Batch History" FontWeight="Bold" Margin="0,0,0,10" Foreground="#334155" FontSize="16"/>
                     <DataGrid Grid.Row="1" ItemsSource="{Binding BatchHistory}" AutoGenerateColumns="False" 
                               IsReadOnly="True" Background="White" BorderBrush="#E2E8F0" BorderThickness="1"
                               RowHeight="40" HeadersVisibility="Column">
@@ -445,11 +324,10 @@
                             </Style>
                         </DataGrid.ColumnHeaderStyle>
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Date" Binding="{Binding ReceivedDate, StringFormat='dd MMM yyyy'}" Width="120" Foreground="#475569"/>
-                            <DataGridTextColumn Header="Original" Binding="{Binding InitialQuantity}" Width="80"/>
-                            <DataGridTextColumn Header="Remaining" Binding="{Binding RemainingQuantity, StringFormat={}{0:0.###}}" Width="100" FontWeight="Bold"/>
-                            <DataGridTextColumn Header="Cost Price" Binding="{Binding CostPrice, StringFormat=N2}" Width="100"/>
-                            <DataGridTextColumn Header="Cost Code" Binding="{Binding DiscountCode}" Width="*" FontWeight="Bold" Foreground="#B45309"/>
+                            <DataGridTextColumn Header="Date Received" Binding="{Binding ReceivedDate, StringFormat='dd MMM yyyy'}" Width="150" Foreground="#475569"/>
+                            <DataGridTextColumn Header="Original Qty" Binding="{Binding InitialQuantity}" Width="100"/>
+                            <DataGridTextColumn Header="Remaining Qty" Binding="{Binding RemainingQuantity, StringFormat={}{0:0.###}}" Width="120" FontWeight="Bold"/>
+                            <DataGridTextColumn Header="Cost Price" Binding="{Binding CostPrice, StringFormat=N2}" Width="120"/>
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>

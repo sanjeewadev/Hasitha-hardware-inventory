@@ -3,144 +3,302 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignHeight="700" d:DesignWidth="1100"
+             mc:Ignorable="d" d:DesignHeight="768" d:DesignWidth="1200"
              Background="#F8FAFC">
 
-    <Grid Margin="20">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+    <Grid>
+        <Grid Visibility="{Binding IsPage1Visible, Converter={StaticResource BoolToVis}}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,50,0,50" Width="800">
 
-        <Border Grid.Row="0" Background="White" CornerRadius="8" Padding="20" Margin="0,0,0,20">
-            <Border.Effect>
-                <DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10"/>
-            </Border.Effect>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
+                    <Border Background="White" CornerRadius="10" Padding="40" Margin="0,0,0,30">
+                        <Border.Effect>
+                            <DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10"/>
+                        </Border.Effect>
+                        <StackPanel>
+                            <TextBlock Text="START NEW GOODS RECEIVED NOTE (GRN)" FontSize="22" FontWeight="Bold" Foreground="#1E293B" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Enter the details from the supplier's delivery note." Foreground="#64748B" Margin="0,10,0,30" HorizontalAlignment="Center"/>
 
-                <StackPanel Grid.Column="0" Margin="0,0,15,0">
-                    <TextBlock Text="Select Supplier" Foreground="#64748B" FontSize="12" Margin="0,0,0,5"/>
-                    <ComboBox ItemsSource="{Binding Suppliers}" SelectedItem="{Binding SelectedSupplier}" DisplayMemberPath="Name"
-                              IsEditable="True" Height="40" Padding="10,0" VerticalContentAlignment="Center" BorderBrush="#E2E8F0"/>
+                            <StackPanel Margin="0,0,0,20">
+                                <TextBlock Text="Select Supplier *" Foreground="#64748B" Margin="0,0,0,8" FontWeight="SemiBold"/>
+                                <ComboBox ItemsSource="{Binding Suppliers}" SelectedItem="{Binding SelectedSupplier}" 
+                                          DisplayMemberPath="Name" Height="50" Padding="10,0" FontSize="14" VerticalContentAlignment="Center"
+                                          BorderBrush="#E2E8F0" BorderThickness="1">
+                                    <ComboBox.Resources>
+                                        <Style TargetType="Border">
+                                            <Setter Property="CornerRadius" Value="6"/>
+                                        </Style>
+                                    </ComboBox.Resources>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <StackPanel Margin="0,0,0,20">
+                                <TextBlock Text="Bill / Invoice Number *" Foreground="#64748B" Margin="0,0,0,8" FontWeight="SemiBold"/>
+                                <TextBox Text="{Binding BillNumber}" Height="50" Padding="15,0" VerticalContentAlignment="Center" FontSize="14"
+                                         BorderBrush="#E2E8F0" BorderThickness="1">
+                                    <TextBox.Resources>
+                                        <Style TargetType="Border">
+                                            <Setter Property="CornerRadius" Value="6"/>
+                                        </Style>
+                                    </TextBox.Resources>
+                                </TextBox>
+                            </StackPanel>
+
+                            <StackPanel Margin="0,0,0,30">
+                                <TextBlock Text="Invoice Date *" Foreground="#64748B" Margin="0,0,0,8" FontWeight="SemiBold"/>
+                                <DatePicker SelectedDate="{Binding BillDate}" Height="50" FontSize="14" Padding="10,0" VerticalContentAlignment="Center"
+                                            BorderBrush="#E2E8F0" BorderThickness="1" HorizontalContentAlignment="Stretch">
+                                </DatePicker>
+                            </StackPanel>
+
+                            <Button Command="{Binding CreateDraftCommand}" Content="CREATE &amp; GO TO ENTRY →" 
+                                    Background="#3B82F6" Foreground="White" Height="55" FontSize="16" FontWeight="Bold" Cursor="Hand">
+                                <Button.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="8"/>
+                                    </Style>
+                                </Button.Resources>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="OR RESUME AN UNFINISHED DRAFT" FontSize="14" FontWeight="Bold" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,20,0,20"/>
+
+                    <Border Background="White" CornerRadius="8" Padding="25">
+                        <Border.Effect>
+                            <DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10"/>
+                        </Border.Effect>
+                        <DataGrid ItemsSource="{Binding DraftInvoices}" AutoGenerateColumns="False" IsReadOnly="True" 
+                                  Background="White" BorderThickness="0" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9" RowHeight="60" HeadersVisibility="Column">
+
+                            <DataGrid.ColumnHeaderStyle>
+                                <Style TargetType="DataGridColumnHeader">
+                                    <Setter Property="Background" Value="White"/>
+                                    <Setter Property="Foreground" Value="#64748B"/>
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                    <Setter Property="Padding" Value="10"/>
+                                    <Setter Property="Height" Value="45"/>
+                                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                                    <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                                </Style>
+                            </DataGrid.ColumnHeaderStyle>
+
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat=dd MMM yyyy}" Width="150" Foreground="#64748B"/>
+                                <DataGridTextColumn Header="Bill Number" Binding="{Binding BillNumber}" Width="200" FontWeight="Bold"/>
+                                <DataGridTextColumn Header="Supplier" Binding="{Binding Supplier.Name}" Width="*"/>
+
+                                <DataGridTemplateColumn Width="180">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                                <Button Command="{Binding DataContext.ResumeDraftCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                        CommandParameter="{Binding}" Content="Resume ➡" Foreground="White" Background="#10B981" 
+                                                        Height="35" Width="90" BorderThickness="0" Cursor="Hand" FontWeight="Bold" Margin="0,0,10,0">
+                                                    <Button.Resources>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="CornerRadius" Value="4"/>
+                                                        </Style>
+                                                    </Button.Resources>
+                                                </Button>
+
+                                                <Button Command="{Binding DataContext.DeleteDraftCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                        CommandParameter="{Binding}" Content="Del" Foreground="#EF4444" Background="#FEE2E2" 
+                                                        Height="35" Width="50" BorderThickness="0" Cursor="Hand" FontWeight="Bold">
+                                                    <Button.Resources>
+                                                        <Style TargetType="Border">
+                                                            <Setter Property="CornerRadius" Value="4"/>
+                                                        </Style>
+                                                    </Button.Resources>
+                                                </Button>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
                 </StackPanel>
+            </ScrollViewer>
+        </Grid>
 
-                <StackPanel Grid.Column="1" Margin="0,0,15,0">
-                    <TextBlock Text="Bill / Invoice Number" Foreground="#64748B" FontSize="12" Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding BillNumber}" Height="40" Padding="10,0" VerticalContentAlignment="Center" BorderBrush="#E2E8F0"/>
-                </StackPanel>
 
-                <StackPanel Grid.Column="2">
-                    <TextBlock Text="Invoice Date" Foreground="#64748B" FontSize="12" Margin="0,0,0,5"/>
-                    <DatePicker SelectedDate="{Binding BillDate}" Height="40" Padding="5" VerticalContentAlignment="Center" BorderBrush="#E2E8F0"/>
-                </StackPanel>
-            </Grid>
-        </Border>
+        <Grid Visibility="{Binding IsPage2Visible, Converter={StaticResource BoolToVis}}" Margin="25">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="1" Text="ADD ITEMS TO BILL" FontSize="14" FontWeight="Bold" Foreground="#1E293B" Margin="5,0,0,10"/>
-
-        <Border Grid.Row="2" Background="#F1F5F9" CornerRadius="8" Padding="20" Margin="0,0,0,20">
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="2*"/>
-                    <ColumnDefinition Width="1*"/>
-                    <ColumnDefinition Width="1*"/>
-                    <ColumnDefinition Width="1*"/>
-                    <ColumnDefinition Width="Auto"/>
-                </Grid.ColumnDefinitions>
-
-                <StackPanel Grid.Column="0" Margin="0,0,15,0">
-                    <TextBlock Text="Search Product" Foreground="#64748B" FontSize="11" Margin="0,0,0,5"/>
-                    <ComboBox ItemsSource="{Binding ProductSearchResults}" SelectedItem="{Binding SelectedProduct}" 
-                              Text="{Binding ProductSearchText, UpdateSourceTrigger=PropertyChanged}" IsEditable="True"
-                              DisplayMemberPath="Name" Height="40" Padding="10,0" VerticalContentAlignment="Center" BorderBrush="#CBD5E1"/>
-                    <TextBlock Text="{Binding SelectedProduct.Barcode}" Foreground="#009688" FontSize="11" Margin="0,2,0,0"/>
-                </StackPanel>
-
-                <StackPanel Grid.Column="1" Margin="0,0,15,0">
-                    <TextBlock Text="Buying Cost" Foreground="#64748B" FontSize="11" Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding CostPrice}" Height="40" Padding="5" VerticalContentAlignment="Center" BorderBrush="#CBD5E1"/>
-                </StackPanel>
-
-                <StackPanel Grid.Column="2" Margin="0,0,15,0">
-                    <TextBlock Text="Selling Price" Foreground="#64748B" FontSize="11" Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding SellingPrice}" Height="40" Padding="5" VerticalContentAlignment="Center" BorderBrush="#CBD5E1"/>
-                </StackPanel>
-
-                <StackPanel Grid.Column="3" Margin="0,0,15,0">
-                    <TextBlock Text="Quantity" Foreground="#64748B" FontSize="11" Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding Quantity}" Height="40" Padding="5" VerticalContentAlignment="Center" BorderBrush="#CBD5E1" FontWeight="Bold"/>
-                </StackPanel>
-
-                <Button Grid.Column="4" Command="{Binding AddToDraftCommand}" Content="+ ADD" 
-                        Background="#3B82F6" Foreground="White" Width="80" Height="40" VerticalAlignment="Bottom" FontWeight="Bold" Cursor="Hand">
-                    <Button.Resources>
-                        <Style TargetType="Border">
-                            <Setter Property="CornerRadius" Value="6"/>
-                        </Style>
-                    </Button.Resources>
-                </Button>
-            </Grid>
-        </Border>
-
-        <DataGrid Grid.Row="3" ItemsSource="{Binding DraftBatches}" AutoGenerateColumns="False" IsReadOnly="True" 
-                  Background="White" BorderThickness="0" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9" RowHeight="50" HeadersVisibility="Column">
-
-            <DataGrid.ColumnHeaderStyle>
-                <Style TargetType="DataGridColumnHeader">
-                    <Setter Property="Background" Value="White"/>
-                    <Setter Property="Foreground" Value="#64748B"/>
-                    <Setter Property="FontWeight" Value="SemiBold"/>
-                    <Setter Property="Padding" Value="10"/>
-                    <Setter Property="Height" Value="45"/>
-                    <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                    <Setter Property="BorderBrush" Value="#E2E8F0"/>
-                </Style>
-            </DataGrid.ColumnHeaderStyle>
-
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Product Name" Binding="{Binding Product.Name}" Width="*"/>
-                <DataGridTextColumn Header="Cost" Binding="{Binding CostPrice, StringFormat=N2}" Width="100"/>
-                <DataGridTextColumn Header="Sell" Binding="{Binding SellingPrice, StringFormat=N2}" Width="100"/>
-                <DataGridTextColumn Header="Qty" Binding="{Binding InitialQuantity}" Width="80" FontWeight="Bold"/>
-
-                <DataGridTemplateColumn Width="80">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <Button Command="{Binding DataContext.RemoveFromDraftCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                    CommandParameter="{Binding}" Content="Remove" Foreground="#EF4444" Background="Transparent" BorderThickness="0" Cursor="Hand"/>
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-            </DataGrid.Columns>
-        </DataGrid>
-
-        <Border Grid.Row="4" Background="#1E293B" CornerRadius="8" Padding="20" Margin="0,20,0,0">
-            <Grid>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="Total Invoice Value:" Foreground="White" FontSize="16" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding TotalBillAmount, StringFormat='Rs {0:N2}'}" Foreground="#4ADE80" FontSize="24" FontWeight="Bold" Margin="15,0,0,0" VerticalAlignment="Center"/>
-                </StackPanel>
-
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Command="{Binding ClearAllCommand}" Content="Cancel" Background="Transparent" Foreground="White" Margin="0,0,20,0" BorderThickness="0" Cursor="Hand"/>
-                    <Button Command="{Binding SaveInvoiceCommand}" Content="✔ SAVE &amp; FINISH STOCK IN" 
-                            Background="#10B981" Foreground="White" Padding="25,10" FontWeight="Bold" FontSize="14" Cursor="Hand">
+            <Border Grid.Row="0" Background="White" CornerRadius="8" Padding="15,10" Margin="0,0,0,20">
+                <Border.Effect>
+                    <DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10"/>
+                </Border.Effect>
+                <Grid>
+                    <Button Command="{Binding BackToPage1Command}" Content="⬅ BACK TO MENU" Background="#F1F5F9" Foreground="#334155" 
+                            Height="40" Padding="15,0" FontWeight="Bold" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Left">
                         <Button.Resources>
                             <Style TargetType="Border">
                                 <Setter Property="CornerRadius" Value="6"/>
                             </Style>
                         </Button.Resources>
                     </Button>
+                    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock FontSize="18" FontWeight="Bold" Foreground="#1E293B" HorizontalAlignment="Center">
+                            <Run Text="Invoice: "/><Run Text="{Binding CurrentInvoice.BillNumber}" Foreground="#3B82F6"/>
+                        </TextBlock>
+                        <TextBlock FontSize="12" Foreground="#64748B" HorizontalAlignment="Center">
+                            <Run Text="Supplier: "/><Run Text="{Binding CurrentInvoice.Supplier.Name}" FontWeight="SemiBold"/>
+                        </TextBlock>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Grid.Row="1" Background="#F1F5F9" CornerRadius="8" Padding="25" Margin="0,0,0,20">
+                <StackPanel>
+                    <StackPanel Margin="0,0,0,15">
+                        <TextBlock Text="Step 1: Find Product" Foreground="#1E293B" FontWeight="Bold" Margin="0,0,0,10"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <ComboBox Grid.Column="0" ItemsSource="{Binding DisplayProducts}" SelectedItem="{Binding SelectedProduct}" 
+                                      Text="{Binding ProductSearchText, UpdateSourceTrigger=PropertyChanged}" IsEditable="True"
+                                      DisplayMemberPath="Name" Height="45" Padding="10,0" VerticalContentAlignment="Center" BorderBrush="#CBD5E1">
+                            </ComboBox>
+
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="15,0,0,0">
+                                <Button Command="{Binding GoUpCategoryCommand}" Content="🏠 Top Categories" Background="White" Foreground="#334155" 
+                                        Height="45" Padding="15,0" Margin="0,0,10,0" BorderThickness="1" BorderBrush="#CBD5E1" Cursor="Hand">
+                                    <Button.Resources>
+                                        <Style TargetType="Border">
+                                            <Setter Property="CornerRadius" Value="4"/>
+                                        </Style>
+                                    </Button.Resources>
+                                </Button>
+                                <ItemsControl ItemsSource="{Binding DisplayCategories}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal"/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Button Command="{Binding DataContext.SelectCategoryCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                    CommandParameter="{Binding}" Content="{Binding Name}" Background="#E0F2FE" Foreground="#0284C7" 
+                                                    Height="45" Padding="15,0" Margin="0,0,5,0" BorderThickness="0" Cursor="Hand">
+                                                <Button.Resources>
+                                                    <Style TargetType="Border">
+                                                        <Setter Property="CornerRadius" Value="4"/>
+                                                    </Style>
+                                                </Button.Resources>
+                                            </Button>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+
+                    <Border BorderBrush="#E2E8F0" BorderThickness="0,1,0,0" Margin="0,5,0,20"/>
+
+                    <StackPanel>
+                        <TextBlock Text="Step 2: Enter Pricing &amp; Add" Foreground="#1E293B" FontWeight="Bold" Margin="0,0,0,10"/>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1*"/>
+                                <ColumnDefinition Width="1*"/>
+                                <ColumnDefinition Width="1*"/>
+                                <ColumnDefinition Width="1.5*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Column="0" Margin="0,0,15,0">
+                                <TextBlock Text="Buying Cost" Foreground="#64748B" FontSize="11" Margin="0,0,0,5"/>
+                                <TextBox Text="{Binding BuyingPrice}" Height="45" Padding="10,0" VerticalContentAlignment="Center"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="1" Margin="0,0,15,0">
+                                <TextBlock Text="Selling Price" Foreground="#64748B" FontSize="11" Margin="0,0,0,5"/>
+                                <TextBox Text="{Binding SellingPrice}" Height="45" Padding="10,0" VerticalContentAlignment="Center"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="2" Margin="0,0,15,0">
+                                <TextBlock Text="Max Disc. (%)" Foreground="#64748B" FontSize="11" Margin="0,0,0,5"/>
+                                <TextBox Text="{Binding MaxDiscount}" Height="45" Padding="10,0" VerticalContentAlignment="Center"/>
+                            </StackPanel>
+
+                            <StackPanel Grid.Column="3" Margin="0,0,20,0">
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                    <TextBlock Text="Quantity " Foreground="#64748B" FontSize="11"/>
+                                    <TextBlock Text="{Binding SelectedProductUnit, StringFormat='[{0}]'}" Foreground="#3B82F6" FontSize="11" FontWeight="Bold"/>
+                                </StackPanel>
+                                <TextBox Text="{Binding Quantity}" Height="45" FontSize="16" FontWeight="Bold" TextAlignment="Center" VerticalContentAlignment="Center"/>
+                            </StackPanel>
+
+                            <Button Grid.Column="4" Command="{Binding AddItemCommand}" Content="+ ADD ITEM TO BILL" 
+                                    Background="#3B82F6" Foreground="White" Height="45" Width="200" VerticalAlignment="Bottom" FontWeight="Bold" Cursor="Hand">
+                                <Button.Resources>
+                                    <Style TargetType="Border">
+                                        <Setter Property="CornerRadius" Value="6"/>
+                                    </Style>
+                                </Button.Resources>
+                            </Button>
+                        </Grid>
+                    </StackPanel>
                 </StackPanel>
-            </Grid>
-        </Border>
+            </Border>
+
+            <DataGrid Grid.Row="2" ItemsSource="{Binding CurrentBatches}" AutoGenerateColumns="False" IsReadOnly="True" 
+                      Background="White" BorderThickness="0" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9" RowHeight="50">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Product Name" Binding="{Binding Product.Name}" Width="2*" IsReadOnly="True" FontWeight="SemiBold" Foreground="#334155"/>
+                    <DataGridTextColumn Header="Cost" Binding="{Binding CostPrice, StringFormat=N2}" Width="1*" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Sell" Binding="{Binding SellingPrice, StringFormat=N2}" Width="1*" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Max Disc %" Binding="{Binding Discount, StringFormat={}{0}%}" Width="100" IsReadOnly="True"/>
+                    <DataGridTextColumn Header="Qty Added" Binding="{Binding InitialQuantity}" Width="100" IsReadOnly="True" FontWeight="Bold"/>
+
+                    <DataGridTextColumn Header="Total Cost" Binding="{Binding TotalLineCost, StringFormat=N2}" Width="120" IsReadOnly="True" FontWeight="SemiBold" Foreground="#10B981"/>
+
+                    <DataGridTemplateColumn Header="Actions" Width="80">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Command="{Binding DataContext.RemoveItemCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}"
+                                        Background="Transparent" BorderThickness="0" Cursor="Hand" ToolTip="Remove Item from this Bill">
+                                    <TextBlock Text="🗑️" FontSize="16" Foreground="#EF4444"/>
+                                </Button>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <Border Grid.Row="3" Background="#1E293B" CornerRadius="8" Padding="20" Margin="0,20,0,0">
+                <Grid>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                        <TextBlock Text="Total Invoice Value:" Foreground="White" FontSize="16" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding TotalBillAmount, StringFormat='Rs {0:N2}'}" Foreground="#4ADE80" FontSize="24" FontWeight="Bold" Margin="15,0,0,0" VerticalAlignment="Center"/>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Command="{Binding BackToPage1Command}" Content="SAVE AS DRAFT &amp; EXIT" 
+                                Background="Transparent" Foreground="#94A3B8" Margin="0,0,20,0" BorderThickness="0" Cursor="Hand" FontWeight="SemiBold"/>
+
+                        <Button Command="{Binding PostInvoiceCommand}" Content="✔ POST &amp; FINALIZE INVENTORY" 
+                                Background="#10B981" Foreground="White" Padding="25,10" FontWeight="Bold" FontSize="14" Cursor="Hand">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>

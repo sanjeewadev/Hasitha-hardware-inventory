@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using InventorySystem.Core.Enums;
 
 namespace InventorySystem.Core.Entities
 {
@@ -11,6 +12,9 @@ namespace InventorySystem.Core.Entities
         public DateTime Date { get; set; } = DateTime.Now;
         public decimal TotalAmount { get; set; }
         public string Note { get; set; } = "";
+
+        // --- NEW: Security Status ---
+        public InvoiceStatus Status { get; set; } = InvoiceStatus.Draft;
 
         // Link to Supplier
         public int SupplierId { get; set; }

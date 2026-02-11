@@ -44,30 +44,29 @@ namespace InventorySystem.Data.Repositories
         public async Task UpdateAsync(Product product)
         {
             // 1. Fetch the LIVE version from the database
-            // We use FindAsync to get the tracked entity
             var existing = await _context.Products.FindAsync(product.Id);
 
             if (existing != null)
             {
                 // 2. Manually copy ONLY the definition fields
-                // This ensures we don't accidentally overwrite 'Quantity' 
-                // if a sale happened while the edit window was open.
-
                 existing.Name = product.Name;
                 existing.Barcode = product.Barcode;
                 existing.Description = product.Description;
                 existing.CategoryId = product.CategoryId;
 
+                // NEW: Make sure we save the Unit (Kg, Pcs, etc.)
+                existing.Unit = product.Unit;
+
                 existing.BuyingPrice = product.BuyingPrice;
                 existing.SellingPrice = product.SellingPrice;
                 existing.DiscountLimit = product.DiscountLimit;
-                existing.LowStockThreshold = product.LowStockThreshold;
+
+                // DELETED: LowStockThreshold was removed here to fix the crash.
 
                 existing.IsActive = product.IsActive;
 
                 // 3. CRITICAL: WE IGNORE 'product.Quantity'
                 // The database quantity stays exactly as it is (safe from overwrites).
-
                 await _context.SaveChangesAsync();
             }
         }
@@ -84,7 +83,6 @@ namespace InventorySystem.Data.Repositories
                 // Optional: Mangle barcode so it can be reused later
                 product.Barcode = $"{product.Barcode}_DEL_{System.DateTime.Now.Ticks}";
 
-                // We can use a simple Update here because we are only changing flags/strings
                 _context.Products.Update(product);
                 await _context.SaveChangesAsync();
             }

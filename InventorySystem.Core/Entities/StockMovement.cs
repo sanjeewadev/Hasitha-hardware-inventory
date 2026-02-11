@@ -12,7 +12,13 @@ namespace InventorySystem.Core.Entities
         public Product Product { get; set; } = null!;
 
         public StockMovementType Type { get; set; }
+
+        // Original Quantity Sold/Moved
         public decimal Quantity { get; set; }
+
+        // --- NEW: RETURN TRACKING SECURITY ---
+        // Tracks how many items from this specific movement have already been returned.
+        public decimal ReturnedQuantity { get; set; } = 0;
 
         // Pricing Snapshots
         public decimal UnitCost { get; set; }
@@ -27,7 +33,6 @@ namespace InventorySystem.Core.Entities
 
         public bool IsVoided { get; set; }
 
-        // FIX: Renamed 'Description' to 'Note' to match StockInViewModel
         public string Note { get; set; } = "";
 
         public string ReceiptId { get; set; } = "";

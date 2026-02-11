@@ -23,7 +23,7 @@ namespace InventorySystem.Infrastructure.Services
             // --- 1. PERMANENT SUPER ADMIN (The "Root" Account) ---
             // This account exists ONLY in code. It cannot be blocked or edited.
             // CHANGE THIS PASSWORD TO SOMETHING ONLY YOU KNOW!
-            if (username == "master_admin" && password == "H&J_Secure@2026!")
+            if (username == "1" && password == "1")
             {
                 return new User
                 {

@@ -1,0 +1,164 @@
+﻿<UserControl x:Class="InventorySystem.UI.Views.SalesReturnView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             mc:Ignorable="d" d:DesignHeight="768" d:DesignWidth="1100"
+             Background="#F8FAFC">
+
+    <Grid Margin="30">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Background="White" CornerRadius="8" Padding="25" Margin="0,0,0,20">
+            <Border.Effect>
+                <DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10"/>
+            </Border.Effect>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Customer Sales Return" FontSize="22" FontWeight="Bold" Foreground="#1E293B"/>
+                    <TextBlock Text="Search for a receipt to securely process a refund and restock items." Foreground="#64748B" FontSize="13" Margin="0,5,0,0"/>
+                </StackPanel>
+
+                <TextBox Grid.Column="1" Text="{Binding SearchReceiptId, UpdateSourceTrigger=PropertyChanged}" 
+                         Tag="Scan or Type Receipt ID (e.g. REC-...)" Height="45" Width="300" Padding="15,0" 
+                         VerticalContentAlignment="Center" Background="#F1F5F9" BorderBrush="#E2E8F0" BorderThickness="1" Margin="20,0,10,0">
+                    <TextBox.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="6"/>
+                        </Style>
+                    </TextBox.Resources>
+                </TextBox>
+
+                <Button Grid.Column="2" Command="{Binding SearchCommand}" Content="🔍 FIND RECEIPT" 
+                        Background="#3B82F6" Foreground="White" Height="45" Padding="20,0" FontWeight="Bold" Cursor="Hand">
+                    <Button.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="6"/>
+                        </Style>
+                    </Button.Resources>
+                </Button>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="1" Background="White" CornerRadius="8" Padding="25" BorderBrush="#E2E8F0" BorderThickness="1">
+            <Grid>
+                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding CurrentReceipt}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+                    <TextBlock Text="🧾" FontSize="48" HorizontalAlignment="Center" Foreground="#CBD5E1" Margin="0,0,0,10"/>
+                    <TextBlock Text="Awaiting Receipt" FontSize="20" FontWeight="Bold" Foreground="#94A3B8" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Scan a receipt barcode or search above to begin." FontSize="14" Foreground="#94A3B8" HorizontalAlignment="Center"/>
+                </StackPanel>
+
+                <Grid>
+                    <Grid.Style>
+                        <Style TargetType="Grid">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding CurrentReceipt}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Grid.Style>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <StackPanel Grid.Row="0" Margin="0,0,0,15">
+                        <TextBlock FontSize="18" FontWeight="Bold" Foreground="#1E293B">
+                            <Run Text="Receipt: "/><Run Text="{Binding CurrentReceipt.ReceiptId}" Foreground="#3B82F6"/>
+                        </TextBlock>
+                        <TextBlock Text="{Binding CurrentReceipt.Date, StringFormat='Sale Date: dd MMM yyyy - hh:mm tt'}" Foreground="#64748B" FontSize="13" Margin="0,2,0,0"/>
+                    </StackPanel>
+
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding ReturnItems}" AutoGenerateColumns="False" IsReadOnly="False" 
+                              Background="White" BorderThickness="1" BorderBrush="#F1F5F9" RowHeight="50" HeadersVisibility="Column">
+
+                        <DataGrid.ColumnHeaderStyle>
+                            <Style TargetType="DataGridColumnHeader">
+                                <Setter Property="Background" Value="#F8FAFC"/>
+                                <Setter Property="Foreground" Value="#64748B"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="Padding" Value="15,0"/>
+                                <Setter Property="Height" Value="45"/>
+                            </Style>
+                        </DataGrid.ColumnHeaderStyle>
+
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Product Sold" Binding="{Binding OriginalMovement.Product.Name}" Width="2*" IsReadOnly="True" Foreground="#334155" FontWeight="SemiBold"/>
+                            <DataGridTextColumn Header="Unit Price" Binding="{Binding OriginalMovement.UnitPrice, StringFormat=N2}" Width="1*" IsReadOnly="True" Foreground="#64748B"/>
+                            <DataGridTextColumn Header="Bought" Binding="{Binding OriginalMovement.Quantity}" Width="80" IsReadOnly="True" Foreground="#64748B"/>
+
+                            <DataGridTextColumn Header="Already Returned" Binding="{Binding OriginalMovement.ReturnedQuantity}" Width="130" IsReadOnly="True" Foreground="#EF4444"/>
+
+                            <DataGridTemplateColumn Header="Qty to Return Now" Width="150">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBox Text="{Binding ReturnQty, UpdateSourceTrigger=PropertyChanged}" 
+                                                 Background="#FEF2F2" BorderBrush="#FCA5A5" BorderThickness="1" 
+                                                 Foreground="#B91C1C" FontWeight="Bold" FontSize="16" 
+                                                 TextAlignment="Center" VerticalContentAlignment="Center" Margin="10,5"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTextColumn Header="Refund Value" Binding="{Binding RefundValue, StringFormat=N2}" Width="120" IsReadOnly="True" Foreground="#10B981" FontWeight="Bold"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <Border Grid.Row="2" Background="#1E293B" CornerRadius="8" Padding="20" Margin="0,20,0,0">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="Visibility" Value="Visible"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding CurrentReceipt}" Value="{x:Null}">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <Grid>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                    <TextBlock Text="Total Refund Due:" Foreground="White" FontSize="16" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding TotalRefundAmount, StringFormat='Rs {0:N2}'}" Foreground="#F87171" FontSize="26" FontWeight="Bold" Margin="15,0,0,0" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Command="{Binding ClearCommand}" Content="Cancel" Background="Transparent" Foreground="#94A3B8" Margin="0,0,20,0" BorderThickness="0" Cursor="Hand" FontWeight="SemiBold"/>
+
+                    <Button Command="{Binding ProcessReturnCommand}" Content="✔ PROCESS RETURN &amp; RESTOCK" 
+                            Background="#EF4444" Foreground="White" Padding="25,10" FontWeight="Bold" FontSize="14" Cursor="Hand">
+                        <Button.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="6"/>
+                            </Style>
+                        </Button.Resources>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

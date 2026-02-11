@@ -2,6 +2,7 @@
 using InventorySystem.Infrastructure.Services;
 using InventorySystem.UI.Commands;
 using System.Windows;
+using System.Windows.Input;
 
 namespace InventorySystem.UI.ViewModels
 {
@@ -29,6 +30,7 @@ namespace InventorySystem.UI.ViewModels
         public RelayCommand NavigateToPOSCommand { get; }
         public RelayCommand NavigateToDashboardCommand { get; }
         public RelayCommand NavigateToHistoryCommand { get; }
+        public ICommand NavigateToSalesReturnCommand { get; }
         public RelayCommand NavigateToTodaySalesCommand { get; }
         public RelayCommand NavigateToSettingsCommand { get; }
         public RelayCommand NavigateToUsersCommand { get; }
@@ -92,6 +94,8 @@ namespace InventorySystem.UI.ViewModels
             {
                 CurrentView = new SalesHistoryViewModel(stockRepo);
             });
+
+            NavigateToSalesReturnCommand = new RelayCommand(() => CurrentView = new SalesReturnViewModel());
 
             NavigateToTodaySalesCommand = new RelayCommand(() =>
             {

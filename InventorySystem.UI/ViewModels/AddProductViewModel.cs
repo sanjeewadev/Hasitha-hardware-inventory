@@ -61,8 +61,7 @@ namespace InventorySystem.UI.ViewModels
                     // Keep existing prices in background, even if UI doesn't show them
                     BuyingPrice = productToEdit.BuyingPrice,
                     SellingPrice = productToEdit.SellingPrice,
-                    DiscountLimit = productToEdit.DiscountLimit,
-                    LowStockThreshold = productToEdit.LowStockThreshold
+                    DiscountLimit = productToEdit.DiscountLimit
                 };
             }
             else
@@ -71,7 +70,6 @@ namespace InventorySystem.UI.ViewModels
                 EditingProduct = new Product();
                 EditingProduct.Barcode = GenerateSimpleCode();
                 EditingProduct.Unit = "Pcs";
-                EditingProduct.LowStockThreshold = 5;
 
                 if (preSelectedCategoryId.HasValue)
                 {
@@ -124,8 +122,6 @@ namespace InventorySystem.UI.ViewModels
                 MessageBox.Show("Product must have a Barcode or SKU.", "Missing Info", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-
-            // Note: Pricing validation removed because prices are set via Batches now.
 
             try
             {

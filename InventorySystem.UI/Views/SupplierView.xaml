@@ -3,51 +3,142 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignHeight="700" d:DesignWidth="1100"
+             mc:Ignorable="d" d:DesignHeight="768" d:DesignWidth="1100"
              Background="#F8FAFC">
 
-    <Grid Margin="30">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="350"/>
-            <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+    <Grid>
+        <Grid Visibility="{Binding IsPage1Visible, Converter={StaticResource BoolToVis}}" Margin="30">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="350"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Background="White" CornerRadius="10" Padding="25" Margin="0,0,25,0">
-            <Border.Effect>
-                <DropShadowEffect Color="Black" BlurRadius="10" Opacity="0.05"/>
-            </Border.Effect>
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <StackPanel>
+            <Border Grid.Column="0" Background="White" CornerRadius="10" Padding="25" Margin="0,0,25,0">
+                <Border.Effect>
+                    <DropShadowEffect Color="Black" BlurRadius="10" Opacity="0.05"/>
+                </Border.Effect>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock FontSize="20" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,20">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="Add New Supplier"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsEditMode}" Value="True">
+                                            <Setter Property="Text" Value="Edit Supplier"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
 
-                    <TextBlock FontSize="20" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,20">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Text" Value="Add New Supplier"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsEditMode}" Value="True">
-                                        <Setter Property="Text" Value="Edit Supplier"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
+                        <TextBlock Text="Company / Name *" Foreground="#64748B" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding Name}" Height="40" Padding="5" VerticalContentAlignment="Center" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,0,0,15"/>
+
+                        <TextBlock Text="Phone Number" Foreground="#64748B" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding Phone}" Height="40" Padding="5" VerticalContentAlignment="Center" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,0,0,15"/>
+
+                        <TextBlock Text="Extra Note" Foreground="#64748B" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding Note}" Height="60" Padding="5" BorderBrush="#E2E8F0" BorderThickness="1" TextWrapping="Wrap" Margin="0,0,0,20"/>
+
+                        <Button Command="{Binding SaveCommand}" Content="SAVE SUPPLIER" Background="#10B981" Foreground="White" Height="45" FontWeight="Bold" Cursor="Hand">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+
+                        <Button Command="{Binding ClearCommand}" Content="Cancel / Clear" Background="Transparent" Foreground="#64748B" Margin="0,10,0,0" BorderThickness="0" Cursor="Hand"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <Grid Grid.Row="0" Margin="0,0,0,20">
+                    <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Tag="Search suppliers by name or phone..." 
+                             Height="45" Padding="15,0" VerticalContentAlignment="Center" Background="White" BorderBrush="#E2E8F0" BorderThickness="1">
+                        <TextBox.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="6"/>
                             </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
+                        </TextBox.Resources>
+                    </TextBox>
+                </Grid>
 
-                    <TextBlock Text="Company / Name *" Foreground="#64748B" Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding Name}" Height="40" Padding="5" VerticalContentAlignment="Center" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,0,0,15"/>
+                <DataGrid Grid.Row="1" ItemsSource="{Binding Suppliers}" SelectedItem="{Binding SelectedSupplier}" 
+                          AutoGenerateColumns="False" IsReadOnly="True" Background="White" BorderThickness="0"
+                          GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9" RowHeight="55" HeadersVisibility="Column">
+                    <DataGrid.ColumnHeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="White"/>
+                            <Setter Property="Foreground" Value="#64748B"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                            <Setter Property="Padding" Value="10"/>
+                            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                            <Setter Property="BorderBrush" Value="#E2E8F0"/>
+                            <Setter Property="Height" Value="45"/>
+                        </Style>
+                    </DataGrid.ColumnHeaderStyle>
 
-                    <TextBlock Text="Phone Number" Foreground="#64748B" Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding Phone}" Height="40" Padding="5" VerticalContentAlignment="Center" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,0,0,15"/>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Company" Binding="{Binding Name}" Width="*" FontWeight="SemiBold" Foreground="#334155"/>
+                        <DataGridTextColumn Header="Phone" Binding="{Binding Phone}" Width="140" Foreground="#64748B"/>
+                        <DataGridTemplateColumn Width="160">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                        <Button Command="{Binding DataContext.ViewDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                CommandParameter="{Binding}" Content="👁 View Bills" Background="#E0F2FE" Foreground="#0284C7" 
+                                                BorderThickness="0" Padding="10,5" FontWeight="Bold" Cursor="Hand" Margin="0,0,10,0">
+                                            <Button.Resources>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="CornerRadius" Value="4"/>
+                                                </Style>
+                                            </Button.Resources>
+                                        </Button>
+                                        <Button Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                                CommandParameter="{Binding}" Content="Del" Background="#FEE2E2" Foreground="#EF4444" 
+                                                BorderThickness="0" Padding="10,5" FontWeight="Bold" Cursor="Hand">
+                                            <Button.Resources>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="CornerRadius" Value="4"/>
+                                                </Style>
+                                            </Button.Resources>
+                                        </Button>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Grid>
+        </Grid>
 
-                    <TextBlock Text="Email (Optional)" Foreground="#64748B" Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding Email}" Height="40" Padding="5" VerticalContentAlignment="Center" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,0,0,15"/>
+        <Grid Visibility="{Binding IsPage2Visible, Converter={StaticResource BoolToVis}}" Margin="25">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-                    <TextBlock Text="Address" Foreground="#64748B" Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding Address}" Height="60" Padding="5" BorderBrush="#E2E8F0" BorderThickness="1" TextWrapping="Wrap" Margin="0,0,0,15"/>
+            <Border Grid.Row="0" Background="White" CornerRadius="8" Padding="20" Margin="0,0,0,20">
+                <Border.Effect>
+                    <DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10"/>
+                </Border.Effect>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="250"/>
+                    </Grid.ColumnDefinitions>
 
-                    <TextBlock Text="Extra Note" Foreground="#64748B" Margin="0,0,0,5"/>
-                    <TextBox Text="{Binding Note}" Height="60" Padding="5" BorderBrush="#E2E8F0" BorderThickness="1" TextWrapping="Wrap" Margin="0,0,0,20"/>
-
-                    <Button Command="{Binding SaveCommand}" Content="SAVE SUPPLIER" Background="#10B981" Foreground="White" Height="45" FontWeight="Bold" Cursor="Hand">
+                    <Button Grid.Column="0" Command="{Binding BackToPage1Command}" Content="⬅ BACK TO SUPPLIERS" Background="#F1F5F9" Foreground="#334155" 
+                            Height="40" Padding="15,0" FontWeight="Bold" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Left">
                         <Button.Resources>
                             <Style TargetType="Border">
                                 <Setter Property="CornerRadius" Value="6"/>
@@ -55,66 +146,93 @@
                         </Button.Resources>
                     </Button>
 
-                    <Button Command="{Binding ClearCommand}" Content="Cancel / Clear" Background="Transparent" Foreground="#64748B" Margin="0,10,0,0" BorderThickness="0" Cursor="Hand"/>
-                </StackPanel>
-            </ScrollViewer>
-        </Border>
+                    <StackPanel Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center">
+                        <TextBlock FontSize="20" FontWeight="Bold" Foreground="#1E293B" HorizontalAlignment="Center">
+                            <Run Text="Supply History: "/><Run Text="{Binding SupplierForDetails.Name}" Foreground="#3B82F6"/>
+                        </TextBlock>
+                        <TextBlock Text="{Binding SupplierForDetails.Phone}" FontSize="12" Foreground="#64748B" HorizontalAlignment="Center"/>
+                    </StackPanel>
 
-        <Grid Grid.Column="1">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
+                    <TextBox Grid.Column="2" Text="{Binding SearchInvoiceText, UpdateSourceTrigger=PropertyChanged}" 
+                             Tag="Search Bill No. or Product..." Height="40" Padding="15,0" VerticalContentAlignment="Center" 
+                             Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1">
+                        <TextBox.Resources>
+                            <Style TargetType="Border">
+                                <Setter Property="CornerRadius" Value="20"/>
+                            </Style>
+                        </TextBox.Resources>
+                    </TextBox>
+                </Grid>
+            </Border>
 
-            <Grid Grid.Row="0" Margin="0,0,0,20">
-                <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Tag="Search suppliers by name or phone..." 
-                         Height="45" Padding="15,0" VerticalContentAlignment="Center" Background="White" BorderBrush="#E2E8F0" BorderThickness="1">
-                    <TextBox.Resources>
-                        <Style TargetType="Border">
-                            <Setter Property="CornerRadius" Value="6"/>
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding SupplierInvoices}">
+                    <ItemsControl.Style>
+                        <Style TargetType="ItemsControl">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SupplierInvoices.Count}" Value="0">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate>
+                                                <TextBlock Text="No matching bills found." Foreground="#94A3B8" FontSize="16" FontStyle="Italic" HorizontalAlignment="Center" Margin="0,50,0,0"/>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                            </Style.Triggers>
                         </Style>
-                    </TextBox.Resources>
-                </TextBox>
-            </Grid>
+                    </ItemsControl.Style>
 
-            <DataGrid Grid.Row="1" ItemsSource="{Binding Suppliers}" SelectedItem="{Binding SelectedSupplier}" 
-                      AutoGenerateColumns="False" IsReadOnly="True" Background="White" BorderThickness="0"
-                      GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9" RowHeight="55" HeadersVisibility="Column">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="White" CornerRadius="8" Padding="20" Margin="0,0,0,20" BorderBrush="#E2E8F0" BorderThickness="1">
+                                <StackPanel>
+                                    <Grid Margin="0,0,0,15">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
 
-                <DataGrid.ColumnHeaderStyle>
-                    <Style TargetType="DataGridColumnHeader">
-                        <Setter Property="Background" Value="White"/>
-                        <Setter Property="Foreground" Value="#64748B"/>
-                        <Setter Property="FontWeight" Value="SemiBold"/>
-                        <Setter Property="Padding" Value="10"/>
-                        <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                        <Setter Property="BorderBrush" Value="#E2E8F0"/>
-                        <Setter Property="Height" Value="45"/>
-                    </Style>
-                </DataGrid.ColumnHeaderStyle>
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                            <TextBlock Text="Invoice: " Foreground="#64748B" FontSize="16" VerticalAlignment="Center"/>
+                                            <TextBlock Text="{Binding BillNumber}" FontWeight="Bold" FontSize="18" Foreground="#1E293B" VerticalAlignment="Center"/>
+                                            <Border Background="#E2E8F0" CornerRadius="4" Padding="8,2" Margin="15,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Status}" FontSize="11" FontWeight="Bold" Foreground="#475569"/>
+                                            </Border>
+                                        </StackPanel>
 
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Company" Binding="{Binding Name}" Width="*" FontWeight="SemiBold" Foreground="#334155"/>
-                    <DataGridTextColumn Header="Phone" Binding="{Binding Phone}" Width="140" Foreground="#64748B"/>
-                    <DataGridTextColumn Header="Note" Binding="{Binding Note}" Width="150" Foreground="#94A3B8"/>
+                                        <StackPanel Grid.Column="2" HorizontalAlignment="Right">
+                                            <TextBlock Text="{Binding Date, StringFormat=dd MMM yyyy}" Foreground="#64748B" FontSize="14" HorizontalAlignment="Right"/>
+                                            <TextBlock Text="{Binding TotalAmount, StringFormat='Total: Rs {0:N2}'}" FontWeight="Bold" Foreground="#10B981" FontSize="14" HorizontalAlignment="Right" Margin="0,5,0,0"/>
+                                        </StackPanel>
+                                    </Grid>
 
-                    <DataGridTemplateColumn Width="80">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <Button Command="{Binding DataContext.DeleteCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                        CommandParameter="{Binding}" Content="Del" Background="#FEE2E2" Foreground="#EF4444" 
-                                        BorderThickness="0" Padding="10,5" FontWeight="Bold" Cursor="Hand" HorizontalAlignment="Center">
-                                    <Button.Resources>
-                                        <Style TargetType="Border">
-                                            <Setter Property="CornerRadius" Value="4"/>
-                                        </Style>
-                                    </Button.Resources>
-                                </Button>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                </DataGrid.Columns>
-            </DataGrid>
+                                    <DataGrid ItemsSource="{Binding Batches}" AutoGenerateColumns="False" IsReadOnly="True" 
+                                              Background="Transparent" BorderThickness="1" BorderBrush="#F1F5F9" RowHeight="40" HeadersVisibility="Column">
+                                        <DataGrid.ColumnHeaderStyle>
+                                            <Style TargetType="DataGridColumnHeader">
+                                                <Setter Property="Background" Value="#F8FAFC"/>
+                                                <Setter Property="Foreground" Value="#64748B"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="Padding" Value="10,5"/>
+                                            </Style>
+                                        </DataGrid.ColumnHeaderStyle>
+
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="Product Name" Binding="{Binding Product.Name}" Width="2*"/>
+                                            <DataGridTextColumn Header="Buying Price" Binding="{Binding CostPrice, StringFormat=N2}" Width="1*"/>
+                                            <DataGridTextColumn Header="Selling Price" Binding="{Binding SellingPrice, StringFormat=N2}" Width="1*"/>
+                                            <DataGridTextColumn Header="Qty Received" Binding="{Binding InitialQuantity}" Width="120" FontWeight="Bold"/>
+                                            <DataGridTextColumn Header="Remaining Stock" Binding="{Binding RemainingQuantity}" Width="120" Foreground="#3B82F6"/>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
         </Grid>
     </Grid>
 </UserControl>

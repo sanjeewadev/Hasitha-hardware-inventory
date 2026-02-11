@@ -1,6 +1,8 @@
 ﻿using InventorySystem.Core.Entities;
 using InventorySystem.Data.Repositories;
 using InventorySystem.UI.Commands;
+using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,30 +14,30 @@ namespace InventorySystem.UI.ViewModels
     public class SupplierViewModel : ViewModelBase
     {
         private readonly ISupplierRepository _supplierRepo;
+        private readonly Data.Context.InventoryDbContext _context;
 
+        // --- PAGE VISIBILITY LOGIC ---
+        private bool _isPage1Visible = true;
+        public bool IsPage1Visible { get => _isPage1Visible; set { _isPage1Visible = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsPage2Visible)); } }
+        public bool IsPage2Visible => !IsPage1Visible;
+
+        // ==========================================
+        // PAGE 1: SUPPLIER MANAGEMENT
+        // ==========================================
         public ObservableCollection<Supplier> Suppliers { get; } = new();
 
-        // --- FORM INPUTS ---
         private string _name = "";
         public string Name { get => _name; set { _name = value; OnPropertyChanged(); } }
 
         private string _phone = "";
         public string Phone { get => _phone; set { _phone = value; OnPropertyChanged(); } }
 
-        private string _email = "";
-        public string Email { get => _email; set { _email = value; OnPropertyChanged(); } }
-
-        private string _address = "";
-        public string Address { get => _address; set { _address = value; OnPropertyChanged(); } }
-
         private string _note = "";
         public string Note { get => _note; set { _note = value; OnPropertyChanged(); } }
 
-        // --- SEARCH ---
         private string _searchText = "";
         public string SearchText { get => _searchText; set { _searchText = value; OnPropertyChanged(); LoadData(); } }
 
-        // --- SELECTION STATE ---
         private Supplier? _selectedSupplier;
         public Supplier? SelectedSupplier
         {
@@ -44,13 +46,10 @@ namespace InventorySystem.UI.ViewModels
             {
                 _selectedSupplier = value;
                 OnPropertyChanged();
-                if (value != null)
+                if (value != null && IsPage1Visible)
                 {
-                    // Populate Form for Editing
                     Name = value.Name;
                     Phone = value.Phone;
-                    Email = value.Email;
-                    Address = value.Address;
                     Note = value.Note;
                     IsEditMode = true;
                 }
@@ -60,21 +59,39 @@ namespace InventorySystem.UI.ViewModels
         private bool _isEditMode;
         public bool IsEditMode { get => _isEditMode; set { _isEditMode = value; OnPropertyChanged(); } }
 
-        // --- COMMANDS ---
         public ICommand SaveCommand { get; }
         public ICommand ClearCommand { get; }
         public ICommand DeleteCommand { get; }
+        public ICommand ViewDetailsCommand { get; }
+
+        // ==========================================
+        // PAGE 2: SUPPLIER BILLS & PRODUCTS
+        // ==========================================
+        public ObservableCollection<PurchaseInvoice> SupplierInvoices { get; } = new();
+        public Supplier? SupplierForDetails { get; private set; }
+
+        private List<PurchaseInvoice> _masterInvoiceList = new(); // Stores all bills for instant filtering
+
+        private string _searchInvoiceText = "";
+        public string SearchInvoiceText
+        {
+            get => _searchInvoiceText;
+            set { _searchInvoiceText = value; OnPropertyChanged(); FilterInvoices(); }
+        }
+
+        public ICommand BackToPage1Command { get; }
 
         public SupplierViewModel()
         {
-            // Ideally, pass this via Constructor Injection if you have it set up.
-            // For now, we create it manually to keep it simple.
-            var db = InventorySystem.Infrastructure.Services.DatabaseService.CreateDbContext();
-            _supplierRepo = new SupplierRepository(db);
+            _context = InventorySystem.Infrastructure.Services.DatabaseService.CreateDbContext();
+            _supplierRepo = new SupplierRepository(_context);
 
             SaveCommand = new RelayCommand(async () => await SaveSupplier());
             ClearCommand = new RelayCommand(ClearForm);
             DeleteCommand = new RelayCommand<Supplier>(async (s) => await DeleteSupplier(s));
+
+            ViewDetailsCommand = new RelayCommand<Supplier>(async (s) => await LoadSupplierDetails(s));
+            BackToPage1Command = new RelayCommand(() => { IsPage1Visible = true; LoadData(); });
 
             LoadData();
         }
@@ -103,30 +120,15 @@ namespace InventorySystem.UI.ViewModels
 
             if (IsEditMode && SelectedSupplier != null)
             {
-                // Update Existing
                 SelectedSupplier.Name = Name;
                 SelectedSupplier.Phone = Phone;
-                SelectedSupplier.Email = Email;
-                SelectedSupplier.Address = Address;
                 SelectedSupplier.Note = Note;
-
                 await _supplierRepo.UpdateAsync(SelectedSupplier);
-                MessageBox.Show("Supplier updated successfully!", "Saved");
             }
             else
             {
-                // Create New
-                var newSupplier = new Supplier
-                {
-                    Name = Name,
-                    Phone = Phone,
-                    Email = Email,
-                    Address = Address,
-                    Note = Note
-                };
-
+                var newSupplier = new Supplier { Name = Name, Phone = Phone, Note = Note };
                 await _supplierRepo.AddAsync(newSupplier);
-                MessageBox.Show("New Supplier added!", "Saved");
             }
 
             ClearForm();
@@ -135,6 +137,7 @@ namespace InventorySystem.UI.ViewModels
 
         private async Task DeleteSupplier(Supplier s)
         {
+            if (s == null) return;
             if (MessageBox.Show($"Delete supplier '{s.Name}'?\n(Only possible if they have no linked bills)", "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
                 await _supplierRepo.DeleteAsync(s.Id);
@@ -144,9 +147,50 @@ namespace InventorySystem.UI.ViewModels
 
         private void ClearForm()
         {
-            Name = ""; Phone = ""; Email = ""; Address = ""; Note = "";
+            Name = ""; Phone = ""; Note = "";
             SelectedSupplier = null;
             IsEditMode = false;
+        }
+
+        private async Task LoadSupplierDetails(Supplier s)
+        {
+            if (s == null) return;
+            SupplierForDetails = s;
+            SearchInvoiceText = ""; // Clear old search
+            OnPropertyChanged(nameof(SupplierForDetails));
+
+            // Fetch deeply
+            var invoices = await _context.PurchaseInvoices
+                .Include(i => i.Batches)
+                    .ThenInclude(b => b.Product)
+                .Where(i => i.SupplierId == s.Id)
+                .OrderByDescending(i => i.Date)
+                .ToListAsync();
+
+            _masterInvoiceList = invoices; // Save to master list
+            FilterInvoices(); // Trigger initial load
+
+            IsPage1Visible = false;
+        }
+
+        private void FilterInvoices()
+        {
+            SupplierInvoices.Clear();
+
+            var query = _masterInvoiceList.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(SearchInvoiceText))
+            {
+                var lower = SearchInvoiceText.ToLower();
+                // Search by Bill Number OR if any Product Name inside the bill matches
+                query = query.Where(i => i.BillNumber.ToLower().Contains(lower) ||
+                                         i.Batches.Any(b => b.Product.Name.ToLower().Contains(lower)));
+            }
+
+            foreach (var inv in query)
+            {
+                SupplierInvoices.Add(inv);
+            }
         }
     }
 }
