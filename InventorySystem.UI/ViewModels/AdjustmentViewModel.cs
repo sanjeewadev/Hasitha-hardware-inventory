@@ -2,6 +2,7 @@
 using InventorySystem.Core.Enums;
 using InventorySystem.Data.Repositories;
 using InventorySystem.UI.Commands;
+using Microsoft.EntityFrameworkCore; // Needed for Include
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -12,11 +13,13 @@ using System.Windows.Input;
 
 namespace InventorySystem.UI.ViewModels
 {
-    public class StockViewModel : ViewModelBase
+    public class AdjustmentViewModel : ViewModelBase
     {
         private readonly IProductRepository _productRepo;
         private readonly ICategoryRepository _categoryRepo;
         private readonly IStockRepository _stockRepo;
+        // Direct DB access for custom history filtering
+        private readonly Data.Context.InventoryDbContext _dbContext;
 
         // --- NAVIGATION ---
         private List<Category> _allCategoriesCache = new();
@@ -69,8 +72,7 @@ namespace InventorySystem.UI.ViewModels
                     StockOutQty = 0;
                     StockOutReason = AdjustmentReason.Correction;
                     SelectedAdjustmentBatch = null;
-
-                    LoadBatchHistory(_selectedProduct.Id);
+                    LoadDataForSelectedProduct();
                 }
                 else
                 {
@@ -82,7 +84,7 @@ namespace InventorySystem.UI.ViewModels
         public bool IsProductSelected => SelectedProduct != null;
         public string CurrentUnit => SelectedProduct?.Unit ?? "";
 
-        // --- ADJUSTMENT (OUT) PROPERTIES ---
+        // --- ADJUSTMENT PROPERTIES ---
         public DateTime StockOutDate { get; set; } = DateTime.Now;
 
         private decimal _stockOutQty;
@@ -101,15 +103,18 @@ namespace InventorySystem.UI.ViewModels
         }
 
         public ObservableCollection<StockBatch> ActiveBatches { get; } = new();
-        public ObservableCollection<StockBatch> BatchHistory { get; } = new();
+
+        // REPLACED: BatchHistory -> AdjustmentHistory
+        public ObservableCollection<StockMovement> AdjustmentHistory { get; } = new();
 
         public ICommand StockOutCommand { get; }
 
-        public StockViewModel(IProductRepository pRepo, ICategoryRepository cRepo, IStockRepository sRepo)
+        public AdjustmentViewModel(IProductRepository pRepo, ICategoryRepository cRepo, IStockRepository sRepo)
         {
             _productRepo = pRepo;
             _categoryRepo = cRepo;
             _stockRepo = sRepo;
+            _dbContext = Infrastructure.Services.DatabaseService.CreateDbContext();
 
             StockOutCommand = new RelayCommand(async () => await ExecuteStockOut());
 
@@ -169,23 +174,28 @@ namespace InventorySystem.UI.ViewModels
             }
         }
 
-        private async void LoadBatchHistory(int productId)
+        private async void LoadDataForSelectedProduct()
         {
-            BatchHistory.Clear();
+            if (SelectedProduct == null) return;
+
+            // 1. Load Active Batches (For Dropdown)
             ActiveBatches.Clear();
-
             var batches = await _stockRepo.GetAllBatchesAsync();
-            var relevant = batches.Where(b => b.ProductId == productId).OrderByDescending(b => b.ReceivedDate);
+            var relevantBatches = batches
+                .Where(b => b.ProductId == SelectedProduct.Id && b.RemainingQuantity > 0)
+                .OrderByDescending(b => b.ReceivedDate);
 
-            foreach (var b in relevant)
-            {
-                BatchHistory.Add(b);
-                if (b.RemainingQuantity > 0)
-                {
-                    ActiveBatches.Add(b);
-                }
-            }
+            foreach (var b in relevantBatches) ActiveBatches.Add(b);
             SelectedAdjustmentBatch = ActiveBatches.FirstOrDefault();
+
+            // 2. Load Adjustment History (NEW FEATURE)
+            AdjustmentHistory.Clear();
+            var history = await _dbContext.StockMovements
+                .Where(m => m.ProductId == SelectedProduct.Id && m.Type == StockMovementType.Adjustment)
+                .OrderByDescending(m => m.Date)
+                .ToListAsync();
+
+            foreach (var h in history) AdjustmentHistory.Add(h);
         }
 
         private async Task ExecuteStockOut()
@@ -205,33 +215,33 @@ namespace InventorySystem.UI.ViewModels
                 return;
             }
 
-            var msg = $"Are you sure you want to remove {StockOutQty} {SelectedProduct.Unit}?\nReason: {StockOutReason}";
-            if (MessageBox.Show(msg, "Confirm Adjustment", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            var msg = $"Confirm Adjustment?\n\nRemoving: {StockOutQty} {SelectedProduct.Unit}\nReason: {StockOutReason}\n\nThis cannot be undone.";
+            if (MessageBox.Show(msg, "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
                 var movement = new StockMovement
                 {
                     ProductId = SelectedProduct.Id,
                     Quantity = StockOutQty,
                     Type = StockMovementType.Adjustment,
-                    Date = StockOutDate,
+                    Date = DateTime.Now,
                     Reason = StockOutReason,
                     StockBatchId = SelectedAdjustmentBatch.Id,
-                    Note = $"Manual Adjustment: {StockOutReason}"
+                    Note = $"Manual Adjustment: {StockOutReason}",
+                    // Carry over costs for accounting
+                    UnitCost = SelectedAdjustmentBatch.CostPrice,
+                    UnitPrice = SelectedAdjustmentBatch.SellingPrice
                 };
 
                 await _stockRepo.AdjustStockAsync(movement);
-                MessageBox.Show("Stock Adjusted Successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                RefreshView();
-            }
-        }
 
-        private void RefreshView()
-        {
-            ClearInputs();
-            if (SelectedProduct != null) LoadBatchHistory(SelectedProduct.Id);
-            var currentSearch = ProductSearchText;
-            LoadProductsForCategory();
-            ProductSearchText = currentSearch;
+                // Update Local UI Cache immediately
+                SelectedProduct.Quantity -= StockOutQty;
+                OnPropertyChanged(nameof(SelectedProduct));
+
+                MessageBox.Show("Stock Adjusted Successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                LoadDataForSelectedProduct(); // Refresh lists
+                StockOutQty = 0; // Reset input
+            }
         }
 
         private void ClearInputs()
@@ -240,6 +250,8 @@ namespace InventorySystem.UI.ViewModels
             StockOutDate = DateTime.Now;
             StockOutReason = AdjustmentReason.Correction;
             SelectedAdjustmentBatch = null;
+            AdjustmentHistory.Clear();
+            ActiveBatches.Clear();
 
             OnPropertyChanged(nameof(StockOutQty));
             OnPropertyChanged(nameof(StockOutReason));

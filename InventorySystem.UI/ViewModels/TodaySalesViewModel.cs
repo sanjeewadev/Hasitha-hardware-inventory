@@ -1,6 +1,6 @@
 ﻿using InventorySystem.Core.Entities;
 using InventorySystem.Data.Repositories;
-using InventorySystem.Infrastructure.Services; // For PrintService
+using InventorySystem.Infrastructure.Services;
 using InventorySystem.UI.Commands;
 using System;
 using System.Collections.Generic;
@@ -15,6 +15,7 @@ namespace InventorySystem.UI.ViewModels
     public class TodaySalesViewModel : ViewModelBase
     {
         private readonly IStockRepository _stockRepo;
+        private List<TodaySaleGroup> _allSalesCache = new();
 
         public ObservableCollection<TodaySaleGroup> TodayTransactions { get; } = new();
 
@@ -28,6 +29,14 @@ namespace InventorySystem.UI.ViewModels
         private int _saleCount;
         public int SaleCount { get => _saleCount; set { _saleCount = value; OnPropertyChanged(); } }
 
+        // --- SEARCH ---
+        private string _searchText = "";
+        public string SearchText
+        {
+            get => _searchText;
+            set { _searchText = value; OnPropertyChanged(); FilterSales(); }
+        }
+
         // --- POPUP STATE ---
         private bool _isDetailsVisible;
         public bool IsDetailsVisible { get => _isDetailsVisible; set { _isDetailsVisible = value; OnPropertyChanged(); } }
@@ -37,17 +46,18 @@ namespace InventorySystem.UI.ViewModels
 
         // --- COMMANDS ---
         public ICommand RefreshCommand { get; }
-        public ICommand VoidLastSaleCommand { get; }
+        public ICommand DeleteSaleCommand { get; }
         public ICommand ViewDetailsCommand { get; }
         public ICommand CloseDetailsCommand { get; }
-        public ICommand PrintReceiptCommand { get; } // <--- NEW
+        public ICommand PrintReceiptCommand { get; }
+        public ICommand CopyIdCommand { get; } // <--- NEW
 
         public TodaySalesViewModel(IStockRepository stockRepo)
         {
             _stockRepo = stockRepo;
 
             RefreshCommand = new RelayCommand(async () => await LoadData());
-            VoidLastSaleCommand = new RelayCommand(async () => await ExecuteVoidLastSale());
+            DeleteSaleCommand = new RelayCommand<TodaySaleGroup>(async (sale) => await ExecuteDeleteSale(sale));
 
             ViewDetailsCommand = new RelayCommand<TodaySaleGroup>((sale) => {
                 SelectedSale = sale;
@@ -55,49 +65,25 @@ namespace InventorySystem.UI.ViewModels
             });
 
             CloseDetailsCommand = new RelayCommand(() => IsDetailsVisible = false);
-
-            // New Print Command
             PrintReceiptCommand = new RelayCommand(PrintCurrentReceipt);
 
-            LoadData();
-        }
-
-        private void PrintCurrentReceipt()
-        {
-            if (SelectedSale == null) return;
-
-            try
+            // NEW: Copy to Clipboard Logic
+            CopyIdCommand = new RelayCommand<string>((id) =>
             {
-                // 1. Get Printer Name (Ignore Count, Force 1)
-                string printerName = Properties.Settings.Default.PrinterName;
-
-                // 2. Build Receipt Content
-                string receiptText = $"REPRINT RECEIPT\nDate: {SelectedSale.Date}\nRef: {SelectedSale.ReferenceId}\n----------------\n";
-
-                foreach (var item in SelectedSale.Items)
+                if (!string.IsNullOrEmpty(id))
                 {
-                    receiptText += $"{item.ProductName} x{item.Quantity}  {item.Total:N2}\n";
+                    Clipboard.SetText(id);
+                    MessageBox.Show($"Receipt ID '{id}' copied to clipboard!", "Copied", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
+            });
 
-                receiptText += $"----------------\nTotal: {SelectedSale.TotalAmount:N2}\n\n(Reprinted Copy)";
-
-                // 3. Print (Force 1 copy)
-                var printService = new PrintService();
-                printService.PrintReceipt(SelectedSale.ReferenceId, receiptText, printerName, 1);
-
-                MessageBox.Show("Sent to printer.");
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Print Failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
+            LoadData();
         }
 
         private async Task LoadData()
         {
             try
             {
-                TodayTransactions.Clear();
                 var start = DateTime.Today;
                 var end = DateTime.Today.AddDays(1).AddTicks(-1);
 
@@ -118,64 +104,97 @@ namespace InventorySystem.UI.ViewModels
 
                 SaleCount = grouped.Count;
 
-                foreach (var group in grouped) TodayTransactions.Add(group);
+                _allSalesCache = grouped;
+                FilterSales();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Failed to load today's sales data.\n\nError: {ex.Message}", "System Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Failed to load data: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        private async Task ExecuteVoidLastSale()
+        private void FilterSales()
         {
-            var lastGroup = TodayTransactions.FirstOrDefault();
-            if (lastGroup == null)
+            TodayTransactions.Clear();
+            var query = _allSalesCache.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(SearchText))
             {
-                MessageBox.Show("No active sales found today to void.", "List Empty", MessageBoxButton.OK, MessageBoxImage.Information);
-                return;
+                var lower = SearchText.ToLower();
+                query = query.Where(s => s.ReferenceId.ToLower().Contains(lower) || s.SummaryText.ToLower().Contains(lower));
             }
 
-            string warningMsg = $"⚠ SECURITY WARNING: VOIDING TRANSACTION\n\n" +
-                                $"You are about to undo the last sale:\n" +
-                                $"--------------------------------------\n" +
-                                $"Time: {lastGroup.Date:hh:mm tt}\n" +
-                                $"Items: {lastGroup.TotalItems}\n" +
-                                $"Total Refund: Rs {lastGroup.TotalAmount:N2}\n" +
-                                $"--------------------------------------\n\n" +
-                                $"• Revenue will be deducted.\n" +
-                                $"• Items will be returned to Stock.\n\n" +
-                                $"Are you sure you want to proceed?";
+            foreach (var s in query) TodayTransactions.Add(s);
+        }
 
-            if (MessageBox.Show(warningMsg, "Confirm Refund / Void", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+        private async Task ExecuteDeleteSale(TodaySaleGroup sale)
+        {
+            if (sale == null) return;
+
+            string warningMsg = $"⚠ SECURITY WARNING: VOID TRANSACTION\n\n" +
+                                $"Receipt: {sale.ReferenceId}\n" +
+                                $"Amount: Rs {sale.TotalAmount:N2}\n\n" +
+                                $"This will remove revenue and restore items to stock.\n" +
+                                $"Are you sure?";
+
+            if (MessageBox.Show(warningMsg, "Confirm Void", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
                 try
                 {
-                    var receiptId = lastGroup.Items.First().ReceiptId;
-                    await _stockRepo.VoidReceiptAsync(receiptId);
+                    await _stockRepo.VoidReceiptAsync(sale.ReferenceId);
                     await LoadData();
-                    MessageBox.Show("Transaction Voided Successfully.\nStock has been restored.", "Void Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                    IsDetailsVisible = false;
+                    MessageBox.Show("Transaction Voided Successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Could not void transaction.\n\nError: {ex.Message}", "Void Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show($"Void Failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
+            }
+        }
+
+        private void PrintCurrentReceipt()
+        {
+            if (SelectedSale == null) return;
+            try
+            {
+                string printerName = Properties.Settings.Default.PrinterName;
+                string receiptText = $"REPRINT RECEIPT\nDate: {SelectedSale.Date}\nRef: {SelectedSale.ReferenceId}\n----------------\n";
+                foreach (var item in SelectedSale.Items)
+                {
+                    receiptText += $"{item.ProductName} x{item.Quantity}  {item.Total:N2}\n";
+                }
+                receiptText += $"----------------\nTotal: {SelectedSale.TotalAmount:N2}\n\n(Reprinted Copy)";
+
+                var printService = new PrintService();
+                printService.PrintReceipt(SelectedSale.ReferenceId, receiptText, printerName, 1);
+                MessageBox.Show("Sent to printer.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Print Failed: {ex.Message}");
             }
         }
     }
 
-    // --- (Keep TodaySaleGroup and TodayItemDetail classes same as before) ---
     public class TodaySaleGroup
     {
         public DateTime Date { get; }
         public List<TodayItemDetail> Items { get; }
-        public string ReferenceId => Date.ToString("HHmmss");
+        public string ReferenceId { get; }
+
         public string SummaryText => Items.Count == 1 ? Items.First().ProductName : $"{Items.Count} Items";
         public decimal TotalItems => Items.Sum(i => i.Quantity);
         public decimal TotalAmount => Items.Sum(i => i.Total);
+        public string CustomerDisplay { get; }
 
         public TodaySaleGroup(DateTime date, List<StockMovement> raw)
         {
             Date = date;
+            ReferenceId = raw.First().ReceiptId;
+            string note = raw.First().Note;
+            CustomerDisplay = string.IsNullOrWhiteSpace(note) ? "Walk-in" : note;
+
             Items = raw.Select(m => new TodayItemDetail
             {
                 ProductName = m.Product?.Name ?? "?",

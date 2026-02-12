@@ -3,6 +3,7 @@ using InventorySystem.Core.Enums;
 using InventorySystem.UI.Commands;
 using Microsoft.EntityFrameworkCore;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -11,12 +12,14 @@ using System.Windows.Input;
 
 namespace InventorySystem.UI.ViewModels
 {
-    // A temporary wrapper to hold the UI state for each item being returned
+    public enum ReturnReason { Restock, Defective }
+
     public class ReturnItemModel : ViewModelBase
     {
         public StockMovement OriginalMovement { get; }
 
         public decimal MaxReturnable => OriginalMovement.Quantity - OriginalMovement.ReturnedQuantity;
+        public bool IsReturnable => MaxReturnable > 0;
 
         private decimal _returnQty;
         public decimal ReturnQty
@@ -24,7 +27,6 @@ namespace InventorySystem.UI.ViewModels
             get => _returnQty;
             set
             {
-                // Prevent typing more than they are allowed to return
                 if (value < 0) value = 0;
                 if (value > MaxReturnable) value = MaxReturnable;
 
@@ -34,7 +36,16 @@ namespace InventorySystem.UI.ViewModels
             }
         }
 
+        private ReturnReason _reason = ReturnReason.Restock;
+        public ReturnReason Reason
+        {
+            get => _reason;
+            set { _reason = value; OnPropertyChanged(); }
+        }
+
         public decimal RefundValue => ReturnQty * OriginalMovement.UnitPrice;
+
+        public IEnumerable<ReturnReason> ReasonOptions => Enum.GetValues(typeof(ReturnReason)).Cast<ReturnReason>();
 
         public ReturnItemModel(StockMovement movement)
         {
@@ -47,11 +58,9 @@ namespace InventorySystem.UI.ViewModels
     {
         private readonly Data.Context.InventoryDbContext _context;
 
-        // --- SEARCH ---
         private string _searchReceiptId = "";
         public string SearchReceiptId { get => _searchReceiptId; set { _searchReceiptId = value; OnPropertyChanged(); } }
 
-        // --- STATE ---
         private SalesTransaction? _currentReceipt;
         public SalesTransaction? CurrentReceipt { get => _currentReceipt; set { _currentReceipt = value; OnPropertyChanged(); } }
 
@@ -59,7 +68,6 @@ namespace InventorySystem.UI.ViewModels
 
         public decimal TotalRefundAmount => ReturnItems.Sum(x => x.RefundValue);
 
-        // --- COMMANDS ---
         public ICommand SearchCommand { get; }
         public ICommand ProcessReturnCommand { get; }
         public ICommand ClearCommand { get; }
@@ -70,21 +78,42 @@ namespace InventorySystem.UI.ViewModels
 
             SearchCommand = new RelayCommand(async () => await SearchReceiptAsync());
             ProcessReturnCommand = new RelayCommand(async () => await ProcessReturnAsync());
-            ClearCommand = new RelayCommand(ClearForm);
+            ClearCommand = new RelayCommand(ResetEntireForm); // Changed to ResetAll
 
-            // Listen for changes inside the collection to update the Total Refund Amount in real-time
             ReturnItems.CollectionChanged += (s, e) => OnPropertyChanged(nameof(TotalRefundAmount));
         }
 
         private async Task SearchReceiptAsync()
         {
+            // 1. Validate Input
             if (string.IsNullOrWhiteSpace(SearchReceiptId)) return;
 
-            ClearForm();
-            SearchReceiptId = SearchReceiptId.Trim(); // Restore search text after clear
+            // 2. Capture the input BEFORE clearing anything
+            string query = SearchReceiptId.Trim();
 
-            // Fetch Receipt and its Outward Stock Movements
-            var receipt = await _context.SalesTransactions.FirstOrDefaultAsync(t => t.ReceiptId == SearchReceiptId);
+            // 3. Clear only the previous results (Keep the search text visible!)
+            ResetResultsOnly();
+
+            // 4. Try Exact Match First
+            var receipt = await _context.SalesTransactions.FirstOrDefaultAsync(t => t.ReceiptId == query);
+
+            // 5. If not found, try Partial Match
+            if (receipt == null)
+            {
+                var candidates = await _context.SalesTransactions
+                    .Where(t => t.ReceiptId.Contains(query))
+                    .ToListAsync();
+
+                if (candidates.Count == 1)
+                {
+                    receipt = candidates.First();
+                }
+                else if (candidates.Count > 1)
+                {
+                    MessageBox.Show($"Multiple receipts found matching '{query}'. Please enter the full ID.", "Multiple Matches", MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
+            }
 
             if (receipt == null)
             {
@@ -92,14 +121,18 @@ namespace InventorySystem.UI.ViewModels
                 return;
             }
 
+            // Update UI with the Full ID found
+            SearchReceiptId = receipt.ReceiptId;
+
+            // Load Items
             var movements = await _context.StockMovements
                 .Include(m => m.Product)
-                .Where(m => m.ReceiptId == SearchReceiptId && m.Type == StockMovementType.Out && !m.IsVoided)
+                .Where(m => m.ReceiptId == receipt.ReceiptId && m.Type == StockMovementType.Out && !m.IsVoided)
                 .ToListAsync();
 
             if (!movements.Any())
             {
-                MessageBox.Show("No valid items found on this receipt.", "Empty Receipt", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("No valid items found on this receipt (or previously voided).", "Empty Receipt", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -108,7 +141,6 @@ namespace InventorySystem.UI.ViewModels
             foreach (var move in movements)
             {
                 var item = new ReturnItemModel(move);
-                // Subscribe to child changes so the Total updates instantly when typing
                 item.PropertyChanged += (s, e) =>
                 {
                     if (e.PropertyName == nameof(ReturnItemModel.RefundValue))
@@ -122,13 +154,23 @@ namespace InventorySystem.UI.ViewModels
         {
             if (CurrentReceipt == null || !ReturnItems.Any(x => x.ReturnQty > 0))
             {
-                MessageBox.Show("Please enter a quantity to return for at least one item.", "No Items Selected", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show("Please enter a quantity to return.", "Validation", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             var itemsToReturn = ReturnItems.Where(x => x.ReturnQty > 0).ToList();
 
-            if (MessageBox.Show($"Process refund for Rs {TotalRefundAmount:N2}?\nThis will securely return the items to inventory.", "Confirm Return", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            string message = $"Total Refund: Rs {TotalRefundAmount:N2}\n";
+            if (CurrentReceipt.IsCredit && CurrentReceipt.Status == PaymentStatus.Unpaid)
+            {
+                message += "\n⚠ WARNING: This was a CREDIT SALE.\nDo NOT give cash. This will reduce their debt balance.";
+            }
+            else
+            {
+                message += "\nRefund Cash to Customer?";
+            }
+
+            if (MessageBox.Show(message, "Confirm Return", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
                 using var dbTrans = await _context.Database.BeginTransactionAsync();
 
@@ -138,60 +180,63 @@ namespace InventorySystem.UI.ViewModels
                     {
                         var originalMove = item.OriginalMovement;
 
-                        // 1. Log the Return Movement
                         var returnMove = new StockMovement
                         {
                             ProductId = originalMove.ProductId,
-                            StockBatchId = originalMove.StockBatchId, // Locks it back to exact batch!
+                            StockBatchId = originalMove.StockBatchId,
                             Type = StockMovementType.SalesReturn,
                             Quantity = item.ReturnQty,
                             UnitCost = originalMove.UnitCost,
                             UnitPrice = originalMove.UnitPrice,
                             Date = DateTime.Now,
-                            ReceiptId = CurrentReceipt.ReceiptId, // Link to original receipt
-                            Note = $"Customer Return (Ref: {CurrentReceipt.ReceiptId})"
+                            ReceiptId = CurrentReceipt.ReceiptId,
+                            Note = $"Return ({item.Reason})"
                         };
                         _context.StockMovements.Add(returnMove);
 
-                        // 2. Update Original Movement's tracking to prevent Double-Dipping
                         var trackedMove = await _context.StockMovements.FindAsync(originalMove.Id);
                         if (trackedMove != null) trackedMove.ReturnedQuantity += item.ReturnQty;
 
-                        // 3. Restore Global Product Stock
-                        var product = await _context.Products.FindAsync(originalMove.ProductId);
-                        if (product != null) product.Quantity += item.ReturnQty;
-
-                        // 4. Restore Batch Stock (Crucial for profit margins)
-                        if (originalMove.StockBatchId.HasValue)
+                        if (item.Reason == ReturnReason.Restock)
                         {
-                            var batch = await _context.StockBatches.FindAsync(originalMove.StockBatchId.Value);
-                            if (batch != null) batch.RemainingQuantity += item.ReturnQty;
+                            var product = await _context.Products.FindAsync(originalMove.ProductId);
+                            if (product != null) product.Quantity += item.ReturnQty;
+
+                            if (originalMove.StockBatchId.HasValue)
+                            {
+                                var batch = await _context.StockBatches.FindAsync(originalMove.StockBatchId.Value);
+                                if (batch != null) batch.RemainingQuantity += item.ReturnQty;
+                            }
                         }
                     }
-
-                    // Optional: If you want to deduct from the day's SalesTransaction total, you can do it here. 
-                    // However, standard accounting leaves the original receipt intact and uses the SalesReturn movements to calculate net sales.
 
                     await _context.SaveChangesAsync();
                     await dbTrans.CommitAsync();
 
-                    MessageBox.Show("Return processed successfully. Stock has been restored.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                    ClearForm();
+                    MessageBox.Show("Return processed successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    ResetEntireForm(); // Clear everything on success
                 }
                 catch (Exception ex)
                 {
                     await dbTrans.RollbackAsync();
-                    MessageBox.Show($"Failed to process return: {ex.Message}", "Database Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show($"Failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
 
-        private void ClearForm()
+        // Helper: Clear only the grid (Used when searching new ID)
+        private void ResetResultsOnly()
         {
-            SearchReceiptId = "";
             CurrentReceipt = null;
             ReturnItems.Clear();
             OnPropertyChanged(nameof(TotalRefundAmount));
+        }
+
+        // Helper: Clear everything (Used by Cancel Button)
+        private void ResetEntireForm()
+        {
+            SearchReceiptId = "";
+            ResetResultsOnly();
         }
     }
 }

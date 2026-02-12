@@ -98,7 +98,6 @@
                                                 <StackPanel Grid.Row="0" VerticalAlignment="Top">
                                                     <TextBlock Text="{Binding Name}" TextWrapping="Wrap" FontWeight="SemiBold" 
                                                                Foreground="#1E293B" FontSize="12"/>
-                                                    <TextBlock Text="{Binding Barcode}" FontSize="10" Foreground="#94A3B8" Margin="0,2,0,0"/>
                                                 </StackPanel>
 
                                                 <Grid Grid.Row="1">
@@ -322,7 +321,7 @@
                     <Grid.RowDefinitions>
                         <RowDefinition Height="120"/>
                         <RowDefinition Height="*"/>
-                        <RowDefinition Height="80"/>
+                        <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <Border Grid.Row="0" Background="{Binding NotificationColor}" CornerRadius="12,12,0,0">
                         <TextBlock Text="{Binding NotificationIcon}" FontSize="60" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/>
@@ -333,16 +332,31 @@
                         <TextBlock Text="{Binding NotificationMessage}" FontSize="15" 
                                    Foreground="#64748B" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"/>
                     </StackPanel>
-                    <Button Grid.Row="2" Command="{Binding CloseNotificationCommand}" 
-                            Content="OK, GOT IT" Width="150" Height="45"
-                            Background="{Binding NotificationColor}" Foreground="White" 
-                            FontSize="14" FontWeight="Bold" Cursor="Hand" Margin="0,0,0,20">
-                        <Button.Resources>
-                            <Style TargetType="Border">
-                                <Setter Property="CornerRadius" Value="25"/>
-                            </Style>
-                        </Button.Resources>
-                    </Button>
+
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,20">
+                        <Button Command="{Binding PrintLastReceiptCommand}" 
+                                Visibility="{Binding ShowPrintButtonInNotification, Converter={StaticResource BoolToVis}}"
+                                Content="🖨 PRINT RECEIPT" Width="150" Height="45"
+                                Background="#3B82F6" Foreground="White" 
+                                FontSize="13" FontWeight="Bold" Cursor="Hand" Margin="0,0,10,0">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="25"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+
+                        <Button Command="{Binding CloseNotificationCommand}" 
+                                Content="OK" Width="100" Height="45"
+                                Background="{Binding NotificationColor}" Foreground="White" 
+                                FontSize="14" FontWeight="Bold" Cursor="Hand">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="25"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+                    </StackPanel>
                 </Grid>
             </Border>
         </Grid>
@@ -374,6 +388,9 @@
                                                             <ColumnDefinition Width="Auto"/>
                                                         </Grid.ColumnDefinitions>
                                                         <StackPanel>
+                                                            <TextBlock Text="{Binding PurchaseInvoice.Supplier.Name, TargetNullValue='Unknown Supplier'}" 
+                                                                       FontSize="11" Foreground="#0284C7" FontWeight="Bold" Margin="0,0,0,2"/>
+
                                                             <TextBlock Text="{Binding ReceivedDate, StringFormat='{}Date: {0:dd MMM yyyy}'}" 
                                                                        FontWeight="SemiBold" FontSize="14" Foreground="#334155"/>
                                                             <TextBlock Text="{Binding RemainingQuantity, StringFormat='In Stock: {0}'}" 

@@ -1,6 +1,6 @@
 ﻿using InventorySystem.Core.Entities;
 using InventorySystem.Data.Repositories;
-using InventorySystem.Infrastructure.Services; // For PrintService
+using InventorySystem.Infrastructure.Services;
 using InventorySystem.UI.Commands;
 using System;
 using System.Collections.Generic;
@@ -16,12 +16,23 @@ namespace InventorySystem.UI.ViewModels
     {
         private readonly IStockRepository _stockRepo;
 
+        // Full list from DB to filter in memory
+        private List<SalesHistoryItem> _allHistoryCache = new();
+
         // --- FILTERS ---
         private DateTime _startDate = DateTime.Today.AddDays(-7);
         public DateTime StartDate { get => _startDate; set { _startDate = value; OnPropertyChanged(); } }
 
         private DateTime _endDate = DateTime.Today;
         public DateTime EndDate { get => _endDate; set { _endDate = value; OnPropertyChanged(); } }
+
+        // --- SEARCH ---
+        private string _searchText = "";
+        public string SearchText
+        {
+            get => _searchText;
+            set { _searchText = value; OnPropertyChanged(); FilterHistory(); }
+        }
 
         // --- LIST DATA ---
         public ObservableCollection<SalesHistoryItem> SalesHistory { get; } = new();
@@ -39,7 +50,7 @@ namespace InventorySystem.UI.ViewModels
         public ICommand ResetFilterCommand { get; }
         public ICommand ViewDetailsCommand { get; }
         public ICommand CloseDetailsCommand { get; }
-        public ICommand PrintReceiptCommand { get; } // <--- NEW
+        public ICommand PrintReceiptCommand { get; }
 
         public SalesHistoryViewModel(IStockRepository stockRepo)
         {
@@ -51,43 +62,17 @@ namespace InventorySystem.UI.ViewModels
             {
                 StartDate = DateTime.Today.AddDays(-7);
                 EndDate = DateTime.Today;
+                SearchText = "";
                 _ = ExecuteSearch();
             });
 
             ViewDetailsCommand = new RelayCommand<SalesHistoryItem>(item => SelectedSale = item);
             CloseDetailsCommand = new RelayCommand(() => SelectedSale = null);
 
-            // New Print Command
             PrintReceiptCommand = new RelayCommand(PrintCurrentReceipt);
 
             // Load initial data
             _ = ExecuteSearch();
-        }
-
-        private void PrintCurrentReceipt()
-        {
-            if (SelectedSale == null) return;
-
-            try
-            {
-                string printerName = Properties.Settings.Default.PrinterName;
-
-                string receiptText = $"HISTORICAL RECEIPT\nDate: {SelectedSale.Date}\nRef: {SelectedSale.ReferenceId}\n----------------\n";
-                foreach (var item in SelectedSale.Items)
-                {
-                    receiptText += $"{item.ProductName} x{item.Quantity}  {item.Total:N2}\n";
-                }
-                receiptText += $"----------------\nTotal: {SelectedSale.TotalAmount:N2}\n\n(Reprinted Copy)";
-
-                var printService = new PrintService();
-                printService.PrintReceipt(SelectedSale.ReferenceId, receiptText, printerName, 1);
-
-                MessageBox.Show("Sent to printer.");
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Print Failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
         }
 
         private async Task ExecuteSearch()
@@ -105,6 +90,7 @@ namespace InventorySystem.UI.ViewModels
 
                 var allMoves = await _stockRepo.GetSalesByDateRangeAsync(actualStart, actualEnd);
 
+                // Group Raw Movements into Sale Receipts
                 var groupedSales = allMoves
                     .Where(m => m.Type == Core.Enums.StockMovementType.Out)
                     .GroupBy(m => m.ReceiptId)
@@ -127,17 +113,61 @@ namespace InventorySystem.UI.ViewModels
                     .OrderByDescending(x => x.Date)
                     .ToList();
 
-                SalesHistory.Clear();
-                foreach (var sale in groupedSales) SalesHistory.Add(sale);
+                _allHistoryCache = groupedSales; // Cache full result
+                FilterHistory(); // Apply search
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Failed to load sales history.\n\nError: {ex.Message}", "System Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
+        private void FilterHistory()
+        {
+            SalesHistory.Clear();
+            var query = _allHistoryCache.AsEnumerable();
+
+            if (!string.IsNullOrWhiteSpace(SearchText))
+            {
+                var lower = SearchText.ToLower();
+                // Filter by Receipt ID OR if any product inside the receipt matches name
+                query = query.Where(s =>
+                    s.ReferenceId.ToLower().Contains(lower) ||
+                    s.Items.Any(i => i.ProductName.ToLower().Contains(lower))
+                );
+            }
+
+            foreach (var sale in query) SalesHistory.Add(sale);
+        }
+
+        private void PrintCurrentReceipt()
+        {
+            if (SelectedSale == null) return;
+
+            try
+            {
+                string printerName = Properties.Settings.Default.PrinterName;
+                int copies = Properties.Settings.Default.ReceiptCopies;
+
+                string receiptText = $"HISTORICAL RECEIPT\nDate: {SelectedSale.Date}\nRef: {SelectedSale.ReferenceId}\n----------------\n";
+                foreach (var item in SelectedSale.Items)
+                {
+                    receiptText += $"{item.ProductName} x{item.Quantity}  {item.Total:N2}\n";
+                }
+                receiptText += $"----------------\nTotal: {SelectedSale.TotalAmount:N2}\n\n(Reprinted Copy)";
+
+                var printService = new PrintService();
+                printService.PrintReceipt(SelectedSale.ReferenceId, receiptText, printerName, copies);
+
+                MessageBox.Show("Sent to printer.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Print Failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
     }
 
-    // --- (Keep DTOs same as before) ---
     public class SalesHistoryItem
     {
         public string ReferenceId { get; set; } = "";
@@ -151,9 +181,9 @@ namespace InventorySystem.UI.ViewModels
         {
             get
             {
-                if (IsVoided) return "[VOIDED / REFUNDED]";
+                if (IsVoided) return "⚠ VOIDED TRANSACTION";
                 if (Items.Count == 1) return Items[0].ProductName;
-                return $"{TotalItems:0.###} Items (Combined)";
+                return $"{Items.Count} Items (Combined)";
             }
         }
     }

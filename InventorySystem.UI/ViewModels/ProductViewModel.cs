@@ -2,6 +2,7 @@
 using InventorySystem.Data.Repositories;
 using InventorySystem.UI.Commands;
 using InventorySystem.UI.Views;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -17,12 +18,13 @@ namespace InventorySystem.UI.ViewModels
         private readonly IProductRepository _productRepo;
         private readonly ICategoryRepository _categoryRepo;
         private readonly IStockRepository _stockRepo;
+        private readonly Data.Context.InventoryDbContext _dbContext;
 
         // --- COLLECTIONS ---
         private List<Product> _allProductsCache = new();
         public ObservableCollection<Product> Products { get; } = new();
         public ObservableCollection<StockBatch> ProductBatches { get; } = new();
-        public ObservableCollection<StockMovement> ProductHistory { get; } = new();
+        // REMOVED: ProductHistory
 
         // --- SEARCH ---
         private string _searchText = "";
@@ -58,10 +60,8 @@ namespace InventorySystem.UI.ViewModels
         public ICommand LoadCommand { get; }
         public ICommand ClearFilterCommand { get; }
         public ICommand DeleteProductCommand { get; }
-
         public ICommand ViewCommand { get; }
         public ICommand CloseDetailCommand { get; }
-        public ICommand EditBatchCommand { get; }
         public ICommand DeleteBatchCommand { get; }
 
         public ProductViewModel(IProductRepository productRepo, ICategoryRepository categoryRepo, IStockRepository stockRepo)
@@ -69,6 +69,7 @@ namespace InventorySystem.UI.ViewModels
             _productRepo = productRepo;
             _categoryRepo = categoryRepo;
             _stockRepo = stockRepo;
+            _dbContext = Infrastructure.Services.DatabaseService.CreateDbContext();
 
             LoadCommand = new RelayCommand(async () => await LoadData());
             ClearFilterCommand = new RelayCommand(() => SearchText = "");
@@ -77,8 +78,6 @@ namespace InventorySystem.UI.ViewModels
             CloseDetailCommand = new RelayCommand(() => IsDetailVisible = false);
 
             DeleteProductCommand = new RelayCommand<Product>(async (p) => await AttemptDeleteProduct(p));
-
-            EditBatchCommand = new RelayCommand<StockBatch>(OpenEditBatchWindow);
             DeleteBatchCommand = new RelayCommand<StockBatch>(async (b) => await DeleteBatchAsync(b));
 
             LoadData();
@@ -88,27 +87,24 @@ namespace InventorySystem.UI.ViewModels
         {
             if (p == null) return;
 
-            // CHECK 1: STOCK
             if (p.Quantity > 0)
             {
-                MessageBox.Show($"You cannot delete '{p.Name}' because it still has stock ({p.Quantity}).\n\nPlease remove all stock using the Adjustment tab first.", "Deletion Blocked", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"You cannot delete '{p.Name}' because it still has stock ({p.Quantity}).", "Deletion Blocked", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
-            // CHECK 2: HISTORY
             var allHistory = await _stockRepo.GetHistoryAsync();
             if (allHistory.Any(x => x.ProductId == p.Id))
             {
-                MessageBox.Show($"The product '{p.Name}' has linked sales records.\n\nDeleting it will corrupt your past Sales Reports.\n\nWe recommend keeping it for records.", "Restricted Action", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show($"The product '{p.Name}' has linked sales records. Deletion restricted.", "Restricted", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            // CHECK 3: CONFIRM
-            if (MessageBox.Show($"Are you sure you want to permanently delete '{p.Name}'?\nThis action cannot be undone.", "Confirm Deletion", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            if (MessageBox.Show($"Permanently delete '{p.Name}'?", "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
                 await _productRepo.DeleteAsync(p.Id);
                 await LoadData();
-                MessageBox.Show($"Product '{p.Name}' has been removed.", "Deleted", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Product deleted.");
             }
         }
 
@@ -139,49 +135,33 @@ namespace InventorySystem.UI.ViewModels
             IsDetailVisible = true;
         }
 
-        // --- UPDATED: 7-Day Retention Logic ---
         private async Task LoadBatchesForViewingProduct()
         {
             if (ViewingProduct == null) return;
 
-            var allBatches = await _stockRepo.GetAllBatchesAsync();
-
-            // LOGIC: Keep if Quantity > 0 OR if created within last 7 days
-            var cutoffDate = DateTime.Now.AddDays(-7);
-
-            var specificBatches = allBatches
+            // LOAD BATCHES (With Supplier Info)
+            var allBatches = await _dbContext.StockBatches
+                .Include(b => b.PurchaseInvoice)
+                .ThenInclude(i => i.Supplier)
                 .Where(b => b.ProductId == ViewingProduct.Id)
-                .Where(b => b.RemainingQuantity > 0 || b.ReceivedDate >= cutoffDate)
                 .OrderByDescending(b => b.ReceivedDate)
+                .ToListAsync();
+
+            // Filter: Keep if Quantity > 0 OR if created within last 7 days
+            var cutoffDate = DateTime.Now.AddDays(-7);
+            var visibleBatches = allBatches
+                .Where(b => b.RemainingQuantity > 0 || b.ReceivedDate >= cutoffDate)
                 .ToList();
 
             ProductBatches.Clear();
-            foreach (var b in specificBatches) ProductBatches.Add(b);
+            foreach (var b in visibleBatches) ProductBatches.Add(b);
 
-            var allHistory = await _stockRepo.GetHistoryAsync();
-            var specificHistory = allHistory.Where(m => m.ProductId == ViewingProduct.Id).OrderByDescending(m => m.Date).ToList();
-
-            ProductHistory.Clear();
-            foreach (var h in specificHistory) ProductHistory.Add(h);
-        }
-
-        private void OpenEditBatchWindow(StockBatch batch)
-        {
-            if (batch == null) return;
-            var vm = new EditBatchViewModel(_stockRepo, batch);
-            var win = new EditBatchWindow { DataContext = vm };
-            vm.CloseAction = async () =>
-            {
-                win.Close();
-                await LoadBatchesForViewingProduct();
-                await LoadData();
-            };
-            win.ShowDialog();
+            // REMOVED HISTORY LOAD
         }
 
         private async Task DeleteBatchAsync(StockBatch batch)
         {
-            if (MessageBox.Show("Delete this batch record? Stock will be reduced.", "Confirm Batch Delete", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            if (MessageBox.Show("Delete this batch record? Stock will be reduced.", "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
                 await _stockRepo.DeleteBatchAsync(batch);
                 if (ViewingProduct != null)

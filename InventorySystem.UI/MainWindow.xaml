@@ -164,7 +164,7 @@
                 </Grid>
             </Border>
 
-            <ContentControl Grid.Row="1" Content="{Binding CurrentView}" Margin="15"/>
+            <ContentControl Grid.Row="1" Content="{Binding CurrentView}" Margin="20"/>
         </Grid>
     </Grid>
 </Window>

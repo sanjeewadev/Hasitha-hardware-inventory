@@ -1,7 +1,9 @@
 ﻿using InventorySystem.Core.Entities;
 using InventorySystem.Data.Repositories;
+using InventorySystem.Infrastructure.Services;
 using InventorySystem.UI.Commands;
 using InventorySystem.UI.Views;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -17,6 +19,8 @@ namespace InventorySystem.UI.ViewModels
         private readonly IProductRepository _productRepo;
         private readonly ICategoryRepository _categoryRepo;
         private readonly IStockRepository _stockRepo;
+        // Direct context required for detailed Includes (Supplier info)
+        private readonly Data.Context.InventoryDbContext _dbContext;
 
         private List<Category> _allCategoriesCache = new();
         private List<Product> _allProductsInFolderCache = new();
@@ -93,6 +97,7 @@ namespace InventorySystem.UI.ViewModels
             _productRepo = productRepo;
             _categoryRepo = categoryRepo;
             _stockRepo = stockRepo;
+            _dbContext = DatabaseService.CreateDbContext();
 
             ViewProductCommand = new RelayCommand<Product>(async (p) => await OpenProductDetail(p));
             CloseDetailCommand = new RelayCommand(() => IsDetailVisible = false);
@@ -129,7 +134,6 @@ namespace InventorySystem.UI.ViewModels
             LoadTree();
         }
 
-        // ... [SMART DELETE LOGIC] ...
         private async Task AttemptDeleteProduct(Product p)
         {
             if (p == null) return;
@@ -155,7 +159,6 @@ namespace InventorySystem.UI.ViewModels
             }
         }
 
-        // ... [CATEGORY LOGIC] ...
         private async Task DeleteCategoryAsync()
         {
             if (SelectedCategory == null) return;
@@ -203,7 +206,6 @@ namespace InventorySystem.UI.ViewModels
             LoadTree();
         }
 
-        // --- HELPER METHODS ---
         private void OpenAddEditWindow(AddProductViewModel vm)
         {
             var window = new AddProductWindow();
@@ -220,23 +222,24 @@ namespace InventorySystem.UI.ViewModels
             IsDetailVisible = true;
         }
 
-        // --- UPDATED: 7-Day Retention Logic ---
         private async Task LoadBatchesForViewingProduct()
         {
             if (ViewingProduct == null) return;
-            var allBatches = await _stockRepo.GetAllBatchesAsync();
 
-            // Logic: Keep if Quantity > 0 OR newer than 7 days
-            var cutoffDate = DateTime.Now.AddDays(-7);
-
-            var specificBatches = allBatches
+            // Fetch batches with Supplier info
+            var allBatches = await _dbContext.StockBatches
+                .Include(b => b.PurchaseInvoice)
+                .ThenInclude(i => i.Supplier)
                 .Where(b => b.ProductId == ViewingProduct.Id)
-                .Where(b => b.RemainingQuantity > 0 || b.ReceivedDate >= cutoffDate)
                 .OrderByDescending(b => b.ReceivedDate)
-                .ToList();
+                .ToListAsync();
+
+            // Filter: Only show batches that have stock remaining (Cleaner view)
+            // You can remove this filter if you want to see history of empty batches too
+            var activeBatches = allBatches.Where(b => b.RemainingQuantity > 0).ToList();
 
             ProductBatches.Clear();
-            foreach (var b in specificBatches) ProductBatches.Add(b);
+            foreach (var b in activeBatches) ProductBatches.Add(b);
         }
 
         private async void LoadTree()
@@ -293,7 +296,7 @@ namespace InventorySystem.UI.ViewModels
             if (batch == null) return;
             var vm = new EditBatchViewModel(_stockRepo, batch);
             var win = new EditBatchWindow { DataContext = vm };
-            vm.CloseAction = () => { win.Close(); _ = LoadBatchesForViewingProduct(); }; // Using discard for async
+            vm.CloseAction = () => { win.Close(); _ = LoadBatchesForViewingProduct(); };
             win.ShowDialog();
         }
 
@@ -309,6 +312,7 @@ namespace InventorySystem.UI.ViewModels
                     await _productRepo.UpdateAsync(ViewingProduct);
                 }
                 await LoadBatchesForViewingProduct();
+                LoadProductsForSelected(); // Refresh main list too
             }
         }
     }

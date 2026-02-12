@@ -77,17 +77,18 @@ namespace InventorySystem.UI.ViewModels
 
             NavigateToStockCommand = new RelayCommand(() =>
             {
-                CurrentView = new StockViewModel(productRepo, categoryRepo, stockRepo);
+                CurrentView = new AdjustmentViewModel(productRepo, categoryRepo, stockRepo);
             });
 
+            // --- FIX IS HERE: POSViewModel is now parameterless ---
             NavigateToPOSCommand = new RelayCommand(() =>
             {
-                CurrentView = new POSViewModel(productRepo, stockRepo);
+                CurrentView = new POSViewModel();
             });
 
             NavigateToDashboardCommand = new RelayCommand(() =>
             {
-                CurrentView = new DashboardViewModel(stockRepo, productRepo);
+                CurrentView = new DashboardViewModel(stockRepo);
             });
 
             NavigateToHistoryCommand = new RelayCommand(() =>

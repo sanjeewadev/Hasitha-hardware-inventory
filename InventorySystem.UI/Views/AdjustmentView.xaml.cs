@@ -5,16 +5,17 @@ using System.Windows.Controls;
 
 namespace InventorySystem.UI.Views
 {
-    public partial class StockView : UserControl
+    public partial class AdjustmentView : UserControl
     {
-        public StockView()
+        public AdjustmentView()
         {
             InitializeComponent();
         }
 
         private void TreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         {
-            if (DataContext is StockViewModel vm)
+            // Cast to the NEW ViewModel Name
+            if (DataContext is AdjustmentViewModel vm)
             {
                 vm.SelectedCategory = e.NewValue as Category;
             }

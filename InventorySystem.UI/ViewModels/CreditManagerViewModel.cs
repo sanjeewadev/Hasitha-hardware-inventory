@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 
 namespace InventorySystem.UI.ViewModels
@@ -43,9 +44,6 @@ namespace InventorySystem.UI.ViewModels
         private decimal _paymentAmountInput;
         public decimal PaymentAmountInput { get => _paymentAmountInput; set { _paymentAmountInput = value; OnPropertyChanged(); } }
 
-        private string _paymentNote = "";
-        public string PaymentNote { get => _paymentNote; set { _paymentNote = value; OnPropertyChanged(); } }
-
         private bool _isFullPayment;
         public bool IsFullPayment
         {
@@ -70,7 +68,7 @@ namespace InventorySystem.UI.ViewModels
         public ICommand SubmitPaymentCommand { get; }
         public ICommand ViewDetailsCommand { get; }
         public ICommand CloseDetailsCommand { get; }
-        public ICommand PrintReceiptCommand { get; } // <--- NEW
+        public ICommand PrintReceiptCommand { get; }
 
         public CreditManagerViewModel(CreditService creditService)
         {
@@ -84,7 +82,6 @@ namespace InventorySystem.UI.ViewModels
                 SelectedTransaction = tx;
                 PaymentAmountInput = 0;
                 IsFullPayment = false;
-                PaymentNote = "";
                 IsPaymentPopupVisible = true;
             });
 
@@ -95,7 +92,7 @@ namespace InventorySystem.UI.ViewModels
             ViewDetailsCommand = new RelayCommand<SalesTransaction>(async (tx) => await LoadAndShowDetails(tx));
             CloseDetailsCommand = new RelayCommand(() => IsDetailsPopupVisible = false);
 
-            // Print Logic (NEW)
+            // Print Logic
             PrintReceiptCommand = new RelayCommand(PrintCurrentSelection);
 
             _ = LoadCredits();
@@ -138,17 +135,29 @@ namespace InventorySystem.UI.ViewModels
         private async Task ExecutePayment()
         {
             if (SelectedTransaction == null) return;
-            if (PaymentAmountInput <= 0) return;
+            if (PaymentAmountInput <= 0)
+            {
+                MessageBox.Show("Please enter a valid amount.", "Invalid Input", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (PaymentAmountInput > SelectedTransaction.RemainingBalance)
+            {
+                MessageBox.Show($"Amount cannot exceed the balance of Rs {SelectedTransaction.RemainingBalance:N2}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
 
             try
             {
-                await _creditService.AddPaymentAsync(SelectedTransaction.ReceiptId, PaymentAmountInput, PaymentNote);
+                // Note removed as requested
+                await _creditService.AddPaymentAsync(SelectedTransaction.ReceiptId, PaymentAmountInput, "Payment Received");
                 IsPaymentPopupVisible = false;
+                MessageBox.Show("Payment Recorded Successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
                 await LoadCredits();
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Payment Failed: {ex.Message}");
+                MessageBox.Show($"Payment Failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -158,28 +167,32 @@ namespace InventorySystem.UI.ViewModels
 
             try
             {
-                // 1. Get Settings from UI
-                string printerName = Properties.Settings.Default.PrinterName;
-                int copies = Properties.Settings.Default.ReceiptCopies;
+                string printerName = "";
+                int copies = 1;
+                try
+                {
+                    printerName = Properties.Settings.Default.PrinterName;
+                    copies = Properties.Settings.Default.ReceiptCopies;
+                }
+                catch { }
 
                 var printService = new PrintService();
 
-                string txt = $"RECEIPT RE-PRINT\nID: {SelectedTransaction.ReceiptId}\nCustomer: {SelectedTransaction.CustomerName}\n";
-                txt += $"----------------\n";
+                string txt = $"CREDIT INVOICE (COPY)\nID: {SelectedTransaction.ReceiptId}\nCustomer: {SelectedTransaction.CustomerName}\n";
+                txt += $"Date: {SelectedTransaction.TransactionDate}\n----------------\n";
                 foreach (var item in SelectedSaleItems)
                 {
-                    txt += $"{item.Product?.Name} x{item.Quantity}  {item.LineTotal}\n";
+                    txt += $"{item.Product?.Name} x{item.Quantity}  {item.LineTotal:N2}\n";
                 }
-                txt += $"----------------\nTotal: {SelectedTransaction.TotalAmount}\nPaid: {SelectedTransaction.PaidAmount}\nDue: {SelectedTransaction.RemainingBalance}";
+                txt += $"----------------\nTotal Bill: {SelectedTransaction.TotalAmount:N2}\nPaid So Far: {SelectedTransaction.PaidAmount:N2}\nBalance Due: {SelectedTransaction.RemainingBalance:N2}";
 
-                // 2. Pass Settings to Service
                 printService.PrintReceipt(SelectedTransaction.ReceiptId, txt, printerName, copies);
 
-                System.Windows.MessageBox.Show("Sent to printer.");
+                MessageBox.Show("Sent to printer.");
             }
             catch (Exception ex)
             {
-                System.Windows.MessageBox.Show($"Print Error: {ex.Message}");
+                MessageBox.Show($"Print Error: {ex.Message}");
             }
         }
     }

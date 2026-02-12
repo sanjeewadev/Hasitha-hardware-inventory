@@ -4,14 +4,14 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignHeight="700" d:DesignWidth="1100"
-             Background="#F8FAFC">
+             Background="Transparent">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     </UserControl.Resources>
 
     <Grid>
-        <Grid Margin="25">
+        <Grid Margin="15">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
@@ -146,27 +146,40 @@
                                        FontSize="16" FontWeight="Bold" Foreground="#EF4444" HorizontalAlignment="Right"/>
                         </StackPanel>
                     </Grid>
+
                     <CheckBox IsChecked="{Binding IsFullPayment}" Content="Pay Full Balance" Margin="0,0,0,10" Foreground="#1E293B"/>
+
                     <TextBlock Text="Amount to Pay" FontSize="12" Foreground="#64748B" Margin="0,0,0,5"/>
                     <TextBox Text="{Binding PaymentAmountInput, StringFormat=N2}" FontSize="16" Padding="8" BorderBrush="#E2E8F0" BorderThickness="1"/>
-                    <TextBlock Text="Note (Optional)" FontSize="12" Foreground="#64748B" Margin="0,15,0,5"/>
-                    <TextBox Text="{Binding PaymentNote}" Height="60" Padding="5" BorderBrush="#E2E8F0" BorderThickness="1" TextWrapping="Wrap"/>
+
                     <Grid Margin="0,25,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Button Grid.Column="0" Command="{Binding ClosePaymentPopupCommand}" Content="Cancel" 
-                                Background="#F1F5F9" Foreground="#64748B" FontWeight="SemiBold" Height="40" Margin="0,0,5,0" BorderThickness="0"/>
+                                Background="#F1F5F9" Foreground="#64748B" FontWeight="SemiBold" Height="40" Margin="0,0,5,0" BorderThickness="0">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
                         <Button Grid.Column="1" Command="{Binding SubmitPaymentCommand}" Content="CONFIRM PAYMENT" 
-                                Background="#10B981" Foreground="White" FontWeight="Bold" Height="40" Margin="5,0,0,0" BorderThickness="0"/>
+                                Background="#10B981" Foreground="White" FontWeight="Bold" Height="40" Margin="5,0,0,0" BorderThickness="0">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
                     </Grid>
                 </StackPanel>
             </Border>
         </Grid>
 
         <Grid Background="#99000000" Visibility="{Binding IsDetailsPopupVisible, Converter={StaticResource BoolToVis}}" Panel.ZIndex="300">
-            <Border Background="White" Width="500" MaxHeight="600" CornerRadius="10" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="25">
+            <Border Background="White" Width="550" MaxHeight="600" CornerRadius="10" VerticalAlignment="Center" HorizontalAlignment="Center" Padding="25">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="20" Opacity="0.4"/>
                 </Border.Effect>

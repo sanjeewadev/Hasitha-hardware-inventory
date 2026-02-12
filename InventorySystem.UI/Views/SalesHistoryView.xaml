@@ -4,13 +4,13 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" d:DesignHeight="700" d:DesignWidth="1100"
-             Background="#F8FAFC">
+             Background="Transparent">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     </UserControl.Resources>
 
-    <Grid Margin="15">
+    <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -26,20 +26,29 @@
             <StackPanel Orientation="Horizontal">
                 <StackPanel Margin="0,0,15,0">
                     <TextBlock Text="From Date" FontSize="12" Foreground="#64748B" Margin="0,0,0,5"/>
-                    <DatePicker SelectedDate="{Binding StartDate}" Width="140" Padding="5"/>
+                    <DatePicker SelectedDate="{Binding StartDate}" Width="140" Padding="5" BorderBrush="#E2E8F0"/>
                 </StackPanel>
+
                 <StackPanel Margin="0,0,25,0">
                     <TextBlock Text="To Date" FontSize="12" Foreground="#64748B" Margin="0,0,0,5"/>
-                    <DatePicker SelectedDate="{Binding EndDate}" Width="140" Padding="5"/>
+                    <DatePicker SelectedDate="{Binding EndDate}" Width="140" Padding="5" BorderBrush="#E2E8F0"/>
                 </StackPanel>
+
+                <StackPanel Margin="0,0,15,0" VerticalAlignment="Bottom">
+                    <TextBlock Text="Search (ID or Product)" FontSize="12" Foreground="#64748B" Margin="0,0,0,5"/>
+                    <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Width="200" Height="36" 
+                             VerticalContentAlignment="Center" Padding="5" BorderBrush="#E2E8F0" BorderThickness="1"/>
+                </StackPanel>
+
                 <Button Command="{Binding SearchCommand}" Content="SEARCH RECORDS" Background="#1E293B" Foreground="White" 
-                        Height="36" VerticalAlignment="Bottom" Margin="0,0,10,0" FontSize="12" FontWeight="Bold">
+                        Height="36" VerticalAlignment="Bottom" Margin="0,0,10,0" FontSize="12" FontWeight="Bold" Padding="15,0">
                     <Button.Resources>
                         <Style TargetType="Border">
                             <Setter Property="CornerRadius" Value="4"/>
                         </Style>
                     </Button.Resources>
                 </Button>
+
                 <Button Command="{Binding ResetFilterCommand}" Content="Reset Filter" Background="Transparent" Foreground="#64748B" 
                         Height="36" VerticalAlignment="Bottom" BorderThickness="0" Cursor="Hand"/>
             </StackPanel>
@@ -48,21 +57,36 @@
         <DataGrid Grid.Row="2" ItemsSource="{Binding SalesHistory}" AutoGenerateColumns="False" IsReadOnly="True"
                   Background="White" BorderThickness="0" RowHeight="55"
                   GridLinesVisibility="None" HorizontalGridLinesBrush="Transparent" HeadersVisibility="Column">
+
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsVoided}" Value="True">
+                            <Setter Property="Background" Value="#FEF2F2"/>
+                            <Setter Property="Foreground" Value="#991B1B"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
+
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat='dd MMM yyyy HH:mm'}" Width="160" Foreground="#64748B"/>
-                <DataGridTemplateColumn Header="Sale Summary" Width="*">
-                </DataGridTemplateColumn>
-                <DataGridTemplateColumn Header="Items" Width="80">
-                </DataGridTemplateColumn>
-                <DataGridTextColumn Header="Total Amount" Binding="{Binding TotalAmount, StringFormat='Rs {0:N2}'}" Width="140" FontWeight="Bold" Foreground="#009688">
-                </DataGridTextColumn>
-                <DataGridTemplateColumn Width="140">
+
+                <DataGridTextColumn Header="Receipt #" Binding="{Binding ReferenceId}" Width="140" FontWeight="Bold" Foreground="#3B82F6"/>
+
+                <DataGridTextColumn Header="Sale Summary" Binding="{Binding SummaryText}" Width="*"/>
+
+                <DataGridTextColumn Header="Items" Binding="{Binding TotalItems}" Width="80"/>
+
+                <DataGridTextColumn Header="Total Amount" Binding="{Binding TotalAmount, StringFormat='Rs {0:N2}'}" Width="140" FontWeight="Bold" Foreground="#009688"/>
+
+                <DataGridTemplateColumn Width="100">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Button Command="{Binding DataContext.ViewDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
                                     CommandParameter="{Binding}"
                                     Content="👁" Background="Transparent" BorderThickness="0" 
-                                    FontSize="18" Foreground="#64748B" Cursor="Hand"/>
+                                    FontSize="18" Foreground="#64748B" Cursor="Hand" HorizontalAlignment="Center"/>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
@@ -82,6 +106,7 @@
                     <StackPanel>
                         <TextBlock Text="Sale Receipt" FontSize="22" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,5"/>
                         <TextBlock Text="{Binding SelectedSale.Date, StringFormat='dd MMM yyyy - hh:mm tt'}" Foreground="Gray" Margin="0,0,0,20"/>
+
                         <Border Background="#FEF2F2" BorderBrush="#FECACA" BorderThickness="1" CornerRadius="6" Padding="10" Margin="0,0,0,15"
                                 Visibility="{Binding SelectedSale.IsVoided, Converter={StaticResource BoolToVis}}">
                             <TextBlock Text="⚠ This sale was voided/deleted." Foreground="#DC2626" FontWeight="SemiBold" HorizontalAlignment="Center"/>
@@ -89,11 +114,19 @@
                     </StackPanel>
 
                     <DataGrid Grid.Row="1" ItemsSource="{Binding SelectedSale.Items}" AutoGenerateColumns="False" IsReadOnly="True"
-                              BorderThickness="0" Background="White" GridLinesVisibility="None" HorizontalGridLinesBrush="#F1F5F9"
+                              BorderThickness="0" Background="White" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9"
                               HeadersVisibility="Column" Margin="0,0,0,20" RowHeight="45">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Item" Binding="{Binding ProductName}" Width="*"/>
                             <DataGridTemplateColumn Header="Qty" Width="80">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding Quantity}" FontWeight="Bold"/>
+                                            <TextBlock Text="{Binding Unit}" FontSize="10" Foreground="Gray" Margin="3,0,0,0" VerticalAlignment="Bottom"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
                             <DataGridTextColumn Header="Price" Binding="{Binding UnitPrice, StringFormat=N2}" Width="90"/>
                             <DataGridTextColumn Header="Total" Binding="{Binding Total, StringFormat=N2}" Width="90" FontWeight="Bold"/>

@@ -3,9 +3,18 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:conv="clr-namespace:InventorySystem.UI.Converters"
              mc:Ignorable="d" d:DesignHeight="700" d:DesignWidth="1100">
 
     <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <conv:StringToVisibilityConverter x:Key="StringToVis"/>
+
+        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#E0F2F1"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#009688"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#E0F2F1"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="#009688"/>
+
         <Style x:Key="StandardExpanderStyle" TargetType="ToggleButton">
             <Setter Property="Focusable" Value="False"/>
             <Setter Property="Width" Value="16"/>
@@ -28,9 +37,6 @@
                                     </Setter.Value>
                                 </Setter>
                                 <Setter TargetName="ExpandPath" Property="Fill" Value="#334155"/>
-                            </Trigger>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="ExpandPath" Property="Fill" Value="#009688"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -95,16 +101,7 @@
                     </TextBox>
                 </StackPanel>
 
-                <TreeView Grid.Row="1" ItemsSource="{Binding CategoryTree}" BorderThickness="0" Background="Transparent" ClipToBounds="True"
-                          SelectedItemChanged="TreeView_SelectedItemChanged">
-
-                    <TreeView.Resources>
-                        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="Transparent"/>
-                        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="Black"/>
-                        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="Transparent"/>
-                        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="Black"/>
-                    </TreeView.Resources>
-
+                <TreeView Grid.Row="1" ItemsSource="{Binding CategoryTree}" BorderThickness="0" Background="Transparent" ClipToBounds="True" SelectedItemChanged="TreeView_SelectedItemChanged">
                     <TreeView.ItemTemplate>
                         <HierarchicalDataTemplate ItemsSource="{Binding SubCategories}">
                             <StackPanel Orientation="Horizontal">
@@ -113,12 +110,11 @@
                             </StackPanel>
                         </HierarchicalDataTemplate>
                     </TreeView.ItemTemplate>
-
                     <TreeView.ItemContainerStyle>
                         <Style TargetType="TreeViewItem">
                             <Setter Property="IsExpanded" Value="True"/>
-                            <Setter Property="Background" Value="Transparent"/>
                             <Setter Property="Padding" Value="5"/>
+                            <Setter Property="Background" Value="Transparent"/>
                             <Setter Property="Template">
                                 <Setter.Value>
                                     <ControlTemplate TargetType="TreeViewItem">
@@ -127,22 +123,19 @@
                                                 <RowDefinition Height="Auto"/>
                                                 <RowDefinition Height="*"/>
                                             </Grid.RowDefinitions>
-                                            <Border x:Name="Bd" Grid.Row="0" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="true" Margin="-1000,0,0,0">
-                                                <Grid Margin="1000,0,0,0">
+                                            <Border x:Name="Bd" Grid.Row="0" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="true">
+                                                <Grid>
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="19"/>
                                                         <ColumnDefinition Width="*"/>
                                                     </Grid.ColumnDefinitions>
                                                     <ToggleButton x:Name="Expander" Style="{StaticResource StandardExpanderStyle}" ClickMode="Press" IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"/>
-                                                    <ContentPresenter x:Name="PART_Header" Grid.Column="1" ContentSource="Header" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                                                    <ContentPresenter x:Name="PART_Header" Grid.Column="1" ContentSource="Header" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
                                                 </Grid>
                                             </Border>
                                             <ItemsPresenter x:Name="ItemsHost" Grid.Row="1" Margin="15,0,0,0"/>
                                         </Grid>
                                         <ControlTemplate.Triggers>
-                                            <Trigger Property="HasItems" Value="false">
-                                                <Setter TargetName="Expander" Property="Visibility" Value="Hidden"/>
-                                            </Trigger>
                                             <Trigger Property="IsExpanded" Value="false">
                                                 <Setter TargetName="ItemsHost" Property="Visibility" Value="Collapsed"/>
                                             </Trigger>
@@ -186,9 +179,9 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                         <TextBlock Text="Products inside:" Foreground="#64748B" FontSize="16" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding SelectedCategory.Name, FallbackValue='None'}" FontWeight="Bold" Foreground="#1E293B" FontSize="16" Margin="8,0,0,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding SelectedCategory.Name, FallbackValue='(Select a Folder)'}" FontWeight="Bold" Foreground="#1E293B" FontSize="16" Margin="8,0,0,0" VerticalAlignment="Center"/>
                     </StackPanel>
-                    <TextBox Grid.Column="1" Text="{Binding ProductSearchText, UpdateSourceTrigger=PropertyChanged}" Tag="Search products by name..." Width="250" Height="42" Padding="15,0" VerticalContentAlignment="Center" BorderBrush="#CBD5E1" Margin="0,0,15,0">
+                    <TextBox Grid.Column="1" Text="{Binding ProductSearchText, UpdateSourceTrigger=PropertyChanged}" Tag="Search products..." Width="250" Height="42" Padding="15,0" VerticalContentAlignment="Center" BorderBrush="#CBD5E1" Margin="0,0,15,0">
                         <TextBox.Resources>
                             <Style TargetType="Border">
                                 <Setter Property="CornerRadius" Value="5"/>
@@ -205,13 +198,27 @@
                 </Grid>
             </Border>
 
-            <DataGrid Grid.Row="1" ItemsSource="{Binding Products}" AutoGenerateColumns="False" IsReadOnly="True" BorderThickness="0" Background="White" RowHeight="60" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9" HeadersVisibility="Column" Padding="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Panel.ZIndex="0">
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Products.Count}" Value="0">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+                <TextBlock Text="📂" FontSize="40" HorizontalAlignment="Center" Foreground="#E2E8F0" Margin="0,0,0,10"/>
+                <TextBlock Text="No products found in this folder." FontSize="16" Foreground="#94A3B8" FontWeight="SemiBold"/>
+            </StackPanel>
+
+            <DataGrid Grid.Row="1" ItemsSource="{Binding Products}" AutoGenerateColumns="False" IsReadOnly="True" BorderThickness="0" Background="Transparent" RowHeight="60" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9" HeadersVisibility="Column" Padding="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                 <DataGrid.ColumnHeaderStyle>
                     <Style TargetType="DataGridColumnHeader">
                         <Setter Property="Background" Value="White"/>
                         <Setter Property="Foreground" Value="#64748B"/>
                         <Setter Property="FontWeight" Value="SemiBold"/>
-                        <Setter Property="FontSize" Value="13"/>
                         <Setter Property="Padding" Value="25,0,0,0"/>
                         <Setter Property="Height" Value="50"/>
                         <Setter Property="BorderThickness" Value="0,0,0,1"/>
@@ -219,32 +226,7 @@
                         <Setter Property="HorizontalContentAlignment" Value="Left"/>
                     </Style>
                 </DataGrid.ColumnHeaderStyle>
-                <DataGrid.RowStyle>
-                    <Style TargetType="DataGridRow">
-                        <Setter Property="Cursor" Value="Hand"/>
-                    </Style>
-                </DataGrid.RowStyle>
-                <DataGrid.CellStyle>
-                    <Style TargetType="DataGridCell">
-                        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
-                        <Setter Property="BorderThickness" Value="0"/>
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="DataGridCell">
-                                    <Border Background="{TemplateBinding Background}" BorderThickness="0" Padding="0">
-                                        <ContentPresenter VerticalAlignment="Center" />
-                                    </Border>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                        <Style.Triggers>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#E0F2F1"/>
-                                <Setter Property="Foreground" Value="#009688"/>
-                            </Trigger>
-                        </Style.Triggers>
-                    </Style>
-                </DataGrid.CellStyle>
+
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="SKU / CODE" Binding="{Binding Barcode}" Width="140" Foreground="#64748B">
                         <DataGridTextColumn.ElementStyle>
@@ -255,26 +237,18 @@
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
+
                     <DataGridTemplateColumn Header="PRODUCT NAME" Width="*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel VerticalAlignment="Center" Margin="25,0">
                                     <TextBlock Text="{Binding Name}" FontWeight="SemiBold" Foreground="#1E293B" FontSize="14"/>
-                                    <TextBlock Text="{Binding Description}" FontSize="11" Foreground="Gray" TextTrimming="CharacterEllipsis" MaxWidth="250" HorizontalAlignment="Left" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
+                                    <TextBlock Text="{Binding Description}" FontSize="11" Foreground="Gray" TextTrimming="CharacterEllipsis" Visibility="{Binding Description, Converter={StaticResource StringToVis}}"/>
                                 </StackPanel>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
-                    <DataGridTemplateColumn Header="LOCATION" Width="180">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="25,0">
-                                    <TextBlock Text="📁" Foreground="#F59E0B" Margin="0,0,8,0" FontSize="14"/>
-                                    <TextBlock Text="{Binding Category.Name}" Foreground="#64748B" FontWeight="Medium"/>
-                                </StackPanel>
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
+
                     <DataGridTemplateColumn Header="ACTIONS" Width="210">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
@@ -318,69 +292,44 @@
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
+
                     <DockPanel Grid.Row="0" Margin="0,0,0,15" LastChildFill="False">
                         <StackPanel>
                             <TextBlock Text="{Binding ViewingProduct.Name}" FontSize="24" FontWeight="Bold" Foreground="#1E293B"/>
                             <TextBlock Text="{Binding ViewingProduct.Category.Name, StringFormat='Category: {0}'}" Foreground="Gray" Margin="0,2,0,0"/>
                         </StackPanel>
-                        <Border DockPanel.Dock="Right" BorderBrush="#009688" BorderThickness="2" CornerRadius="6" Padding="15,5" Margin="0,0,15,0">
+                        <Border DockPanel.Dock="Right" BorderBrush="#009688" BorderThickness="2" CornerRadius="6" Padding="15,5">
                             <StackPanel>
                                 <TextBlock Text="Total Quantity" FontSize="10" Foreground="#009688" HorizontalAlignment="Center"/>
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                    <TextBlock Text="{Binding ViewingProduct.Quantity}" FontSize="20" FontWeight="Bold" Foreground="#009688"/>
-                                    <TextBlock Text="{Binding CurrentUnit}" FontSize="12" Foreground="#009688" Margin="3,0,0,2" VerticalAlignment="Bottom"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-                        <Border DockPanel.Dock="Right" BorderBrush="#E2E8F0" BorderThickness="1" CornerRadius="4" Padding="15,5" Margin="0,0,15,0" MinWidth="100">
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Text="SKU / Barcode" FontSize="10" Foreground="Gray" HorizontalAlignment="Center" Margin="0,0,0,5"/>
-                                <TextBlock Text="{Binding ViewingProduct.Barcode}" HorizontalAlignment="Center" FontSize="16" FontWeight="Bold" FontFamily="Consolas"/>
+                                <TextBlock Text="{Binding ViewingProduct.Quantity}" FontSize="20" FontWeight="Bold" Foreground="#009688" HorizontalAlignment="Center"/>
                             </StackPanel>
                         </Border>
                     </DockPanel>
-                    <TextBlock Grid.Row="1" Text="{Binding ViewingProduct.Description}" FontSize="12" Foreground="#64748B" FontStyle="Italic" TextWrapping="Wrap" Margin="0,0,0,20" MaxWidth="700" HorizontalAlignment="Left" Visibility="{Binding ViewingProduct.Description, Converter={StaticResource StringToVis}}"/>
-                    <TextBlock Grid.Row="2" Text="Inventory Batches (History &amp; Cost Variations)" FontWeight="SemiBold" Margin="0,0,0,10"/>
 
-                    <DataGrid Grid.Row="3" ItemsSource="{Binding ProductBatches}" Margin="0,0,0,0" AutoGenerateColumns="False" IsReadOnly="True" BorderThickness="1" BorderBrush="#E2E8F0">
+                    <TextBlock Grid.Row="1" Text="{Binding ViewingProduct.Description}" FontSize="12" Foreground="#64748B" FontStyle="Italic" TextWrapping="Wrap" Margin="0,0,0,20"/>
+                    <TextBlock Grid.Row="2" Text="Inventory Batches" FontWeight="SemiBold" Margin="0,0,0,10"/>
+
+                    <DataGrid Grid.Row="3" ItemsSource="{Binding ProductBatches}" AutoGenerateColumns="False" IsReadOnly="True" BorderThickness="1" BorderBrush="#E2E8F0">
                         <DataGrid.ColumnHeaderStyle>
                             <Style TargetType="DataGridColumnHeader">
                                 <Setter Property="Background" Value="#F8FAFC"/>
-                                <Setter Property="Padding" Value="10,0"/>
-                                <Setter Property="FontWeight" Value="SemiBold"/>
                                 <Setter Property="Foreground" Value="#64748B"/>
-                                <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                                <Setter Property="BorderBrush" Value="#E2E8F0"/>
-                                <Setter Property="Height" Value="35"/>
+                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                <Setter Property="Padding" Value="10,5"/>
                             </Style>
                         </DataGrid.ColumnHeaderStyle>
-                        <DataGrid.RowStyle>
-                            <Style TargetType="DataGridRow">
-                                <Setter Property="Cursor" Value="Hand"/>
-                                <Style.Triggers>
-                                    <Trigger Property="IsSelected" Value="True">
-                                        <Setter Property="Background" Value="#E0F2F1"/>
-                                        <Setter Property="BorderBrush" Value="Transparent"/>
-                                    </Trigger>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="#F8FAFC"/>
-                                    </Trigger>
-                                    <DataTrigger Binding="{Binding RemainingQuantity}" Value="0">
-                                        <Setter Property="Opacity" Value="0.5"/>
-                                        <Setter Property="Background" Value="#FAFAFA"/>
-                                        <Setter Property="ToolTip" Value="Sold Out / History Record"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </DataGrid.RowStyle>
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Date" Binding="{Binding ReceivedDate, StringFormat='dd MMM yyyy'}" Width="110"/>
-                            <DataGridTextColumn Header="Original" Binding="{Binding InitialQuantity}" Width="90"/>
-                            <DataGridTextColumn Header="Current" Binding="{Binding RemainingQuantity}" Width="90" FontWeight="Bold"/>
+
+                            <DataGridTextColumn Header="Supplier" Binding="{Binding PurchaseInvoice.Supplier.Name, TargetNullValue='Unknown'}" Width="120" FontWeight="SemiBold" Foreground="#3B82F6"/>
+
+                            <DataGridTextColumn Header="Original" Binding="{Binding InitialQuantity}" Width="80"/>
+                            <DataGridTextColumn Header="Current" Binding="{Binding RemainingQuantity}" Width="80" FontWeight="Bold"/>
                             <DataGridTextColumn Header="Buying" Binding="{Binding CostPrice, StringFormat=N2}" Width="90"/>
                             <DataGridTextColumn Header="Selling" Binding="{Binding SellingPrice, StringFormat=N2}" Width="90" Foreground="#009688" FontWeight="Bold"/>
-                            <DataGridTextColumn Header="Disc %" Binding="{Binding Discount}" Width="70"/>
-                            <DataGridTextColumn Header="Min Selling" Binding="{Binding MinSellingPrice, StringFormat=N2}" Width="90" FontWeight="Bold" Foreground="#EF4444"/>
+                            <DataGridTextColumn Header="Disc %" Binding="{Binding Discount}" Width="60"/>
+
+                            <DataGridTextColumn Header="Min Price (Max Disc)" Binding="{Binding MinSellingPrice, StringFormat=N2}" Width="140" FontWeight="Bold" Foreground="#EF4444"/>
                         </DataGrid.Columns>
                     </DataGrid>
 

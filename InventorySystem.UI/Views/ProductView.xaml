@@ -3,7 +3,14 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:conv="clr-namespace:InventorySystem.UI.Converters" 
              mc:Ignorable="d" d:DesignHeight="700" d:DesignWidth="1000">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <conv:NullToVisibilityConverter x:Key="NullToVis"/>
+        <conv:StringToVisibilityConverter x:Key="StringToVis"/>
+    </UserControl.Resources>
 
     <Grid Background="White">
         <Grid Margin="0">
@@ -47,6 +54,13 @@
                       HeadersVisibility="Column" Padding="0"
                       ScrollViewer.HorizontalScrollBarVisibility="Disabled">
 
+                <DataGrid.Resources>
+                    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#E0F2F1"/>
+                    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#009688"/>
+                    <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#E0F2F1"/>
+                    <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="#009688"/>
+                </DataGrid.Resources>
+
                 <DataGrid.ColumnHeaderStyle>
                     <Style TargetType="DataGridColumnHeader">
                         <Setter Property="Background" Value="White"/>
@@ -64,6 +78,11 @@
                 <DataGrid.RowStyle>
                     <Style TargetType="DataGridRow">
                         <Setter Property="Cursor" Value="Hand"/>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#F8FAFC"/>
+                            </Trigger>
+                        </Style.Triggers>
                     </Style>
                 </DataGrid.RowStyle>
 
@@ -80,12 +99,6 @@
                                 </ControlTemplate>
                             </Setter.Value>
                         </Setter>
-                        <Style.Triggers>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#E0F2F1"/>
-                                <Setter Property="Foreground" Value="#009688"/>
-                            </Trigger>
-                        </Style.Triggers>
                     </Style>
                 </DataGrid.CellStyle>
 
@@ -100,7 +113,7 @@
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
 
-                    <DataGridTemplateColumn Header="Product Name" Width="1.8*">
+                    <DataGridTemplateColumn Header="Product Name" Width="2*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel VerticalAlignment="Center" Margin="20,0">
@@ -117,28 +130,10 @@
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0">
-                                    <TextBlock Text="{Binding Category.Parent.Name}" Foreground="#94A3B8">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding Category.Parent}" Value="{x:Null}">
-                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
-                                    <TextBlock Text=" > " Foreground="#CBD5E1" Margin="5,0">
-                                        <TextBlock.Style>
-                                            <Style TargetType="TextBlock">
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding Category.Parent}" Value="{x:Null}">
-                                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TextBlock.Style>
-                                    </TextBlock>
+                                    <TextBlock Text="{Binding Category.Parent.Name}" Foreground="#94A3B8" 
+                                               Visibility="{Binding Category.Parent, Converter={StaticResource NullToVis}}"/>
+                                    <TextBlock Text=" > " Foreground="#CBD5E1" Margin="5,0" 
+                                               Visibility="{Binding Category.Parent, Converter={StaticResource NullToVis}}"/>
                                     <TextBlock Text="{Binding Category.Name}" Foreground="#64748B" FontWeight="Medium"/>
                                 </StackPanel>
                             </DataTemplate>
@@ -148,10 +143,49 @@
                     <DataGridTemplateColumn Header="Total Qty" Width="130">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <Border Background="#F0FDF4" CornerRadius="4" Padding="12,4" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="20,0">
+                                <Border CornerRadius="4" Padding="12,4" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="20,0">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="#F0FDF4"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsLowStock}" Value="True">
+                                                    <Setter Property="Background" Value="#FFF7ED"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Quantity}" Value="0">
+                                                    <Setter Property="Background" Value="#FEF2F2"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding Quantity}" FontWeight="Bold" Foreground="#166534" FontSize="12"/>
-                                        <TextBlock Text="{Binding Unit}" Foreground="#166534" FontSize="10" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                                        <TextBlock Text="{Binding Quantity}" FontWeight="Bold" FontSize="12">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="#166534"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsLowStock}" Value="True">
+                                                            <Setter Property="Foreground" Value="#C2410C"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Quantity}" Value="0">
+                                                            <Setter Property="Foreground" Value="#B91C1C"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                        <TextBlock Text="{Binding Unit}" FontSize="10" Margin="4,0,0,0" VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="#166534"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Quantity}" Value="0">
+                                                            <Setter Property="Foreground" Value="#B91C1C"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
                                     </StackPanel>
                                 </Border>
                             </DataTemplate>
@@ -161,18 +195,16 @@
                     <DataGridTemplateColumn Header="Action" Width="140">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <StackPanel Orientation="Horizontal" Margin="20,0,0,0">
-                                    <Button Content="VIEW DETAILS" Command="{Binding DataContext.ViewCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                            CommandParameter="{Binding}" 
-                                            Background="#1E293B" Foreground="White" FontSize="10" FontWeight="Bold" 
-                                            Padding="0" Height="30" Width="100" HorizontalAlignment="Left" Cursor="Hand">
-                                        <Button.Resources>
-                                            <Style TargetType="Border">
-                                                <Setter Property="CornerRadius" Value="4"/>
-                                            </Style>
-                                        </Button.Resources>
-                                    </Button>
-                                </StackPanel>
+                                <Button Content="VIEW DETAILS" Command="{Binding DataContext.ViewCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                        CommandParameter="{Binding}" 
+                                        Background="#1E293B" Foreground="White" FontSize="10" FontWeight="Bold" 
+                                        Padding="0" Height="30" Width="100" HorizontalAlignment="Left" Cursor="Hand">
+                                    <Button.Resources>
+                                        <Style TargetType="Border">
+                                            <Setter Property="CornerRadius" Value="4"/>
+                                        </Style>
+                                    </Button.Resources>
+                                </Button>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
@@ -181,7 +213,7 @@
         </Grid>
 
         <Grid Background="#7F000000" Visibility="{Binding IsDetailVisible, Converter={StaticResource BoolToVis}}" Panel.ZIndex="50">
-            <Border Background="White" Width="800" Height="600" CornerRadius="8" Padding="30" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <Border Background="White" Width="850" Height="600" CornerRadius="8" Padding="30" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -212,13 +244,21 @@
                                Margin="0,0,0,20" MaxWidth="700" HorizontalAlignment="Left"
                                Visibility="{Binding ViewingProduct.Description, Converter={StaticResource StringToVis}}"/>
 
-                    <TextBlock Grid.Row="2" Text="Inventory Batches (History &amp; Cost Variations)" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                    <TextBlock Grid.Row="2" Text="Inventory Batches" FontWeight="Bold" FontSize="16" Foreground="#1E293B" Margin="0,0,0,10"/>
 
-                    <DataGrid Grid.Row="3" ItemsSource="{Binding ProductBatches}" Margin="0,0,0,0" 
+                    <DataGrid Grid.Row="3" ItemsSource="{Binding ProductBatches}" 
                               AutoGenerateColumns="False" IsReadOnly="True" 
                               BorderThickness="1" BorderBrush="#E2E8F0"
                               GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9"
-                              HeadersVisibility="Column" RowHeight="40">
+                              HeadersVisibility="Column" RowHeight="45">
+
+                        <DataGrid.Resources>
+                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#E0F2F1"/>
+                            <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#009688"/>
+                            <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#E0F2F1"/>
+                            <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="#009688"/>
+                        </DataGrid.Resources>
+
                         <DataGrid.ColumnHeaderStyle>
                             <Style TargetType="DataGridColumnHeader">
                                 <Setter Property="Background" Value="#F8FAFC"/>
@@ -230,37 +270,23 @@
                                 <Setter Property="Height" Value="35"/>
                             </Style>
                         </DataGrid.ColumnHeaderStyle>
-                        <DataGrid.RowStyle>
-                            <Style TargetType="DataGridRow">
-                                <Setter Property="Cursor" Value="Hand"/>
-                                <Style.Triggers>
-                                    <Trigger Property="IsSelected" Value="True">
-                                        <Setter Property="Background" Value="#E0F2F1"/>
-                                        <Setter Property="BorderBrush" Value="Transparent"/>
-                                    </Trigger>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="#F8FAFC"/>
-                                    </Trigger>
-                                    <DataTrigger Binding="{Binding RemainingQuantity}" Value="0">
-                                        <Setter Property="Opacity" Value="0.5"/>
-                                        <Setter Property="Background" Value="#FAFAFA"/>
-                                        <Setter Property="ToolTip" Value="Sold Out / History Record"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </DataGrid.RowStyle>
+
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Date" Binding="{Binding ReceivedDate, StringFormat='dd MMM yyyy'}" Width="120" Foreground="#475569"/>
-                            <DataGridTextColumn Header="Original" Binding="{Binding InitialQuantity}" Width="90"/>
-                            <DataGridTextColumn Header="Current" Binding="{Binding RemainingQuantity}" Width="90" FontWeight="Bold"/>
+                            <DataGridTextColumn Header="Date" Binding="{Binding ReceivedDate, StringFormat='dd MMM yyyy'}" Width="110" Foreground="#475569"/>
+                            <DataGridTextColumn Header="Supplier" Binding="{Binding PurchaseInvoice.Supplier.Name, TargetNullValue='Unknown'}" Width="120" FontWeight="SemiBold" Foreground="#3B82F6"/>
+                            <DataGridTextColumn Header="Original" Binding="{Binding InitialQuantity}" Width="80"/>
+                            <DataGridTextColumn Header="Current" Binding="{Binding RemainingQuantity}" Width="80" FontWeight="Bold"/>
                             <DataGridTextColumn Header="Buying" Binding="{Binding CostPrice, StringFormat=N2}" Width="90"/>
                             <DataGridTextColumn Header="Selling" Binding="{Binding SellingPrice, StringFormat=N2}" Width="90" Foreground="#009688" FontWeight="Bold"/>
-                            <DataGridTextColumn Header="Discount %" Binding="{Binding Discount}" Width="90"/>
-                            <DataGridTextColumn Header="Min Selling" Binding="{Binding MinSellingPrice, StringFormat=N2}" Width="100" FontWeight="Bold" Foreground="#EF4444"/>
+                            <DataGridTextColumn Header="Disc %" Binding="{Binding Discount}" Width="70"/>
+
+                            <DataGridTextColumn Header="Min Price (Max Disc)" Binding="{Binding MinSellingPrice, StringFormat=N2}" Width="140" FontWeight="Bold" Foreground="#EF4444"/>
                         </DataGrid.Columns>
                     </DataGrid>
 
-                    <Button Grid.Row="4" Content="CLOSE" Command="{Binding CloseDetailCommand}" Background="#94A3B8" Padding="20,10" HorizontalAlignment="Right" Margin="0,20,0,0">
+                    <Button Grid.Row="4" Content="CLOSE" Command="{Binding CloseDetailCommand}" 
+                            Background="#94A3B8" Foreground="White" FontWeight="Bold"
+                            Padding="20,10" HorizontalAlignment="Right" Margin="0,20,0,0">
                         <Button.Resources>
                             <Style TargetType="Border">
                                 <Setter Property="CornerRadius" Value="6"/>

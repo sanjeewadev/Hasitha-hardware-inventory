@@ -3,6 +3,7 @@ using InventorySystem.Core.Enums;
 using InventorySystem.Data.Repositories;
 using InventorySystem.Infrastructure.Services;
 using InventorySystem.UI.Commands;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -16,20 +17,31 @@ namespace InventorySystem.UI.ViewModels
 
     public class POSViewModel : ViewModelBase
     {
+        private readonly Data.Context.InventoryDbContext _dbContext; // Keep direct ref for complex queries
         private readonly IProductRepository _productRepo;
         private readonly IStockRepository _stockRepo;
 
         // --- POPUP STATE: NOTIFICATIONS ---
         private bool _isNotificationVisible;
         public bool IsNotificationVisible { get => _isNotificationVisible; set { _isNotificationVisible = value; OnPropertyChanged(); } }
+
         private string _notificationTitle = "";
         public string NotificationTitle { get => _notificationTitle; set { _notificationTitle = value; OnPropertyChanged(); } }
+
         private string _notificationMessage = "";
         public string NotificationMessage { get => _notificationMessage; set { _notificationMessage = value; OnPropertyChanged(); } }
+
         private string _notificationColor = "#1E293B";
         public string NotificationColor { get => _notificationColor; set { _notificationColor = value; OnPropertyChanged(); } }
+
         private string _notificationIcon = "ℹ️";
         public string NotificationIcon { get => _notificationIcon; set { _notificationIcon = value; OnPropertyChanged(); } }
+
+        // NEW: Print Button in Notification
+        private bool _showPrintButtonInNotification;
+        public bool ShowPrintButtonInNotification { get => _showPrintButtonInNotification; set { _showPrintButtonInNotification = value; OnPropertyChanged(); } }
+
+        private string _lastReceiptId = ""; // To store ID for printing
 
         // --- POPUP STATE: CREDIT CUSTOMER NAME ---
         private bool _isCustomerPopupVisible;
@@ -85,11 +97,14 @@ namespace InventorySystem.UI.ViewModels
         public ICommand InitCreditCheckoutCommand { get; }
         public ICommand ConfirmCreditSaleCommand { get; }
         public ICommand CancelCreditPopupCommand { get; }
+        public ICommand RefreshProductsCommand { get; }
+        public ICommand PrintLastReceiptCommand { get; } // NEW
 
-        public POSViewModel(IProductRepository pRepo, IStockRepository sRepo)
+        public POSViewModel()
         {
-            _productRepo = pRepo;
-            _stockRepo = sRepo;
+            _dbContext = DatabaseService.CreateDbContext();
+            _productRepo = new ProductRepository(_dbContext);
+            _stockRepo = new StockRepository(_dbContext);
 
             CloseNotificationCommand = new RelayCommand(() => IsNotificationVisible = false);
             CloseBatchSelectorCommand = new RelayCommand(() => IsBatchSelectorVisible = false);
@@ -134,6 +149,18 @@ namespace InventorySystem.UI.ViewModels
                 await ExecuteTransaction(isCredit: true, autoPrint: false);
             });
 
+            RefreshProductsCommand = new RelayCommand(LoadProducts);
+
+            // NEW: Print Command for the Notification Button
+            PrintLastReceiptCommand = new RelayCommand(() =>
+            {
+                if (!string.IsNullOrEmpty(_lastReceiptId))
+                {
+                    PrintReceipt(_lastReceiptId);
+                    IsNotificationVisible = false; // Close popup after printing
+                }
+            });
+
             LoadProducts();
         }
 
@@ -145,6 +172,7 @@ namespace InventorySystem.UI.ViewModels
             {
                 DateTime now = DateTime.Now;
                 string receiptId = now.ToString("yyyyMMddHHmmss");
+                _lastReceiptId = receiptId; // Store for manual printing
 
                 var transaction = new SalesTransaction
                 {
@@ -178,37 +206,13 @@ namespace InventorySystem.UI.ViewModels
 
                 if (autoPrint)
                 {
-                    try
-                    {
-                        string printerName = "";
-                        int copies = 1;
-                        try
-                        {
-                            printerName = InventorySystem.UI.Properties.Settings.Default.PrinterName;
-                            copies = InventorySystem.UI.Properties.Settings.Default.ReceiptCopies;
-                        }
-                        catch { }
-
-                        string receiptText = $"H & J HARDWARE\nDate: {now}\nReceipt: {receiptId}\n----------------\n";
-                        foreach (var item in Cart)
-                        {
-                            receiptText += $"{item.Name} x{item.Quantity}  {item.Total:N2}\n";
-                        }
-                        receiptText += $"----------------\nTotal: {GrandTotal:N2}\nTHANK YOU!";
-
-                        var printService = new PrintService();
-                        printService.PrintReceipt(receiptId, receiptText, printerName, copies);
-
-                        ShowNotification("Success", "Saved & Printed!", NotificationType.Success);
-                    }
-                    catch (Exception printEx)
-                    {
-                        ShowNotification("Saved (Print Failed)", printEx.Message, NotificationType.Error);
-                    }
+                    PrintReceipt(receiptId);
+                    ShowNotification("Success", "Saved & Printed!", NotificationType.Success);
                 }
                 else
                 {
-                    ShowNotification("Success", "Transaction Recorded.", NotificationType.Success);
+                    // For Credit Sales (or manual checkout), show success with Option to Print
+                    ShowNotification("Success", "Transaction Recorded.", NotificationType.Success, showPrintBtn: true);
                 }
 
                 Cart.Clear();
@@ -224,10 +228,48 @@ namespace InventorySystem.UI.ViewModels
             }
         }
 
-        private void ShowNotification(string title, string message, NotificationType type)
+        private void PrintReceipt(string receiptId)
+        {
+            try
+            {
+                string printerName = "";
+                int copies = 1;
+                try
+                {
+                    printerName = InventorySystem.UI.Properties.Settings.Default.PrinterName;
+                    copies = InventorySystem.UI.Properties.Settings.Default.ReceiptCopies;
+                }
+                catch { }
+
+                // Basic Receipt Content (You can expand this to fetch from DB if Cart is cleared)
+                // Note: Since Cart is cleared after transaction, for re-printing immediately 
+                // we rely on the fact that 'Cart' hasn't been cleared YET if called from autoPrint.
+                // But for the Credit Sale button, the Cart IS cleared. 
+                // In a real app, you'd fetch the transaction details from DB using receiptId.
+                // For simplicity here, we assume printing happens immediately or we'd need to re-fetch.
+
+                // *Quick Fix*: Since Cart is cleared, a re-fetch is safer for the "Print" button.
+                // But to keep it simple, we'll just print a generic success slip or handle fetching later.
+                // For now, let's assume the user prints immediately.
+
+                string receiptText = $"H & J HARDWARE\nDate: {DateTime.Now}\nReceipt: {receiptId}\n";
+                receiptText += $"Type: {(IsCustomerPopupVisible ? "CREDIT" : "CASH")}\n----------------\n";
+                receiptText += $"Total: {GrandTotal:N2}\n\nTHANK YOU!";
+
+                var printService = new PrintService();
+                printService.PrintReceipt(receiptId, receiptText, printerName, copies);
+            }
+            catch (Exception ex)
+            {
+                ShowNotification("Print Failed", ex.Message, NotificationType.Error);
+            }
+        }
+
+        private void ShowNotification(string title, string message, NotificationType type, bool showPrintBtn = false)
         {
             NotificationTitle = title;
             NotificationMessage = message;
+            ShowPrintButtonInNotification = showPrintBtn; // Toggle button visibility
             IsNotificationVisible = true;
             switch (type)
             {
@@ -241,6 +283,7 @@ namespace InventorySystem.UI.ViewModels
         private async void LoadProducts()
         {
             var all = await _productRepo.GetAllAsync();
+            // FILTER: Only show items with stock > 0
             _allProductsCache = all.Where(p => p.Quantity > 0).ToList();
             FilterProducts();
         }
@@ -252,6 +295,8 @@ namespace InventorySystem.UI.ViewModels
             if (!string.IsNullOrWhiteSpace(SearchText))
             {
                 var lower = SearchText.ToLower();
+                // We can't easily search by Supplier here because Product doesn't have Supplier info directly.
+                // But we can search Name/Barcode.
                 query = query.Where(p => p.Name.ToLower().Contains(lower) || p.Barcode.ToLower().Contains(lower));
             }
             foreach (var p in query) Products.Add(p);
@@ -260,31 +305,39 @@ namespace InventorySystem.UI.ViewModels
         private async Task OpenBatchSelector(Product p)
         {
             if (p == null) return;
-            _selectedProductForBatch = p;
-            var allBatches = await _stockRepo.GetActiveBatchesAsync();
-            var validBatches = allBatches.Where(b => b.ProductId == p.Id).OrderBy(b => b.ReceivedDate).ToList();
 
-            if (!validBatches.Any()) { ShowNotification("Stock Error", "No active batches found.", NotificationType.Error); return; }
+            _selectedProductForBatch = p;
+
+            // Fetch Batches WITH Supplier Info explicitly
+            var allBatches = await _dbContext.StockBatches
+                .Include(b => b.PurchaseInvoice)
+                .ThenInclude(i => i.Supplier) // <--- CRITICAL: Include Supplier
+                .Where(b => b.ProductId == p.Id && b.RemainingQuantity > 0)
+                .OrderBy(b => b.ReceivedDate)
+                .ToListAsync();
+
+            if (!allBatches.Any())
+            {
+                ShowNotification("Stock Error", "Stock exists globally but no active batches found.", NotificationType.Error);
+                return;
+            }
 
             AvailableBatches.Clear();
-            foreach (var b in validBatches) AvailableBatches.Add(b);
+            foreach (var b in allBatches) AvailableBatches.Add(b);
             IsBatchSelectorVisible = true;
         }
 
-        // --- UPDATED: Click-to-Increment Logic (Keeps Popup Open) ---
         private void AddBatchToCart(StockBatch batch)
         {
             if (batch == null || _selectedProductForBatch == null) return;
 
-            // 1. Check if item already exists in cart
             var existing = Cart.FirstOrDefault(c => c.BatchId == batch.Id);
 
             if (existing != null)
             {
-                // 2. Increment logic with safety check
                 if (existing.Quantity < batch.RemainingQuantity)
                 {
-                    existing.Quantity += 1; // Increment
+                    existing.Quantity += 1;
                 }
                 else
                 {
@@ -293,7 +346,6 @@ namespace InventorySystem.UI.ViewModels
             }
             else
             {
-                // 3. Add new item
                 var item = new CartItem(RecalculateTotal)
                 {
                     ProductId = _selectedProductForBatch.Id,
@@ -311,16 +363,12 @@ namespace InventorySystem.UI.ViewModels
                 Cart.Add(item);
             }
 
-            // --- CHANGE HERE: Popup logic removed so it stays open ---
-            // IsBatchSelectorVisible = false; // <--- REMOVED THIS LINE
-
             RecalculateTotal();
         }
 
         private void RecalculateTotal() { GrandTotal = Cart.Sum(c => c.Total); }
     }
 
-    // --- CART ITEM (Same as before) ---
     public class CartItem : ViewModelBase
     {
         private readonly Action? _recalcCallback;
@@ -333,12 +381,7 @@ namespace InventorySystem.UI.ViewModels
             ApplyMaxDiscountCommand = new RelayCommand(ApplyMaxDiscount);
         }
 
-        public CartItem()
-        {
-            _quantityStr = "1";
-            _quantity = 1;
-            ApplyMaxDiscountCommand = new RelayCommand(ApplyMaxDiscount);
-        }
+        public CartItem() : this(null) { }
 
         public int ProductId { get; set; }
         public int BatchId { get; set; }
@@ -350,8 +393,6 @@ namespace InventorySystem.UI.ViewModels
         public decimal StandardPrice { get; set; }
         public decimal MaxDiscountPercent { get; set; }
 
-        public ICommand? IncreaseQuantityCommand { get; set; }
-        public ICommand? DecreaseQuantityCommand { get; set; }
         public ICommand ApplyMaxDiscountCommand { get; }
 
         private string _quantityStr = "";

@@ -183,8 +183,8 @@
         <DataTemplate DataType="{x:Type vm:InventoryViewModel}">
             <views:InventoryView />
         </DataTemplate>
-        <DataTemplate DataType="{x:Type vm:StockViewModel}">
-            <views:StockView />
+        <DataTemplate DataType="{x:Type vm:AdjustmentViewModel}">
+            <views:AdjustmentView />
         </DataTemplate>
         <DataTemplate DataType="{x:Type vm:POSViewModel}">
             <views:POSView />

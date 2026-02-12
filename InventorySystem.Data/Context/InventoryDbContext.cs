@@ -104,6 +104,9 @@ namespace InventorySystem.Data.Context
             modelBuilder.Entity<SalesTransaction>().Ignore(t => t.RemainingBalance);
             modelBuilder.Entity<StockMovement>().Ignore(m => m.LineTotal);
             modelBuilder.Entity<StockBatch>().Ignore(b => b.MinSellingPrice);
+
+            // --- FIX: Tell EF Core to ignore our new Math property ---
+            modelBuilder.Entity<StockBatch>().Ignore(b => b.TotalLineCost);
         }
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)

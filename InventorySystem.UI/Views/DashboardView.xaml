@@ -13,51 +13,38 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Background="Transparent" Margin="10">
+    <Grid Background="Transparent" Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <Grid Grid.Row="0" Margin="0,0,0,25">
+        <Grid Grid.Row="0" Margin="0,0,0,30">
             <StackPanel>
-                <TextBlock Text="Store Performance" FontSize="26" FontWeight="Bold" Foreground="#1E293B"/>
-                <TextBlock Text="Analytics and revenue overview." Foreground="#94A3B8" Margin="0,5,0,0"/>
+                <TextBlock Text="Store Performance" FontSize="28" FontWeight="Bold" Foreground="#1E293B"/>
+                <TextBlock Text="Analytics and revenue overview." Foreground="#94A3B8" Margin="0,5,0,0" FontSize="14"/>
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
-                <Border Background="White" CornerRadius="6" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,0,10,0" Padding="8,5">
+                <Border Background="White" CornerRadius="8" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,0,10,0" Padding="10,6">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="📅" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                        <DatePicker SelectedDate="{Binding StartDate}" Width="105" BorderThickness="0" VerticalContentAlignment="Center"/>
-                        <TextBlock Text=" to " VerticalAlignment="Center" Foreground="#94A3B8" Margin="5,0"/>
-                        <DatePicker SelectedDate="{Binding EndDate}" Width="105" BorderThickness="0" VerticalContentAlignment="Center"/>
+                        <TextBlock Text="📅" VerticalAlignment="Center" Margin="0,0,5,0" Foreground="#64748B"/>
+                        <DatePicker SelectedDate="{Binding StartDate}" Width="110" BorderThickness="0" VerticalContentAlignment="Center"/>
+                        <TextBlock Text=" ➜ " VerticalAlignment="Center" Foreground="#94A3B8" Margin="5,0"/>
+                        <DatePicker SelectedDate="{Binding EndDate}" Width="110" BorderThickness="0" VerticalContentAlignment="Center"/>
                     </StackPanel>
                 </Border>
 
-                <Button Command="{Binding ClearFilterCommand}" 
-                        Background="White" BorderBrush="#E2E8F0" BorderThickness="1" Padding="15,8" Margin="0,0,10,0" Cursor="Hand" ToolTip="Reset Dates to Today">
-                    <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="✖" Foreground="#EF4444" FontSize="12" Margin="0,0,8,0" FontWeight="Bold"/>
-                        <TextBlock Text="Clear" Foreground="#64748B" FontWeight="SemiBold"/>
-                    </StackPanel>
-                    <Button.Resources>
-                        <Style TargetType="Border">
-                            <Setter Property="CornerRadius" Value="6"/>
-                        </Style>
-                    </Button.Resources>
-                </Button>
-
                 <Button Command="{Binding RefreshCommand}" 
-                        Background="#009688" BorderThickness="0" Padding="15,8" Cursor="Hand">
+                        Background="#3B82F6" BorderThickness="0" Padding="15,8" Cursor="Hand" ToolTip="Refresh Data">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="↻" Foreground="White" FontSize="14" Margin="0,0,8,0" FontWeight="Bold"/>
-                        <TextBlock Text="Refresh" Foreground="White" FontWeight="Bold"/>
+                        <TextBlock Text="↻" Foreground="White" FontSize="16" Margin="0,0,8,0" FontWeight="Bold"/>
+                        <TextBlock Text="Refresh" Foreground="White" FontWeight="Bold" FontSize="13"/>
                     </StackPanel>
                     <Button.Resources>
                         <Style TargetType="Border">
-                            <Setter Property="CornerRadius" Value="6"/>
+                            <Setter Property="CornerRadius" Value="8"/>
                         </Style>
                     </Button.Resources>
                 </Button>
@@ -73,11 +60,11 @@
                     </LinearGradientBrush>
                 </Border.Background>
                 <Border.Effect>
-                    <DropShadowEffect Color="#10B981" BlurRadius="20" Opacity="0.3" ShadowDepth="5"/>
+                    <DropShadowEffect Color="#10B981" BlurRadius="15" Opacity="0.25" ShadowDepth="4"/>
                 </Border.Effect>
                 <StackPanel>
                     <TextBlock Text="Period Revenue" Foreground="#D1FAE5" FontSize="13" FontWeight="Medium"/>
-                    <TextBlock Text="{Binding PeriodRevenue, StringFormat='Rs {0:N0}'}" Foreground="White" FontSize="28" FontWeight="Bold" Margin="0,5,0,0"/>
+                    <TextBlock Text="{Binding PeriodRevenue, StringFormat='Rs {0:N0}'}" Foreground="White" FontSize="30" FontWeight="Bold" Margin="0,5,0,0"/>
                     <TextBlock Text="Sales in selected range" Foreground="#A7F3D0" FontSize="11" Margin="0,2,0,0"/>
                 </StackPanel>
             </Border>
@@ -90,11 +77,11 @@
                     </LinearGradientBrush>
                 </Border.Background>
                 <Border.Effect>
-                    <DropShadowEffect Color="#0D9488" BlurRadius="20" Opacity="0.3" ShadowDepth="5"/>
+                    <DropShadowEffect Color="#0D9488" BlurRadius="15" Opacity="0.25" ShadowDepth="4"/>
                 </Border.Effect>
                 <StackPanel>
                     <TextBlock Text="Gross Profit" Foreground="#CCFBF1" FontSize="13" FontWeight="Medium"/>
-                    <TextBlock Text="{Binding PeriodProfit, StringFormat='Rs {0:N0}'}" Foreground="White" FontSize="28" FontWeight="Bold" Margin="0,5,0,0"/>
+                    <TextBlock Text="{Binding PeriodProfit, StringFormat='Rs {0:N0}'}" Foreground="White" FontSize="30" FontWeight="Bold" Margin="0,5,0,0"/>
                     <TextBlock Text="Revenue - Cost" Foreground="#99F6E4" FontSize="11" Margin="0,2,0,0"/>
                 </StackPanel>
             </Border>
@@ -104,11 +91,11 @@
                     <Grid>
                         <TextBlock Text="Transactions" Foreground="#64748B" FontSize="13" FontWeight="SemiBold"/>
                         <Border Background="#EFF6FF" CornerRadius="20" HorizontalAlignment="Right" Padding="8">
-                            <TextBlock Text="🧾" FontSize="14"/>
+                            <TextBlock Text="🧾" FontSize="16"/>
                         </Border>
                     </Grid>
-                    <TextBlock Text="{Binding TransactionCount}" Foreground="#1E293B" FontSize="32" FontWeight="Bold" Margin="0,0,0,0"/>
-                    <TextBlock Text="Receipts in range" Foreground="#94A3B8" FontSize="11"/>
+                    <TextBlock Text="{Binding TransactionCount}" Foreground="#1E293B" FontSize="36" FontWeight="Bold" Margin="0,0,0,0"/>
+                    <TextBlock Text="Receipts generated" Foreground="#94A3B8" FontSize="11"/>
                 </StackPanel>
             </Border>
         </UniformGrid>
@@ -121,11 +108,11 @@
                 </Grid.RowDefinitions>
 
                 <StackPanel>
-                    <TextBlock Text="Sales Trend" FontSize="16" FontWeight="Bold" Foreground="#1E293B"/>
-                    <TextBlock Text="Performance leading up to End Date" FontSize="12" Foreground="#94A3B8" Margin="0,3,0,0"/>
+                    <TextBlock Text="Sales Trend (Last 7 Days)" FontSize="16" FontWeight="Bold" Foreground="#1E293B"/>
+                    <TextBlock Text="Daily revenue performance" FontSize="12" Foreground="#94A3B8" Margin="0,3,0,0"/>
                 </StackPanel>
 
-                <ItemsControl Grid.Row="1" ItemsSource="{Binding WeeklySalesData}" VerticalAlignment="Bottom" Margin="0,30,0,0" Height="250">
+                <ItemsControl Grid.Row="1" ItemsSource="{Binding WeeklySalesData}" VerticalAlignment="Bottom" Margin="0,40,0,0">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <UniformGrid Rows="1"/>
@@ -133,12 +120,12 @@
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Grid VerticalAlignment="Bottom" ToolTip="{Binding Tooltip}">
+                            <Grid VerticalAlignment="Bottom" ToolTip="{Binding Tooltip}" Margin="15,0">
                                 <Grid.RowDefinitions>
                                     <RowDefinition Height="*"/>
                                     <RowDefinition Height="Auto"/>
                                 </Grid.RowDefinitions>
-                                <Border Width="40" CornerRadius="6,6,0,0" VerticalAlignment="Bottom" Margin="0,0,0,10"
+                                <Border Width="60" CornerRadius="6,6,0,0" VerticalAlignment="Bottom" Margin="0,0,0,10"
                                         Height="{Binding NormalizedHeight}">
                                     <Border.Background>
                                         <LinearGradientBrush StartPoint="0,1" EndPoint="0,0">
@@ -148,7 +135,7 @@
                                     </Border.Background>
                                 </Border>
                                 <TextBlock Grid.Row="1" Text="{Binding DayName}" HorizontalAlignment="Center" 
-                                           Foreground="#64748B" FontSize="12" FontWeight="SemiBold"/>
+                                           Foreground="#64748B" FontSize="13" FontWeight="SemiBold"/>
                             </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>

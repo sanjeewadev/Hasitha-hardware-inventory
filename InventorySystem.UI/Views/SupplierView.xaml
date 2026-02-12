@@ -4,10 +4,19 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignHeight="768" d:DesignWidth="1100"
-             Background="#F8FAFC">
+             Background="Transparent">
+
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#E0F2F1"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#009688"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#E0F2F1"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="#009688"/>
+    </UserControl.Resources>
 
     <Grid>
-        <Grid Visibility="{Binding IsPage1Visible, Converter={StaticResource BoolToVis}}" Margin="30">
+        <Grid Visibility="{Binding IsPage1Visible, Converter={StaticResource BoolToVis}}" Margin="0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="350"/>
                 <ColumnDefinition Width="*"/>
@@ -33,13 +42,13 @@
                         </TextBlock>
 
                         <TextBlock Text="Company / Name *" Foreground="#64748B" Margin="0,0,0,5"/>
-                        <TextBox Text="{Binding Name}" Height="40" Padding="5" VerticalContentAlignment="Center" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,0,0,15"/>
+                        <TextBox Text="{Binding Name, UpdateSourceTrigger=PropertyChanged}" Height="40" Padding="5" VerticalContentAlignment="Center" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,0,0,15"/>
 
                         <TextBlock Text="Phone Number" Foreground="#64748B" Margin="0,0,0,5"/>
-                        <TextBox Text="{Binding Phone}" Height="40" Padding="5" VerticalContentAlignment="Center" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,0,0,15"/>
+                        <TextBox Text="{Binding Phone, UpdateSourceTrigger=PropertyChanged}" Height="40" Padding="5" VerticalContentAlignment="Center" BorderBrush="#E2E8F0" BorderThickness="1" Margin="0,0,0,15"/>
 
                         <TextBlock Text="Extra Note" Foreground="#64748B" Margin="0,0,0,5"/>
-                        <TextBox Text="{Binding Note}" Height="60" Padding="5" BorderBrush="#E2E8F0" BorderThickness="1" TextWrapping="Wrap" Margin="0,0,0,20"/>
+                        <TextBox Text="{Binding Note, UpdateSourceTrigger=PropertyChanged}" Height="60" Padding="5" BorderBrush="#E2E8F0" BorderThickness="1" TextWrapping="Wrap" Margin="0,0,0,20"/>
 
                         <Button Command="{Binding SaveCommand}" Content="SAVE SUPPLIER" Background="#10B981" Foreground="White" Height="45" FontWeight="Bold" Cursor="Hand">
                             <Button.Resources>
@@ -61,7 +70,7 @@
                 </Grid.RowDefinitions>
 
                 <Grid Grid.Row="0" Margin="0,0,0,20">
-                    <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Tag="Search suppliers by name or phone..." 
+                    <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" Tag="Search suppliers..." 
                              Height="45" Padding="15,0" VerticalContentAlignment="Center" Background="White" BorderBrush="#E2E8F0" BorderThickness="1">
                         <TextBox.Resources>
                             <Style TargetType="Border">
@@ -94,7 +103,7 @@
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                                         <Button Command="{Binding DataContext.ViewDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                                CommandParameter="{Binding}" Content="👁 View Bills" Background="#E0F2FE" Foreground="#0284C7" 
+                                                CommandParameter="{Binding}" Content="👁 Bills" Background="#E0F2FE" Foreground="#0284C7" 
                                                 BorderThickness="0" Padding="10,5" FontWeight="Bold" Cursor="Hand" Margin="0,0,10,0">
                                             <Button.Resources>
                                                 <Style TargetType="Border">
@@ -137,7 +146,7 @@
                         <ColumnDefinition Width="250"/>
                     </Grid.ColumnDefinitions>
 
-                    <Button Grid.Column="0" Command="{Binding BackToPage1Command}" Content="⬅ BACK TO SUPPLIERS" Background="#F1F5F9" Foreground="#334155" 
+                    <Button Grid.Column="0" Command="{Binding BackToPage1Command}" Content="⬅ BACK" Background="#F1F5F9" Foreground="#334155" 
                             Height="40" Padding="15,0" FontWeight="Bold" BorderThickness="0" Cursor="Hand" HorizontalAlignment="Left">
                         <Button.Resources>
                             <Style TargetType="Border">
@@ -154,7 +163,7 @@
                     </StackPanel>
 
                     <TextBox Grid.Column="2" Text="{Binding SearchInvoiceText, UpdateSourceTrigger=PropertyChanged}" 
-                             Tag="Search Bill No. or Product..." Height="40" Padding="15,0" VerticalContentAlignment="Center" 
+                             Tag="Search Bill No..." Height="40" Padding="15,0" VerticalContentAlignment="Center" 
                              Background="#F8FAFC" BorderBrush="#E2E8F0" BorderThickness="1">
                         <TextBox.Resources>
                             <Style TargetType="Border">
@@ -167,22 +176,6 @@
 
             <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
                 <ItemsControl ItemsSource="{Binding SupplierInvoices}">
-                    <ItemsControl.Style>
-                        <Style TargetType="ItemsControl">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding SupplierInvoices.Count}" Value="0">
-                                    <Setter Property="Template">
-                                        <Setter.Value>
-                                            <ControlTemplate>
-                                                <TextBlock Text="No matching bills found." Foreground="#94A3B8" FontSize="16" FontStyle="Italic" HorizontalAlignment="Center" Margin="0,50,0,0"/>
-                                            </ControlTemplate>
-                                        </Setter.Value>
-                                    </Setter>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </ItemsControl.Style>
-
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <Border Background="White" CornerRadius="8" Padding="20" Margin="0,0,0,20" BorderBrush="#E2E8F0" BorderThickness="1">
@@ -218,7 +211,6 @@
                                                 <Setter Property="Padding" Value="10,5"/>
                                             </Style>
                                         </DataGrid.ColumnHeaderStyle>
-
                                         <DataGrid.Columns>
                                             <DataGridTextColumn Header="Product Name" Binding="{Binding Product.Name}" Width="2*"/>
                                             <DataGridTextColumn Header="Buying Price" Binding="{Binding CostPrice, StringFormat=N2}" Width="1*"/>

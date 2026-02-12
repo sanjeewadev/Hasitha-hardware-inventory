@@ -15,7 +15,7 @@
         <Grid Grid.Row="0" Margin="0,0,0,25">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="300"/>
             </Grid.ColumnDefinitions>
 
             <StackPanel>
@@ -23,22 +23,22 @@
                 <TextBlock Text="Manage sales made during the current shift." Foreground="#94A3B8" Margin="0,5,0,0"/>
             </StackPanel>
 
-            <Button Grid.Column="1" Command="{Binding VoidLastSaleCommand}" 
-                    Background="#FEF2F2" BorderBrush="#FECACA" BorderThickness="1" Padding="15,0" Height="40" Cursor="Hand">
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="↩" Foreground="#EF4444" FontSize="16" Margin="0,0,8,0" FontWeight="Bold" VerticalAlignment="Center"/>
-                    <TextBlock Text="UNDO LAST SALE" Foreground="#EF4444" FontWeight="Bold" FontSize="12" VerticalAlignment="Center"/>
-                </StackPanel>
-                <Button.Resources>
-                    <Style TargetType="Border">
-                        <Setter Property="CornerRadius" Value="6"/>
-                    </Style>
-                </Button.Resources>
-            </Button>
+            <Border Grid.Column="1" Background="White" CornerRadius="6" BorderBrush="#E2E8F0" BorderThickness="1" Padding="5">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="🔍" Foreground="#94A3B8" VerticalAlignment="Center" Margin="8,0,8,0"/>
+                    <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" 
+                             Tag="Search Receipt ID..." BorderThickness="0" Background="Transparent"
+                             VerticalAlignment="Center" FontSize="14"/>
+                </Grid>
+            </Border>
         </Grid>
 
         <DataGrid Grid.Row="1" ItemsSource="{Binding TodayTransactions}" AutoGenerateColumns="False" 
-                  IsReadOnly="True" Background="White" BorderThickness="0" RowHeight="50"
+                  IsReadOnly="True" Background="White" BorderThickness="0" RowHeight="55"
                   GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9">
 
             <DataGrid.RowStyle>
@@ -57,11 +57,26 @@
             </DataGrid.RowStyle>
 
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Time" Binding="{Binding Date, StringFormat='hh:mm tt'}" Width="100" Foreground="#64748B"/>
-                <DataGridTextColumn Binding="{Binding ReferenceId}" Width="120" Foreground="#94A3B8"/>
-                <DataGridTextColumn Header="Sale Summary" Binding="{Binding SummaryText}" Width="*" FontWeight="SemiBold" Foreground="#334155"/>
+                <DataGridTextColumn Header="Time" Binding="{Binding Date, StringFormat='hh:mm tt'}" Width="90" Foreground="#64748B"/>
 
-                <DataGridTextColumn Binding="{Binding TotalAmount, StringFormat='Rs {0:N2}'}" Width="160" FontWeight="Bold" Foreground="#009688">
+                <DataGridTemplateColumn Header="Receipt #" Width="140">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <Button Content="{Binding ReferenceId}" 
+                                    Command="{Binding DataContext.CopyIdCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                    CommandParameter="{Binding ReferenceId}"
+                                    Foreground="#3B82F6" Background="Transparent" BorderThickness="0" 
+                                    FontWeight="Bold" Cursor="Hand" ToolTip="Click to Copy ID"
+                                    HorizontalContentAlignment="Left"/>
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+
+                <DataGridTextColumn Header="Details" Binding="{Binding CustomerDisplay}" Width="150" Foreground="#64748B"/>
+
+                <DataGridTextColumn Header="Items" Binding="{Binding SummaryText}" Width="*" FontWeight="SemiBold" Foreground="#334155"/>
+
+                <DataGridTextColumn Binding="{Binding TotalAmount, StringFormat='Rs {0:N2}'}" Width="140" FontWeight="Bold" Foreground="#009688">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="TextAlignment" Value="Right"/>
@@ -70,14 +85,32 @@
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
 
-                <DataGridTemplateColumn Width="80">
+                <DataGridTemplateColumn Width="120">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <Button Command="{Binding DataContext.ViewDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                    CommandParameter="{Binding}"
-                                    Content="👁" Background="Transparent" BorderThickness="0" 
-                                    FontSize="18" Foreground="#64748B" Cursor="Hand" ToolTip="View Details"
-                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                                <Button Command="{Binding DataContext.ViewDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                        CommandParameter="{Binding}"
+                                        Content="👁" Background="#E0F2FE" Foreground="#0284C7" BorderThickness="0" 
+                                        Width="35" Height="35" Margin="0,0,8,0" Cursor="Hand" ToolTip="View Details">
+                                    <Button.Resources>
+                                        <Style TargetType="Border">
+                                            <Setter Property="CornerRadius" Value="4"/>
+                                        </Style>
+                                    </Button.Resources>
+                                </Button>
+
+                                <Button Command="{Binding DataContext.DeleteSaleCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                        CommandParameter="{Binding}"
+                                        Content="🗑" Background="#FEE2E2" Foreground="#EF4444" BorderThickness="0" 
+                                        Width="35" Height="35" Cursor="Hand" ToolTip="Void Transaction">
+                                    <Button.Resources>
+                                        <Style TargetType="Border">
+                                            <Setter Property="CornerRadius" Value="4"/>
+                                        </Style>
+                                    </Button.Resources>
+                                </Button>
+                            </StackPanel>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
@@ -87,7 +120,7 @@
         <Grid Grid.Row="0" Grid.RowSpan="2" Background="#99000000" Panel.ZIndex="100"
               Visibility="{Binding IsDetailsVisible, Converter={StaticResource BoolToVis}}">
 
-            <Border Background="White" Width="500" MaxHeight="600" CornerRadius="10" Padding="30" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <Border Background="White" Width="550" MaxHeight="650" CornerRadius="10" Padding="30" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -96,32 +129,29 @@
                     </Grid.RowDefinitions>
 
                     <StackPanel>
-                        <TextBlock Text="Sale Receipt" FontSize="22" FontWeight="Bold" Foreground="#1E293B" Margin="0,0,0,5"/>
-                        <TextBlock Text="{Binding SelectedSale.Date, StringFormat='dd MMM yyyy - hh:mm tt'}" Foreground="Gray" Margin="0,0,0,20"/>
+                        <Grid Margin="0,0,0,20">
+                            <TextBlock Text="Sale Receipt" FontSize="22" FontWeight="Bold" Foreground="#1E293B"/>
+                            <Button Content="{Binding SelectedSale.ReferenceId}" 
+                                    Command="{Binding CopyIdCommand}" CommandParameter="{Binding SelectedSale.ReferenceId}"
+                                    FontSize="16" FontWeight="Bold" Foreground="#3B82F6" Background="Transparent" 
+                                    BorderThickness="0" HorizontalAlignment="Right" VerticalAlignment="Center" Cursor="Hand"/>
+                        </Grid>
+
+                        <Border Background="#F8FAFC" Padding="15" CornerRadius="6" Margin="0,0,0,20">
+                            <StackPanel>
+                                <TextBlock Text="Customer / Type" FontSize="11" Foreground="#94A3B8"/>
+                                <TextBlock Text="{Binding SelectedSale.CustomerDisplay}" FontSize="14" FontWeight="SemiBold" Foreground="#334155"/>
+                                <TextBlock Text="{Binding SelectedSale.Date, StringFormat='dd MMM yyyy - hh:mm tt'}" FontSize="12" Foreground="#64748B" Margin="0,5,0,0"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
 
                     <DataGrid Grid.Row="1" ItemsSource="{Binding SelectedSale.Items}" AutoGenerateColumns="False" IsReadOnly="True"
                               BorderThickness="0" Background="White" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9"
                               HeadersVisibility="Column" Margin="0,0,0,20" RowHeight="45">
-
-                        <DataGrid.RowStyle>
-                            <Style TargetType="DataGridRow">
-                                <Setter Property="IsHitTestVisible" Value="False"/>
-                            </Style>
-                        </DataGrid.RowStyle>
-
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Item" Binding="{Binding ProductName}" Width="*"/>
-                            <DataGridTemplateColumn Header="Qty" Width="80">
-                                <DataGridTemplateColumn.CellTemplate>
-                                    <DataTemplate>
-                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                            <TextBlock Text="{Binding Quantity}" FontWeight="Bold" VerticalAlignment="Center"/>
-                                            <TextBlock Text="{Binding Unit}" FontSize="10" Foreground="Gray" Margin="3,0,0,0" VerticalAlignment="Bottom"/>
-                                        </StackPanel>
-                                    </DataTemplate>
-                                </DataGridTemplateColumn.CellTemplate>
-                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Qty" Binding="{Binding Quantity}" Width="60" FontWeight="Bold"/>
                             <DataGridTextColumn Header="Price" Binding="{Binding UnitPrice, StringFormat=N2}" Width="90"/>
                             <DataGridTextColumn Header="Total" Binding="{Binding Total, StringFormat=N2}" Width="90" FontWeight="Bold"/>
                         </DataGrid.Columns>
@@ -134,8 +164,8 @@
                         </Grid.ColumnDefinitions>
 
                         <Button Grid.Column="0" Content="🖨 PRINT RECEIPT" Command="{Binding PrintReceiptCommand}" 
-                                Background="#009688" Foreground="White" FontWeight="Bold" Height="40" 
-                                HorizontalAlignment="Left" Padding="15,0" Cursor="Hand" BorderThickness="0">
+                                Background="#009688" Foreground="White" FontWeight="Bold" Height="45" 
+                                HorizontalAlignment="Left" Padding="20,0" Cursor="Hand" BorderThickness="0">
                             <Button.Resources>
                                 <Style TargetType="Border">
                                     <Setter Property="CornerRadius" Value="6"/>
@@ -144,8 +174,8 @@
                         </Button>
 
                         <Button Grid.Column="1" Content="Close" Command="{Binding CloseDetailsCommand}" 
-                                Background="#F1F5F9" Foreground="#64748B" FontWeight="SemiBold" Height="40" 
-                                Padding="20,0" Cursor="Hand" BorderThickness="0">
+                                Background="#F1F5F9" Foreground="#64748B" FontWeight="SemiBold" Height="45" 
+                                Padding="25,0" Cursor="Hand" BorderThickness="0">
                             <Button.Resources>
                                 <Style TargetType="Border">
                                     <Setter Property="CornerRadius" Value="6"/>

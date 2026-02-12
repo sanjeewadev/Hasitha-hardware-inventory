@@ -17,9 +17,10 @@ namespace InventorySystem.UI.ViewModels
 
         public Product EditingProduct { get; set; }
 
+        // Keep Unit options, this is a static product property
         public ObservableCollection<string> UnitOptions { get; } = new ObservableCollection<string>
         {
-            "Pcs", "Kg", "M", "L", "Ft", "Box", "Set"
+            "Pcs", "Kg", "M", "L", "Ft", "Box", "Set", "Pair"
         };
 
         private ObservableCollection<Category> _allCategories = new();
@@ -30,6 +31,8 @@ namespace InventorySystem.UI.ViewModels
             get => _categoryDisplayPath;
             set { _categoryDisplayPath = value; OnPropertyChanged(); }
         }
+
+        // --- REMOVED PRICE/DISCOUNT WRAPPERS & CALCULATOR HERE ---
 
         public Action? CloseAction { get; set; }
 
@@ -48,7 +51,7 @@ namespace InventorySystem.UI.ViewModels
 
             if (productToEdit != null)
             {
-                // EDIT MODE - Copy existing data
+                // EDIT MODE - Only copy static definition data
                 EditingProduct = new Product
                 {
                     Id = productToEdit.Id,
@@ -58,7 +61,8 @@ namespace InventorySystem.UI.ViewModels
                     CategoryId = productToEdit.CategoryId,
                     Quantity = productToEdit.Quantity,
                     Unit = productToEdit.Unit,
-                    // Keep existing prices in background, even if UI doesn't show them
+                    // IMPORTANT: Do NOT copy existing prices/discounts here. 
+                    // We leave them alone so they don't get accidentally wiped on save.
                     BuyingPrice = productToEdit.BuyingPrice,
                     SellingPrice = productToEdit.SellingPrice,
                     DiscountLimit = productToEdit.DiscountLimit
@@ -66,10 +70,11 @@ namespace InventorySystem.UI.ViewModels
             }
             else
             {
-                // NEW MODE - Prices default to 0
+                // NEW MODE
                 EditingProduct = new Product();
                 EditingProduct.Barcode = GenerateSimpleCode();
                 EditingProduct.Unit = "Pcs";
+                // Prices/Discounts default to 0 in the entity model
 
                 if (preSelectedCategoryId.HasValue)
                 {
@@ -132,6 +137,8 @@ namespace InventorySystem.UI.ViewModels
                 }
                 else
                 {
+                    // This update will only change the fields we bound to (Name, Barcode, Unit, Description)
+                    // Existing prices in the DB will remain untouched.
                     await _productRepo.UpdateAsync(EditingProduct);
                 }
 

@@ -1,5 +1,6 @@
 ﻿using InventorySystem.Core.Entities;
 using InventorySystem.Data.Repositories;
+using InventorySystem.Infrastructure.Services;
 using InventorySystem.UI.Commands;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
@@ -16,14 +17,16 @@ namespace InventorySystem.UI.ViewModels
         private readonly ISupplierRepository _supplierRepo;
         private readonly Data.Context.InventoryDbContext _context;
 
-        // --- PAGE VISIBILITY LOGIC ---
+        // --- PAGE VISIBILITY ---
         private bool _isPage1Visible = true;
-        public bool IsPage1Visible { get => _isPage1Visible; set { _isPage1Visible = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsPage2Visible)); } }
+        public bool IsPage1Visible
+        {
+            get => _isPage1Visible;
+            set { _isPage1Visible = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsPage2Visible)); }
+        }
         public bool IsPage2Visible => !IsPage1Visible;
 
-        // ==========================================
-        // PAGE 1: SUPPLIER MANAGEMENT
-        // ==========================================
+        // --- PAGE 1: LIST ---
         public ObservableCollection<Supplier> Suppliers { get; } = new();
 
         private string _name = "";
@@ -53,6 +56,10 @@ namespace InventorySystem.UI.ViewModels
                     Note = value.Note;
                     IsEditMode = true;
                 }
+                else if (value == null)
+                {
+                    IsEditMode = false;
+                }
             }
         }
 
@@ -64,13 +71,13 @@ namespace InventorySystem.UI.ViewModels
         public ICommand DeleteCommand { get; }
         public ICommand ViewDetailsCommand { get; }
 
-        // ==========================================
-        // PAGE 2: SUPPLIER BILLS & PRODUCTS
-        // ==========================================
+        // --- PAGE 2: HISTORY ---
         public ObservableCollection<PurchaseInvoice> SupplierInvoices { get; } = new();
-        public Supplier? SupplierForDetails { get; private set; }
 
-        private List<PurchaseInvoice> _masterInvoiceList = new(); // Stores all bills for instant filtering
+        private Supplier? _supplierForDetails;
+        public Supplier? SupplierForDetails { get => _supplierForDetails; private set { _supplierForDetails = value; OnPropertyChanged(); } }
+
+        private List<PurchaseInvoice> _masterInvoiceList = new();
 
         private string _searchInvoiceText = "";
         public string SearchInvoiceText
@@ -83,7 +90,7 @@ namespace InventorySystem.UI.ViewModels
 
         public SupplierViewModel()
         {
-            _context = InventorySystem.Infrastructure.Services.DatabaseService.CreateDbContext();
+            _context = DatabaseService.CreateDbContext();
             _supplierRepo = new SupplierRepository(_context);
 
             SaveCommand = new RelayCommand(async () => await SaveSupplier());
@@ -103,7 +110,7 @@ namespace InventorySystem.UI.ViewModels
             if (!string.IsNullOrWhiteSpace(SearchText))
             {
                 var lower = SearchText.ToLower();
-                list = list.Where(s => s.Name.ToLower().Contains(lower) || s.Phone.Contains(lower)).ToList();
+                list = list.Where(s => s.Name.ToLower().Contains(lower) || (s.Phone != null && s.Phone.Contains(lower))).ToList();
             }
 
             Suppliers.Clear();
@@ -138,10 +145,20 @@ namespace InventorySystem.UI.ViewModels
         private async Task DeleteSupplier(Supplier s)
         {
             if (s == null) return;
-            if (MessageBox.Show($"Delete supplier '{s.Name}'?\n(Only possible if they have no linked bills)", "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+
+            // Strict Check: Are there ANY invoices linked?
+            var hasInvoices = await _context.PurchaseInvoices.AnyAsync(i => i.SupplierId == s.Id);
+            if (hasInvoices)
+            {
+                MessageBox.Show($"Cannot delete '{s.Name}'.\n\nThis supplier has linked purchase history. Deleting them would corrupt financial records.", "Action Blocked", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            if (MessageBox.Show($"Delete supplier '{s.Name}'?", "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
                 await _supplierRepo.DeleteAsync(s.Id);
                 LoadData();
+                ClearForm();
             }
         }
 
@@ -156,10 +173,8 @@ namespace InventorySystem.UI.ViewModels
         {
             if (s == null) return;
             SupplierForDetails = s;
-            SearchInvoiceText = ""; // Clear old search
-            OnPropertyChanged(nameof(SupplierForDetails));
+            SearchInvoiceText = "";
 
-            // Fetch deeply
             var invoices = await _context.PurchaseInvoices
                 .Include(i => i.Batches)
                     .ThenInclude(b => b.Product)
@@ -167,8 +182,8 @@ namespace InventorySystem.UI.ViewModels
                 .OrderByDescending(i => i.Date)
                 .ToListAsync();
 
-            _masterInvoiceList = invoices; // Save to master list
-            FilterInvoices(); // Trigger initial load
+            _masterInvoiceList = invoices;
+            FilterInvoices();
 
             IsPage1Visible = false;
         }
@@ -176,21 +191,18 @@ namespace InventorySystem.UI.ViewModels
         private void FilterInvoices()
         {
             SupplierInvoices.Clear();
-
             var query = _masterInvoiceList.AsEnumerable();
 
             if (!string.IsNullOrWhiteSpace(SearchInvoiceText))
             {
                 var lower = SearchInvoiceText.ToLower();
-                // Search by Bill Number OR if any Product Name inside the bill matches
-                query = query.Where(i => i.BillNumber.ToLower().Contains(lower) ||
-                                         i.Batches.Any(b => b.Product.Name.ToLower().Contains(lower)));
+                query = query.Where(i =>
+                    i.BillNumber.ToLower().Contains(lower) ||
+                    i.Batches.Any(b => b.Product.Name.ToLower().Contains(lower))
+                );
             }
 
-            foreach (var inv in query)
-            {
-                SupplierInvoices.Add(inv);
-            }
+            foreach (var inv in query) SupplierInvoices.Add(inv);
         }
     }
 }

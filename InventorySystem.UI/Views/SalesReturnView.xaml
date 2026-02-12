@@ -4,9 +4,9 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" d:DesignHeight="768" d:DesignWidth="1100"
-             Background="#F8FAFC">
+             Background="Transparent">
 
-    <Grid Margin="30">
+    <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -26,11 +26,11 @@
 
                 <StackPanel Grid.Column="0">
                     <TextBlock Text="Customer Sales Return" FontSize="22" FontWeight="Bold" Foreground="#1E293B"/>
-                    <TextBlock Text="Search for a receipt to securely process a refund and restock items." Foreground="#64748B" FontSize="13" Margin="0,5,0,0"/>
+                    <TextBlock Text="Search for a receipt to securely process a refund." Foreground="#64748B" FontSize="13" Margin="0,5,0,0"/>
                 </StackPanel>
 
                 <TextBox Grid.Column="1" Text="{Binding SearchReceiptId, UpdateSourceTrigger=PropertyChanged}" 
-                         Tag="Scan or Type Receipt ID (e.g. REC-...)" Height="45" Width="300" Padding="15,0" 
+                         Tag="Receipt ID (e.g. 2026...)" Height="45" Width="300" Padding="15,0" 
                          VerticalContentAlignment="Center" Background="#F1F5F9" BorderBrush="#E2E8F0" BorderThickness="1" Margin="20,0,10,0">
                     <TextBox.Resources>
                         <Style TargetType="Border">
@@ -65,7 +65,6 @@
                     </StackPanel.Style>
                     <TextBlock Text="🧾" FontSize="48" HorizontalAlignment="Center" Foreground="#CBD5E1" Margin="0,0,0,10"/>
                     <TextBlock Text="Awaiting Receipt" FontSize="20" FontWeight="Bold" Foreground="#94A3B8" HorizontalAlignment="Center"/>
-                    <TextBlock Text="Scan a receipt barcode or search above to begin." FontSize="14" Foreground="#94A3B8" HorizontalAlignment="Center"/>
                 </StackPanel>
 
                 <Grid>
@@ -88,41 +87,67 @@
                         <TextBlock FontSize="18" FontWeight="Bold" Foreground="#1E293B">
                             <Run Text="Receipt: "/><Run Text="{Binding CurrentReceipt.ReceiptId}" Foreground="#3B82F6"/>
                         </TextBlock>
-                        <TextBlock Text="{Binding CurrentReceipt.Date, StringFormat='Sale Date: dd MMM yyyy - hh:mm tt'}" Foreground="#64748B" FontSize="13" Margin="0,2,0,0"/>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding CurrentReceipt.Date, StringFormat='Sale Date: dd MMM yyyy - hh:mm tt'}" Foreground="#64748B" FontSize="13" Margin="0,2,10,0"/>
+                            <Border Background="#FEF2F2" CornerRadius="4" Padding="5,0" Visibility="{Binding CurrentReceipt.IsCredit, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="CREDIT SALE" Foreground="#EF4444" FontSize="10" FontWeight="Bold" VerticalAlignment="Center"/>
+                            </Border>
+                        </StackPanel>
                     </StackPanel>
 
-                    <DataGrid Grid.Row="1" ItemsSource="{Binding ReturnItems}" AutoGenerateColumns="False" IsReadOnly="False" 
-                              Background="White" BorderThickness="1" BorderBrush="#F1F5F9" RowHeight="50" HeadersVisibility="Column">
+                    <DataGrid Grid.Row="1" ItemsSource="{Binding ReturnItems}" AutoGenerateColumns="False" 
+                              CanUserAddRows="False" Background="White" BorderThickness="1" BorderBrush="#F1F5F9" 
+                              RowHeight="50" HeadersVisibility="Column">
+
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsReturnable}" Value="False">
+                                        <Setter Property="IsEnabled" Value="False"/>
+                                        <Setter Property="Opacity" Value="0.5"/>
+                                        <Setter Property="Background" Value="#F8FAFC"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
 
                         <DataGrid.ColumnHeaderStyle>
                             <Style TargetType="DataGridColumnHeader">
                                 <Setter Property="Background" Value="#F8FAFC"/>
                                 <Setter Property="Foreground" Value="#64748B"/>
                                 <Setter Property="FontWeight" Value="SemiBold"/>
-                                <Setter Property="Padding" Value="15,0"/>
+                                <Setter Property="Padding" Value="10,0"/>
                                 <Setter Property="Height" Value="45"/>
                             </Style>
                         </DataGrid.ColumnHeaderStyle>
 
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Product Sold" Binding="{Binding OriginalMovement.Product.Name}" Width="2*" IsReadOnly="True" Foreground="#334155" FontWeight="SemiBold"/>
-                            <DataGridTextColumn Header="Unit Price" Binding="{Binding OriginalMovement.UnitPrice, StringFormat=N2}" Width="1*" IsReadOnly="True" Foreground="#64748B"/>
-                            <DataGridTextColumn Header="Bought" Binding="{Binding OriginalMovement.Quantity}" Width="80" IsReadOnly="True" Foreground="#64748B"/>
+                            <DataGridTextColumn Header="Product" Binding="{Binding OriginalMovement.Product.Name}" Width="2*" IsReadOnly="True" FontWeight="SemiBold" Foreground="#334155"/>
+                            <DataGridTextColumn Header="Sold Price" Binding="{Binding OriginalMovement.UnitPrice, StringFormat=N2}" Width="100" IsReadOnly="True"/>
+                            <DataGridTextColumn Header="Qty Bought" Binding="{Binding OriginalMovement.Quantity}" Width="90" IsReadOnly="True"/>
 
-                            <DataGridTextColumn Header="Already Returned" Binding="{Binding OriginalMovement.ReturnedQuantity}" Width="130" IsReadOnly="True" Foreground="#EF4444"/>
+                            <DataGridTextColumn Header="Returned" Binding="{Binding OriginalMovement.ReturnedQuantity}" Width="90" IsReadOnly="True" Foreground="#EF4444" FontWeight="Bold"/>
 
-                            <DataGridTemplateColumn Header="Qty to Return Now" Width="150">
+                            <DataGridTemplateColumn Header="Return Qty" Width="100">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
                                         <TextBox Text="{Binding ReturnQty, UpdateSourceTrigger=PropertyChanged}" 
-                                                 Background="#FEF2F2" BorderBrush="#FCA5A5" BorderThickness="1" 
-                                                 Foreground="#B91C1C" FontWeight="Bold" FontSize="16" 
-                                                 TextAlignment="Center" VerticalContentAlignment="Center" Margin="10,5"/>
+                                                 Background="#F0FDFA" BorderBrush="#009688" BorderThickness="1"
+                                                 FontWeight="Bold" FontSize="14" TextAlignment="Center" VerticalContentAlignment="Center" Margin="5"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
 
-                            <DataGridTextColumn Header="Refund Value" Binding="{Binding RefundValue, StringFormat=N2}" Width="120" IsReadOnly="True" Foreground="#10B981" FontWeight="Bold"/>
+                            <DataGridTemplateColumn Header="Reason" Width="140">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <ComboBox ItemsSource="{Binding ReasonOptions}" SelectedItem="{Binding Reason}" 
+                                                  Padding="5" VerticalContentAlignment="Center" Margin="5"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+
+                            <DataGridTextColumn Header="Refund Value" Binding="{Binding RefundValue, StringFormat=N2}" Width="110" IsReadOnly="True" Foreground="#10B981" FontWeight="Bold"/>
                         </DataGrid.Columns>
                     </DataGrid>
                 </Grid>
@@ -142,14 +167,14 @@
             </Border.Style>
             <Grid>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                    <TextBlock Text="Total Refund Due:" Foreground="White" FontSize="16" VerticalAlignment="Center"/>
+                    <TextBlock Text="Total Refund:" Foreground="White" FontSize="16" VerticalAlignment="Center"/>
                     <TextBlock Text="{Binding TotalRefundAmount, StringFormat='Rs {0:N2}'}" Foreground="#F87171" FontSize="26" FontWeight="Bold" Margin="15,0,0,0" VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Command="{Binding ClearCommand}" Content="Cancel" Background="Transparent" Foreground="#94A3B8" Margin="0,0,20,0" BorderThickness="0" Cursor="Hand" FontWeight="SemiBold"/>
 
-                    <Button Command="{Binding ProcessReturnCommand}" Content="✔ PROCESS RETURN &amp; RESTOCK" 
+                    <Button Command="{Binding ProcessReturnCommand}" Content="✔ CONFIRM RETURN" 
                             Background="#EF4444" Foreground="White" Padding="25,10" FontWeight="Bold" FontSize="14" Cursor="Hand">
                         <Button.Resources>
                             <Style TargetType="Border">

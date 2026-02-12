@@ -4,14 +4,14 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignHeight="768" d:DesignWidth="1200"
-             Background="#F8FAFC">
+             Background="Transparent">
 
     <Grid>
         <Grid Visibility="{Binding IsPage1Visible, Converter={StaticResource BoolToVis}}">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,50,0,50" Width="800">
+                <StackPanel HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,0,0,50">
 
-                    <Border Background="White" CornerRadius="10" Padding="40" Margin="0,0,0,30">
+                    <Border Background="White" CornerRadius="10" Padding="40" Margin="0,0,0,15">
                         <Border.Effect>
                             <DropShadowEffect Color="Black" Opacity="0.05" BlurRadius="10"/>
                         </Border.Effect>
@@ -22,7 +22,7 @@
                             <StackPanel Margin="0,0,0,20">
                                 <TextBlock Text="Select Supplier *" Foreground="#64748B" Margin="0,0,0,8" FontWeight="SemiBold"/>
                                 <ComboBox ItemsSource="{Binding Suppliers}" SelectedItem="{Binding SelectedSupplier}" 
-                                          DisplayMemberPath="Name" Height="50" Padding="10,0" FontSize="14" VerticalContentAlignment="Center"
+                                          DisplayMemberPath="Name" Height="40" Padding="10,0" FontSize="14" VerticalContentAlignment="Center"
                                           BorderBrush="#E2E8F0" BorderThickness="1">
                                     <ComboBox.Resources>
                                         <Style TargetType="Border">
@@ -34,7 +34,7 @@
 
                             <StackPanel Margin="0,0,0,20">
                                 <TextBlock Text="Bill / Invoice Number *" Foreground="#64748B" Margin="0,0,0,8" FontWeight="SemiBold"/>
-                                <TextBox Text="{Binding BillNumber}" Height="50" Padding="15,0" VerticalContentAlignment="Center" FontSize="14"
+                                <TextBox Text="{Binding BillNumber}" Height="40" Padding="15,0" VerticalContentAlignment="Center" FontSize="14"
                                          BorderBrush="#E2E8F0" BorderThickness="1">
                                     <TextBox.Resources>
                                         <Style TargetType="Border">
@@ -46,13 +46,13 @@
 
                             <StackPanel Margin="0,0,0,30">
                                 <TextBlock Text="Invoice Date *" Foreground="#64748B" Margin="0,0,0,8" FontWeight="SemiBold"/>
-                                <DatePicker SelectedDate="{Binding BillDate}" Height="50" FontSize="14" Padding="10,0" VerticalContentAlignment="Center"
+                                <DatePicker SelectedDate="{Binding BillDate}" Height="40" FontSize="14" Padding="10,0" VerticalContentAlignment="Center"
                                             BorderBrush="#E2E8F0" BorderThickness="1" HorizontalContentAlignment="Stretch">
                                 </DatePicker>
                             </StackPanel>
 
                             <Button Command="{Binding CreateDraftCommand}" Content="CREATE &amp; GO TO ENTRY →" 
-                                    Background="#3B82F6" Foreground="White" Height="55" FontSize="16" FontWeight="Bold" Cursor="Hand">
+                                    Background="#3B82F6" Foreground="White" Height="45" FontSize="16" FontWeight="Bold" Cursor="Hand">
                                 <Button.Resources>
                                     <Style TargetType="Border">
                                         <Setter Property="CornerRadius" Value="8"/>
