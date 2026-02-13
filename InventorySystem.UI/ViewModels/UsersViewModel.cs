@@ -7,10 +7,20 @@ using System;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Input;
 
 namespace InventorySystem.UI.ViewModels
 {
+    // Helper class for the Checkboxes
+    public class PermissionItem : ViewModelBase
+    {
+        public string Name { get; set; } // "Dashboard", "POS", etc.
+        public string DisplayName { get; set; }
+        private bool _isChecked;
+        public bool IsChecked { get => _isChecked; set { _isChecked = value; OnPropertyChanged(); } }
+    }
+
     public class UsersViewModel : ViewModelBase
     {
         private readonly IUserRepository _userRepo;
@@ -18,12 +28,13 @@ namespace InventorySystem.UI.ViewModels
 
         public ObservableCollection<User> Users { get; } = new();
 
+        // --- Permissions UI ---
+        public ObservableCollection<PermissionItem> AvailablePermissions { get; } = new();
+        public bool IsEmployeeSelected => SelectedRole == UserRole.Employee;
+
         // --- Editor State ---
         private string _editorTitle = "Create New User";
         public string EditorTitle { get => _editorTitle; set { _editorTitle = value; OnPropertyChanged(); } }
-
-        private bool _isEditing;
-        public bool IsEditing { get => _isEditing; set { _isEditing = value; OnPropertyChanged(); } }
 
         // --- Notifications ---
         private string _statusMessage = "";
@@ -34,7 +45,6 @@ namespace InventorySystem.UI.ViewModels
 
         // --- Form Inputs ---
         private int _editingId;
-
         private string _fullName = "";
         public string FullName { get => _fullName; set { _fullName = value; OnPropertyChanged(); } }
 
@@ -45,7 +55,16 @@ namespace InventorySystem.UI.ViewModels
         public string Password { get => _password; set { _password = value; OnPropertyChanged(); } }
 
         private UserRole _selectedRole = UserRole.Employee;
-        public UserRole SelectedRole { get => _selectedRole; set { _selectedRole = value; OnPropertyChanged(); } }
+        public UserRole SelectedRole
+        {
+            get => _selectedRole;
+            set
+            {
+                _selectedRole = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(IsEmployeeSelected)); // Show/Hide checkboxes
+            }
+        }
 
         public ObservableCollection<UserRole> Roles { get; } = new() { UserRole.Admin, UserRole.Employee };
 
@@ -65,18 +84,26 @@ namespace InventorySystem.UI.ViewModels
             SaveCommand = new RelayCommand(async () => await SaveUser());
             ResetCommand = new RelayCommand(ResetForm);
 
+            InitializePermissions();
             LoadUsers();
+        }
+
+        private void InitializePermissions()
+        {
+            // Define all the pages you want to control
+            AvailablePermissions.Add(new PermissionItem { Name = "Dashboard", DisplayName = "📊 Dashboard / Analytics" });
+            AvailablePermissions.Add(new PermissionItem { Name = "POS", DisplayName = "🛒 Point of Sale" });
+            AvailablePermissions.Add(new PermissionItem { Name = "Catalog", DisplayName = "📦 Inventory Catalog" });
+            AvailablePermissions.Add(new PermissionItem { Name = "Stock", DisplayName = "⚖️ Stock Adjustments" });
+            AvailablePermissions.Add(new PermissionItem { Name = "Suppliers", DisplayName = "🚛 Supplier Management" });
+            AvailablePermissions.Add(new PermissionItem { Name = "Settings", DisplayName = "⚙️ Settings & Backups" });
         }
 
         private async void LoadUsers()
         {
             Users.Clear();
             var list = await _userRepo.GetAllAsync();
-            // Sort by active status so blocked users go to bottom, or just by ID
-            foreach (var user in list.OrderBy(u => u.Username))
-            {
-                Users.Add(user);
-            }
+            foreach (var user in list.OrderBy(u => u.Username)) Users.Add(user);
         }
 
         private void ResetForm()
@@ -87,9 +114,11 @@ namespace InventorySystem.UI.ViewModels
             Password = "";
             SelectedRole = UserRole.Employee;
 
+            // Reset Checkboxes
+            foreach (var p in AvailablePermissions) p.IsChecked = false;
+
             EditorTitle = "Create New User";
             StatusMessage = "";
-            IsEditing = false;
         }
 
         private void OpenEdit(User user)
@@ -100,11 +129,17 @@ namespace InventorySystem.UI.ViewModels
             FullName = user.FullName;
             Username = user.Username;
             SelectedRole = user.Role;
-            Password = ""; // Reset password field
+            Password = "";
+
+            // Load Permissions from DB string (e.g. "POS,Stock")
+            var userPerms = (user.Permissions ?? "").Split(',');
+            foreach (var p in AvailablePermissions)
+            {
+                p.IsChecked = userPerms.Contains(p.Name);
+            }
 
             EditorTitle = $"Edit User: {user.Username}";
             StatusMessage = "";
-            IsEditing = true;
         }
 
         private async Task SaveUser()
@@ -112,33 +147,39 @@ namespace InventorySystem.UI.ViewModels
             StatusMessage = "";
             IsErrorMessage = false;
 
-            // Basic Validation
-            if (string.IsNullOrWhiteSpace(FullName))
+            if (string.IsNullOrWhiteSpace(FullName) || string.IsNullOrWhiteSpace(Username))
             {
-                StatusMessage = "⚠️ Full Name is required.";
-                IsErrorMessage = true;
-                return;
-            }
-            if (string.IsNullOrWhiteSpace(Username))
-            {
-                StatusMessage = "⚠️ Username is required.";
-                IsErrorMessage = true;
-                return;
-            }
-            if (_editingId == 0 && string.IsNullOrWhiteSpace(Password))
-            {
-                StatusMessage = "⚠️ Password is required for new users.";
+                StatusMessage = "⚠️ Missing fields.";
                 IsErrorMessage = true;
                 return;
             }
 
+            // Build Permission String
+            string permString = "";
+            if (SelectedRole == UserRole.Admin)
+            {
+                permString = "ALL"; // Admins get everything
+            }
+            else
+            {
+                var active = AvailablePermissions.Where(p => p.IsChecked).Select(p => p.Name);
+                permString = string.Join(",", active);
+            }
+
             try
             {
-                if (_editingId == 0) // ADD NEW
+                if (_editingId == 0) // NEW
                 {
                     if (Users.Any(u => u.Username.Equals(Username, StringComparison.OrdinalIgnoreCase)))
                     {
-                        StatusMessage = "⚠️ Username already taken.";
+                        StatusMessage = "⚠️ Username taken.";
+                        IsErrorMessage = true;
+                        return;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(Password))
+                    {
+                        StatusMessage = "⚠️ Password required.";
                         IsErrorMessage = true;
                         return;
                     }
@@ -150,33 +191,31 @@ namespace InventorySystem.UI.ViewModels
                         FullName = FullName,
                         Role = SelectedRole,
                         IsActive = true,
+                        Permissions = permString, // <--- SAVE PERMISSIONS
                         CreatedAt = DateTime.Now
                     };
 
                     await _userRepo.AddAsync(newUser);
-                    StatusMessage = "✅ User created successfully!";
-
+                    StatusMessage = "✅ User created!";
                     await Task.Delay(1000);
                     ResetForm();
                     LoadUsers();
                 }
-                else // UPDATE EXISTING
+                else // UPDATE
                 {
-                    // Find existing tracked object
                     var userToUpdate = Users.FirstOrDefault(u => u.Id == _editingId);
                     if (userToUpdate != null)
                     {
                         userToUpdate.FullName = FullName;
                         userToUpdate.Role = SelectedRole;
                         userToUpdate.Username = Username;
+                        userToUpdate.Permissions = permString; // <--- UPDATE PERMISSIONS
 
                         if (!string.IsNullOrWhiteSpace(Password))
-                        {
                             userToUpdate.PasswordHash = _authService.HashPassword(Password);
-                        }
 
                         await _userRepo.UpdateAsync(userToUpdate);
-                        StatusMessage = "✅ User updated successfully!";
+                        StatusMessage = "✅ User updated!";
                     }
                 }
             }
@@ -190,14 +229,8 @@ namespace InventorySystem.UI.ViewModels
         private async Task ToggleActive(User user)
         {
             if (user == null) return;
-
-            // Toggle
             user.IsActive = !user.IsActive;
-
-            // Save to DB
             await _userRepo.UpdateAsync(user);
-
-            // RELOAD LIST to update the UI Button Color
             LoadUsers();
         }
     }

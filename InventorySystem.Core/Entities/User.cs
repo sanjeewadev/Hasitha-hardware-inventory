@@ -17,6 +17,8 @@ namespace InventorySystem.Core.Entities
 
         public bool IsActive { get; set; } = true; // If false, user cannot log in.
 
+        public string Permissions { get; set; } = ""; // Stores "Dashboard,POS,Stock"
+
         public DateTime CreatedAt { get; set; } = DateTime.Now;
     }
 }

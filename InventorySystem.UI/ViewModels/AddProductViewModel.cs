@@ -18,10 +18,22 @@ namespace InventorySystem.UI.ViewModels
         public Product EditingProduct { get; set; }
 
         // Keep Unit options, this is a static product property
+        // Inside AddProductViewModel class
+
         public ObservableCollection<string> UnitOptions { get; } = new ObservableCollection<string>
-        {
-            "Pcs", "Kg", "M", "L", "Ft", "Box", "Set", "Pair"
-        };
+            {
+                // Count
+                "Pcs", "Box", "Set", "Pair",
+    
+                // Weight
+                "Kg", "g", "mg", 
+    
+                // Length
+                "M", "Ft", "cm", "mm",
+    
+                // Volume/Liquid
+                "L", "ml"
+            };
 
         private ObservableCollection<Category> _allCategories = new();
 
