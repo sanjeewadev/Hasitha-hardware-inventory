@@ -11,13 +11,13 @@
         <conv:BoolToColorConverter x:Key="BoolToColor"/>
     </UserControl.Resources>
 
-    <Grid Background="Transparent">
+    <Grid Background="Transparent" Margin="20">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="380"/>
+            <ColumnDefinition Width="400"/>
         </Grid.ColumnDefinitions>
 
-        <Grid Grid.Column="0" Margin="15">
+        <Grid Grid.Column="0" Margin="0,0,15,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
@@ -30,8 +30,19 @@
 
             <DataGrid Grid.Row="1" ItemsSource="{Binding Users}" AutoGenerateColumns="False" 
                       IsReadOnly="True" Background="White" BorderBrush="#E2E8F0" BorderThickness="1"
-                      RowHeight="55" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                      RowHeight="60" HeadersVisibility="Column" GridLinesVisibility="Horizontal"
                       HorizontalGridLinesBrush="#F1F5F9" SelectionMode="Single">
+
+                <DataGrid.RowStyle>
+                    <Style TargetType="DataGridRow">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsActive}" Value="False">
+                                <Setter Property="Opacity" Value="0.6"/>
+                                <Setter Property="Background" Value="#F8FAFC"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.RowStyle>
 
                 <DataGrid.ColumnHeaderStyle>
                     <Style TargetType="DataGridColumnHeader">
@@ -46,15 +57,81 @@
                 </DataGrid.ColumnHeaderStyle>
 
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Username" Binding="{Binding Username}" Width="150" FontWeight="Bold"/>
+                    <DataGridTextColumn Header="Username" Binding="{Binding Username}" Width="150" FontWeight="Bold" Foreground="#1E293B"/>
                     <DataGridTextColumn Header="Full Name" Binding="{Binding FullName}" Width="*"/>
                     <DataGridTextColumn Header="Role" Binding="{Binding Role}" Width="100"/>
+
+                    <DataGridTemplateColumn Header="Status" Width="100">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Border Padding="8,4" CornerRadius="4" HorizontalAlignment="Left" VerticalAlignment="Center">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Background" Value="#DCFCE7"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsActive}" Value="False">
+                                                    <Setter Property="Background" Value="#FEE2E2"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock FontWeight="Bold" FontSize="11" HorizontalAlignment="Center">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Setter Property="Text" Value="ACTIVE"/>
+                                                <Setter Property="Foreground" Value="#16A34A"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsActive}" Value="False">
+                                                        <Setter Property="Text" Value="BLOCKED"/>
+                                                        <Setter Property="Foreground" Value="#DC2626"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </Border>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+
                     <DataGridTemplateColumn Header="Actions" Width="170">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal">
-                                    <Button Content="EDIT" Command="{Binding DataContext.EditUserCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Background="White" Margin="0,0,5,0"/>
-                                    <Button Content="BLOCK" Command="{Binding DataContext.ToggleActiveCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" Background="#EF4444" Foreground="White"/>
+                                    <Button Command="{Binding DataContext.EditUserCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                            CommandParameter="{Binding}" Content="EDIT" Background="#F1F5F9" Foreground="#334155" 
+                                            FontWeight="Bold" Width="60" Margin="0,0,5,0" BorderThickness="0" Cursor="Hand">
+                                        <Button.Resources>
+                                            <Style TargetType="Border">
+                                                <Setter Property="CornerRadius" Value="4"/>
+                                            </Style>
+                                        </Button.Resources>
+                                    </Button>
+
+                                    <Button Command="{Binding DataContext.ToggleActiveCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
+                                            CommandParameter="{Binding}" Foreground="White" Width="80" FontWeight="Bold" BorderThickness="0" Cursor="Hand">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Content" Value="BLOCK"/>
+                                                <Setter Property="Background" Value="#EF4444"/>
+                                                <Setter Property="Template">
+                                                    <Setter.Value>
+                                                        <ControlTemplate TargetType="Button">
+                                                            <Border Background="{TemplateBinding Background}" CornerRadius="4">
+                                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,6"/>
+                                                            </Border>
+                                                        </ControlTemplate>
+                                                    </Setter.Value>
+                                                </Setter>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsActive}" Value="False">
+                                                        <Setter Property="Content" Value="UNBLOCK"/>
+                                                        <Setter Property="Background" Value="#10B981"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
                                 </StackPanel>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
@@ -80,26 +157,50 @@
 
                     <StackPanel Grid.Row="1">
                         <TextBlock Text="Full Name" Foreground="#64748B" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                        <TextBox Text="{Binding FullName, UpdateSourceTrigger=PropertyChanged}" Padding="12" BorderBrush="#E2E8F0" Background="#F8FAFC" Margin="0,0,0,20"/>
+                        <TextBox Text="{Binding FullName, UpdateSourceTrigger=PropertyChanged}" Padding="12" BorderBrush="#E2E8F0" Background="#F8FAFC" Margin="0,0,0,20">
+                            <TextBox.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </TextBox.Resources>
+                        </TextBox>
 
                         <TextBlock Text="Role" Foreground="#64748B" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                        <ComboBox ItemsSource="{Binding Roles}" SelectedItem="{Binding SelectedRole}" Padding="12" BorderBrush="#E2E8F0" Background="#F8FAFC" Margin="0,0,0,20"/>
+                        <ComboBox ItemsSource="{Binding Roles}" SelectedItem="{Binding SelectedRole}" Padding="12" BorderBrush="#E2E8F0" Background="#F8FAFC" Margin="0,0,0,20">
+                            <ComboBox.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </ComboBox.Resources>
+                        </ComboBox>
 
                         <TextBlock Text="Username" Foreground="#64748B" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                        <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" Padding="12" BorderBrush="#E2E8F0" Background="#F8FAFC" Margin="0,0,0,20"/>
+                        <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" Padding="12" BorderBrush="#E2E8F0" Background="#F8FAFC" Margin="0,0,0,20">
+                            <TextBox.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </TextBox.Resources>
+                        </TextBox>
 
                         <TextBlock Text="Password" Foreground="#64748B" FontWeight="SemiBold" Margin="0,0,0,8"/>
-                        <TextBox Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}" Padding="12" BorderBrush="#E2E8F0" Background="#F8FAFC" Margin="0,0,0,5"/>
+                        <TextBox Text="{Binding Password, UpdateSourceTrigger=PropertyChanged}" Padding="12" BorderBrush="#E2E8F0" Background="#F8FAFC" Margin="0,0,0,5">
+                            <TextBox.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="6"/>
+                                </Style>
+                            </TextBox.Resources>
+                        </TextBox>
                         <TextBlock Text="Leave blank if not changing" FontSize="11" Foreground="#94A3B8" FontStyle="Italic" Margin="0,0,0,20"/>
                     </StackPanel>
 
                     <StackPanel Grid.Row="2" Visibility="{Binding IsEmployeeSelected, Converter={StaticResource BoolToVis}}" Margin="0,0,0,20">
                         <TextBlock Text="Access Control Permissions" Foreground="#1E293B" FontWeight="Bold" FontSize="14" Margin="0,0,0,10"/>
-                        <Border Background="#F1F5F9" CornerRadius="6" Padding="15" BorderBrush="#E2E8F0" BorderThickness="1">
+                        <Border Background="#F8FAFC" CornerRadius="6" Padding="15" BorderBrush="#E2E8F0" BorderThickness="1">
                             <ItemsControl ItemsSource="{Binding AvailablePermissions}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate>
-                                        <CheckBox Content="{Binding DisplayName}" IsChecked="{Binding IsChecked}" Margin="0,0,0,8" Cursor="Hand" Foreground="#334155" FontSize="13"/>
+                                        <CheckBox Content="{Binding DisplayName}" IsChecked="{Binding IsChecked}" Margin="0,0,0,10" Cursor="Hand" Foreground="#334155" FontSize="13" FontWeight="SemiBold"/>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -109,11 +210,11 @@
                     <StackPanel Grid.Row="3">
                         <Border Background="#F1F5F9" CornerRadius="6" Padding="15" Margin="0,0,0,20" 
                                 Visibility="{Binding StatusMessage, Converter={StaticResource StringToVis}}">
-                            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" FontWeight="Medium" 
+                            <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap" FontWeight="Bold" HorizontalAlignment="Center" 
                                        Foreground="{Binding IsErrorMessage, Converter={StaticResource BoolToColor}}"/>
                         </Border>
 
-                        <Button Command="{Binding SaveCommand}" Content="SAVE USER" Background="#0F172A" Foreground="White" Padding="0,15" FontSize="14" FontWeight="Bold" Cursor="Hand" Margin="0,0,0,10">
+                        <Button Command="{Binding SaveCommand}" Content="SAVE USER" Background="#1E293B" Foreground="White" Padding="0,15" FontSize="14" FontWeight="Bold" Cursor="Hand" Margin="0,0,0,10" BorderThickness="0">
                             <Button.Resources>
                                 <Style TargetType="Border">
                                     <Setter Property="CornerRadius" Value="6"/>
@@ -121,7 +222,7 @@
                             </Button.Resources>
                         </Button>
 
-                        <Button Command="{Binding ResetCommand}" Content="Cancel / Clear" Background="Transparent" Foreground="#94A3B8" Cursor="Hand"/>
+                        <Button Command="{Binding ResetCommand}" Content="Cancel / Clear" Background="Transparent" Foreground="#94A3B8" FontWeight="SemiBold" Cursor="Hand" BorderThickness="0"/>
                     </StackPanel>
                 </Grid>
             </ScrollViewer>

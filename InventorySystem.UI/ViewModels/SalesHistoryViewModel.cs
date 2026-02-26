@@ -1,4 +1,5 @@
 ﻿using InventorySystem.Core.Entities;
+using InventorySystem.Core.Enums;
 using InventorySystem.Data.Repositories;
 using InventorySystem.Infrastructure.Services;
 using InventorySystem.UI.Commands;
@@ -15,18 +16,14 @@ namespace InventorySystem.UI.ViewModels
     public class SalesHistoryViewModel : ViewModelBase
     {
         private readonly IStockRepository _stockRepo;
-
-        // Full list from DB to filter in memory
         private List<SalesHistoryItem> _allHistoryCache = new();
 
-        // --- FILTERS ---
         private DateTime _startDate = DateTime.Today.AddDays(-7);
         public DateTime StartDate { get => _startDate; set { _startDate = value; OnPropertyChanged(); } }
 
         private DateTime _endDate = DateTime.Today;
         public DateTime EndDate { get => _endDate; set { _endDate = value; OnPropertyChanged(); } }
 
-        // --- SEARCH ---
         private string _searchText = "";
         public string SearchText
         {
@@ -34,7 +31,6 @@ namespace InventorySystem.UI.ViewModels
             set { _searchText = value; OnPropertyChanged(); FilterHistory(); }
         }
 
-        // --- LIST DATA ---
         public ObservableCollection<SalesHistoryItem> SalesHistory { get; } = new();
 
         private SalesHistoryItem? _selectedSale;
@@ -51,6 +47,7 @@ namespace InventorySystem.UI.ViewModels
         public ICommand ViewDetailsCommand { get; }
         public ICommand CloseDetailsCommand { get; }
         public ICommand PrintReceiptCommand { get; }
+        public ICommand CopyIdCommand { get; } // NEW: Added Copy Command
 
         public SalesHistoryViewModel(IStockRepository stockRepo)
         {
@@ -71,7 +68,16 @@ namespace InventorySystem.UI.ViewModels
 
             PrintReceiptCommand = new RelayCommand(PrintCurrentReceipt);
 
-            // Load initial data
+            // NEW: Implementation for Copy ID
+            CopyIdCommand = new RelayCommand<string>((id) =>
+            {
+                if (!string.IsNullOrEmpty(id))
+                {
+                    Clipboard.SetText(id);
+                    MessageBox.Show($"Receipt ID '{id}' copied to clipboard!", "Copied", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            });
+
             _ = ExecuteSearch();
         }
 
@@ -90,31 +96,42 @@ namespace InventorySystem.UI.ViewModels
 
                 var allMoves = await _stockRepo.GetSalesByDateRangeAsync(actualStart, actualEnd);
 
-                // Group Raw Movements into Sale Receipts
-                var groupedSales = allMoves
-                    .Where(m => m.Type == Core.Enums.StockMovementType.Out)
+                var validMoves = allMoves.Where(m => !m.IsVoided).ToList();
+
+                var receiptIds = validMoves.Select(m => m.ReceiptId).Distinct().ToList();
+                var transactions = await _stockRepo.GetTransactionsByReceiptIdsAsync(receiptIds);
+
+                var groupedSales = validMoves
                     .GroupBy(m => m.ReceiptId)
-                    .Select(g => new SalesHistoryItem
+                    .Select(g =>
                     {
-                        ReferenceId = g.Key,
-                        Date = g.First().Date,
-                        IsVoided = g.Any(x => x.IsVoided),
-                        TotalItems = g.Sum(x => x.Quantity),
-                        TotalAmount = g.Sum(x => x.Quantity * x.UnitPrice),
-                        Items = g.Select(x => new SaleDetailItem
+                        var outs = g.Where(x => x.Type == StockMovementType.Out).ToList();
+                        var returns = g.Where(x => x.Type == StockMovementType.SalesReturn).ToList();
+                        var tx = transactions.FirstOrDefault(t => t.ReceiptId == g.Key);
+
+                        return new SalesHistoryItem(tx)
                         {
-                            ProductName = x.Product?.Name ?? "Unknown",
-                            Barcode = x.Product?.Barcode ?? "-",
-                            Quantity = x.Quantity,
-                            Unit = x.Product?.Unit ?? "",
-                            UnitPrice = x.UnitPrice
-                        }).ToList()
+                            ReferenceId = g.Key,
+                            Date = outs.FirstOrDefault()?.Date ?? g.First().Date,
+                            TotalItems = outs.Sum(x => x.Quantity) - returns.Sum(x => x.Quantity),
+                            TotalAmount = outs.Sum(x => x.Quantity * x.UnitPrice) - returns.Sum(x => x.Quantity * x.UnitPrice),
+
+                            Items = outs.Select(x => new SaleDetailItem
+                            {
+                                ProductName = x.Product?.Name ?? "Unknown",
+                                Barcode = x.Product?.Barcode ?? "-",
+                                Quantity = x.Quantity,
+                                Unit = x.Product?.Unit ?? "",
+                                UnitPrice = x.UnitPrice
+                            }).ToList()
+                        };
                     })
+                    .Where(s => s.TotalItems > 0)
                     .OrderByDescending(x => x.Date)
                     .ToList();
 
-                _allHistoryCache = groupedSales; // Cache full result
-                FilterHistory(); // Apply search
+                _allHistoryCache = groupedSales;
+                FilterHistory();
             }
             catch (Exception ex)
             {
@@ -130,7 +147,6 @@ namespace InventorySystem.UI.ViewModels
             if (!string.IsNullOrWhiteSpace(SearchText))
             {
                 var lower = SearchText.ToLower();
-                // Filter by Receipt ID OR if any product inside the receipt matches name
                 query = query.Where(s =>
                     s.ReferenceId.ToLower().Contains(lower) ||
                     s.Items.Any(i => i.ProductName.ToLower().Contains(lower))
@@ -143,7 +159,6 @@ namespace InventorySystem.UI.ViewModels
         private void PrintCurrentReceipt()
         {
             if (SelectedSale == null) return;
-
             try
             {
                 string printerName = Properties.Settings.Default.PrinterName;
@@ -158,12 +173,11 @@ namespace InventorySystem.UI.ViewModels
 
                 var printService = new PrintService();
                 printService.PrintReceipt(SelectedSale.ReferenceId, receiptText, printerName, copies);
-
                 MessageBox.Show("Sent to printer.");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Print Failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Print Failed: {ex.Message}");
             }
         }
     }
@@ -172,20 +186,20 @@ namespace InventorySystem.UI.ViewModels
     {
         public string ReferenceId { get; set; } = "";
         public DateTime Date { get; set; }
-        public bool IsVoided { get; set; }
         public decimal TotalItems { get; set; }
         public decimal TotalAmount { get; set; }
         public List<SaleDetailItem> Items { get; set; } = new();
+        public string StatusDisplay { get; }
 
-        public string SummaryText
+        public SalesHistoryItem(SalesTransaction? tx)
         {
-            get
-            {
-                if (IsVoided) return "⚠ VOIDED TRANSACTION";
-                if (Items.Count == 1) return Items[0].ProductName;
-                return $"{Items.Count} Items (Combined)";
-            }
+            if (tx == null) StatusDisplay = "Unknown";
+            else if (!tx.IsCredit) StatusDisplay = "💰 CASH - PAID";
+            else if (tx.Status == PaymentStatus.Paid) StatusDisplay = "💳 CREDIT - SETTLED";
+            else StatusDisplay = $"⏳ CREDIT - DUE (Rs {tx.RemainingBalance:N0})";
         }
+
+        public string SummaryText => Items.Count == 1 ? Items[0].ProductName : $"{Items.Count} Items (Combined)";
     }
 
     public class SaleDetailItem

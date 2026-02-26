@@ -17,7 +17,7 @@ namespace InventorySystem.UI.ViewModels
 
     public class POSViewModel : ViewModelBase
     {
-        private readonly Data.Context.InventoryDbContext _dbContext; // Keep direct ref for complex queries
+        private readonly Data.Context.InventoryDbContext _dbContext;
         private readonly IProductRepository _productRepo;
         private readonly IStockRepository _stockRepo;
 
@@ -37,11 +37,10 @@ namespace InventorySystem.UI.ViewModels
         private string _notificationIcon = "ℹ️";
         public string NotificationIcon { get => _notificationIcon; set { _notificationIcon = value; OnPropertyChanged(); } }
 
-        // NEW: Print Button in Notification
         private bool _showPrintButtonInNotification;
         public bool ShowPrintButtonInNotification { get => _showPrintButtonInNotification; set { _showPrintButtonInNotification = value; OnPropertyChanged(); } }
 
-        private string _lastReceiptId = ""; // To store ID for printing
+        private string _lastReceiptId = "";
 
         // --- POPUP STATE: CREDIT CUSTOMER NAME ---
         private bool _isCustomerPopupVisible;
@@ -77,6 +76,11 @@ namespace InventorySystem.UI.ViewModels
         private decimal _grandTotal;
         public decimal GrandTotal { get => _grandTotal; set { _grandTotal = value; OnPropertyChanged(); } }
 
+        // --- TOTAL DISCOUNT TRACKING ---
+        private decimal _totalDiscount;
+        public decimal TotalDiscount { get => _totalDiscount; set { _totalDiscount = value; OnPropertyChanged(); OnPropertyChanged(nameof(HasDiscount)); } }
+        public bool HasDiscount => TotalDiscount > 0;
+
         private decimal _amountPaid;
         public decimal AmountPaid
         {
@@ -98,7 +102,7 @@ namespace InventorySystem.UI.ViewModels
         public ICommand ConfirmCreditSaleCommand { get; }
         public ICommand CancelCreditPopupCommand { get; }
         public ICommand RefreshProductsCommand { get; }
-        public ICommand PrintLastReceiptCommand { get; } // NEW
+        public ICommand PrintLastReceiptCommand { get; }
 
         public POSViewModel()
         {
@@ -151,13 +155,12 @@ namespace InventorySystem.UI.ViewModels
 
             RefreshProductsCommand = new RelayCommand(LoadProducts);
 
-            // NEW: Print Command for the Notification Button
             PrintLastReceiptCommand = new RelayCommand(() =>
             {
                 if (!string.IsNullOrEmpty(_lastReceiptId))
                 {
                     PrintReceipt(_lastReceiptId);
-                    IsNotificationVisible = false; // Close popup after printing
+                    IsNotificationVisible = false;
                 }
             });
 
@@ -166,12 +169,23 @@ namespace InventorySystem.UI.ViewModels
 
         private async Task ExecuteTransaction(bool isCredit, bool autoPrint)
         {
-            if (Cart.Count == 0) return;
+            // VULNERABILITY FIX: Prevent Empty or 0-value checkouts
+            if (Cart.Count == 0 || GrandTotal <= 0)
+            {
+                ShowNotification("Invalid Cart", "Cart must contain items with a total greater than Rs 0.00", NotificationType.Warning);
+                return;
+            }
 
             try
             {
                 DateTime now = DateTime.Now;
-                string receiptId = now.ToString("yyyyMMddHHmmss");
+
+                // --- BULLETPROOF RECEIPT ID ---
+                // Format: INV-YYMMDD-HHMMSS (e.g., INV-260226-175035)
+                // This guarantees absolute uniqueness and avoids database counting crashes.
+                string receiptId = $"INV-{now:yyMMdd-HHmmss}";
+                // ---------------------------------------------------
+
                 _lastReceiptId = receiptId; // Store for manual printing
 
                 var transaction = new SalesTransaction
@@ -211,8 +225,8 @@ namespace InventorySystem.UI.ViewModels
                 }
                 else
                 {
-                    // For Credit Sales (or manual checkout), show success with Option to Print
-                    ShowNotification("Success", "Transaction Recorded.", NotificationType.Success, showPrintBtn: true);
+                    // Show the new clean ID in the success notification
+                    ShowNotification("Success", $"Transaction Recorded.\nReceipt: {receiptId}", NotificationType.Success, showPrintBtn: true);
                 }
 
                 Cart.Clear();
@@ -241,19 +255,15 @@ namespace InventorySystem.UI.ViewModels
                 }
                 catch { }
 
-                // Basic Receipt Content (You can expand this to fetch from DB if Cart is cleared)
-                // Note: Since Cart is cleared after transaction, for re-printing immediately 
-                // we rely on the fact that 'Cart' hasn't been cleared YET if called from autoPrint.
-                // But for the Credit Sale button, the Cart IS cleared. 
-                // In a real app, you'd fetch the transaction details from DB using receiptId.
-                // For simplicity here, we assume printing happens immediately or we'd need to re-fetch.
-
-                // *Quick Fix*: Since Cart is cleared, a re-fetch is safer for the "Print" button.
-                // But to keep it simple, we'll just print a generic success slip or handle fetching later.
-                // For now, let's assume the user prints immediately.
-
                 string receiptText = $"H & J HARDWARE\nDate: {DateTime.Now}\nReceipt: {receiptId}\n";
                 receiptText += $"Type: {(IsCustomerPopupVisible ? "CREDIT" : "CASH")}\n----------------\n";
+
+                // Add the savings to the receipt if applicable
+                if (TotalDiscount > 0)
+                {
+                    receiptText += $"Savings: -{TotalDiscount:N2}\n";
+                }
+
                 receiptText += $"Total: {GrandTotal:N2}\n\nTHANK YOU!";
 
                 var printService = new PrintService();
@@ -269,7 +279,7 @@ namespace InventorySystem.UI.ViewModels
         {
             NotificationTitle = title;
             NotificationMessage = message;
-            ShowPrintButtonInNotification = showPrintBtn; // Toggle button visibility
+            ShowPrintButtonInNotification = showPrintBtn;
             IsNotificationVisible = true;
             switch (type)
             {
@@ -283,7 +293,6 @@ namespace InventorySystem.UI.ViewModels
         private async void LoadProducts()
         {
             var all = await _productRepo.GetAllAsync();
-            // FILTER: Only show items with stock > 0
             _allProductsCache = all.Where(p => p.Quantity > 0).ToList();
             FilterProducts();
         }
@@ -295,8 +304,6 @@ namespace InventorySystem.UI.ViewModels
             if (!string.IsNullOrWhiteSpace(SearchText))
             {
                 var lower = SearchText.ToLower();
-                // We can't easily search by Supplier here because Product doesn't have Supplier info directly.
-                // But we can search Name/Barcode.
                 query = query.Where(p => p.Name.ToLower().Contains(lower) || p.Barcode.ToLower().Contains(lower));
             }
             foreach (var p in query) Products.Add(p);
@@ -308,10 +315,9 @@ namespace InventorySystem.UI.ViewModels
 
             _selectedProductForBatch = p;
 
-            // Fetch Batches WITH Supplier Info explicitly
             var allBatches = await _dbContext.StockBatches
                 .Include(b => b.PurchaseInvoice)
-                .ThenInclude(i => i.Supplier) // <--- CRITICAL: Include Supplier
+                .ThenInclude(i => i.Supplier)
                 .Where(b => b.ProductId == p.Id && b.RemainingQuantity > 0)
                 .OrderBy(b => b.ReceivedDate)
                 .ToListAsync();
@@ -366,7 +372,14 @@ namespace InventorySystem.UI.ViewModels
             RecalculateTotal();
         }
 
-        private void RecalculateTotal() { GrandTotal = Cart.Sum(c => c.Total); }
+        private void RecalculateTotal()
+        {
+            // 1. Final amount customer pays
+            GrandTotal = Cart.Sum(c => c.Total);
+
+            // 2. Total savings calculation
+            TotalDiscount = Cart.Sum(c => (c.StandardPrice - c.UnitPrice) * c.Quantity);
+        }
     }
 
     public class CartItem : ViewModelBase

@@ -4,7 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:conv="clr-namespace:InventorySystem.UI.Converters"
-             mc:Ignorable="d" d:DesignHeight="700" d:DesignWidth="1100">
+             mc:Ignorable="d" d:DesignHeight="700" d:DesignWidth="1100" Background="{StaticResource BackgroundBrush}" Margin="20">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
@@ -51,7 +51,7 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" BorderBrush="#E2E8F0" BorderThickness="0,0,1,0" Padding="0,25,0,25" Background="#F8FAFC">
+        <Border Grid.Column="0" BorderBrush="#E2E8F0" BorderThickness="0,0,2,0" Padding="0,25,0,25" Background="white">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -170,7 +170,7 @@
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <Border Grid.Row="0" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="25" Margin="0,0,0,20">
+            <Border Grid.Row="0" BorderBrush="#E2E8F0" BorderThickness="0,0,0,1" Padding="25" Margin="0,0,0,0">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*"/>
@@ -209,14 +209,14 @@
                         </Style.Triggers>
                     </Style>
                 </StackPanel.Style>
-                <TextBlock Text="📂" FontSize="40" HorizontalAlignment="Center" Foreground="#E2E8F0" Margin="0,0,0,10"/>
+                <TextBlock Text="📂" FontSize="40" HorizontalAlignment="Center" Foreground="#E2E8F0" Margin="0,0,0,0"/>
                 <TextBlock Text="No products found in this folder." FontSize="16" Foreground="#94A3B8" FontWeight="SemiBold"/>
             </StackPanel>
 
             <DataGrid Grid.Row="1" ItemsSource="{Binding Products}" AutoGenerateColumns="False" IsReadOnly="True" BorderThickness="0" Background="Transparent" RowHeight="60" GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9" HeadersVisibility="Column" Padding="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                 <DataGrid.ColumnHeaderStyle>
                     <Style TargetType="DataGridColumnHeader">
-                        <Setter Property="Background" Value="White"/>
+                        <Setter Property="Background" Value="#F8F7FF"/>
                         <Setter Property="Foreground" Value="#64748B"/>
                         <Setter Property="FontWeight" Value="SemiBold"/>
                         <Setter Property="Padding" Value="25,0,0,0"/>
@@ -283,7 +283,7 @@
         </Grid>
 
         <Grid Grid.Column="0" Grid.ColumnSpan="2" Panel.ZIndex="100" Background="#7F000000" Visibility="{Binding IsDetailVisible, Converter={StaticResource BoolToVis}}">
-            <Border Background="White" Width="800" Height="600" CornerRadius="8" Padding="30" VerticalAlignment="Center" HorizontalAlignment="Center">
+            <Border Background="White" Width="1000" Height="600" CornerRadius="8" Padding="30" VerticalAlignment="Center" HorizontalAlignment="Center">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -293,7 +293,7 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
 
-                    <DockPanel Grid.Row="0" Margin="0,0,0,15" LastChildFill="False">
+                    <DockPanel Grid.Row="0" Margin="0,0,0,5" LastChildFill="False">
                         <StackPanel>
                             <TextBlock Text="{Binding ViewingProduct.Name}" FontSize="24" FontWeight="Bold" Foreground="#1E293B"/>
                             <TextBlock Text="{Binding ViewingProduct.Category.Name, StringFormat='Category: {0}'}" Foreground="Gray" Margin="0,2,0,0"/>
@@ -321,12 +321,12 @@
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Date" Binding="{Binding ReceivedDate, StringFormat='dd MMM yyyy'}" Width="110"/>
 
-                            <DataGridTextColumn Header="Supplier" Binding="{Binding PurchaseInvoice.Supplier.Name, TargetNullValue='Unknown'}" Width="120" FontWeight="SemiBold" Foreground="#3B82F6"/>
+                            <DataGridTextColumn Header="Supplier" Binding="{Binding PurchaseInvoice.Supplier.Name, TargetNullValue='Unknown'}" Width="*" FontWeight="SemiBold" Foreground="#3B82F6"/>
 
-                            <DataGridTextColumn Header="Original" Binding="{Binding InitialQuantity}" Width="80"/>
-                            <DataGridTextColumn Header="Current" Binding="{Binding RemainingQuantity}" Width="80" FontWeight="Bold"/>
-                            <DataGridTextColumn Header="Buying" Binding="{Binding CostPrice, StringFormat=N2}" Width="90"/>
-                            <DataGridTextColumn Header="Selling" Binding="{Binding SellingPrice, StringFormat=N2}" Width="90" Foreground="#009688" FontWeight="Bold"/>
+                            <DataGridTextColumn Header="Original Q" Binding="{Binding InitialQuantity}" Width="90"/>
+                            <DataGridTextColumn Header="Current Q" Binding="{Binding RemainingQuantity}" Width="90" FontWeight="Bold"/>
+                            <DataGridTextColumn Header="Buying" Binding="{Binding CostPrice, StringFormat=N2}" Width="100"/>
+                            <DataGridTextColumn Header="Selling" Binding="{Binding SellingPrice, StringFormat=N2}" Width="100" Foreground="#009688" FontWeight="Bold"/>
                             <DataGridTextColumn Header="Disc %" Binding="{Binding Discount}" Width="60"/>
 
                             <DataGridTextColumn Header="Min Price (Max Disc)" Binding="{Binding MinSellingPrice, StringFormat=N2}" Width="140" FontWeight="Bold" Foreground="#EF4444"/>

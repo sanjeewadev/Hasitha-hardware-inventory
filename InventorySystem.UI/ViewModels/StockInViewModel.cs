@@ -38,7 +38,7 @@ namespace InventorySystem.UI.ViewModels
 
         public ICommand CreateDraftCommand { get; }
         public ICommand ResumeDraftCommand { get; }
-        public ICommand DeleteDraftCommand { get; } // NEW
+        public ICommand DeleteDraftCommand { get; }
 
         // ==========================================
         // PAGE 2: WORKSPACE (ITEM ENTRY)
@@ -51,11 +51,41 @@ namespace InventorySystem.UI.ViewModels
 
         private Category? _currentParentCategory;
 
+        // --- COMBOBOX UX FIXES ---
+        private bool _isProductDropdownOpen;
+        public bool IsProductDropdownOpen { get => _isProductDropdownOpen; set { _isProductDropdownOpen = value; OnPropertyChanged(); } }
+
+        private bool _isSelectingProduct = false; // Prevents the infinite loop bug
+
         private string _productSearchText = "";
         public string ProductSearchText
         {
             get => _productSearchText;
-            set { _productSearchText = value; OnPropertyChanged(); SearchProducts(); }
+            set
+            {
+                _productSearchText = value;
+                OnPropertyChanged();
+
+                // 1. If we are currently setting the text because the user clicked an item, DO NOT search.
+                if (_isSelectingProduct) return;
+
+                // 2. If the user types something new, they are no longer selecting the old product.
+                if (SelectedProduct != null && SelectedProduct.Name != value)
+                {
+                    _selectedProduct = null;
+                    OnPropertyChanged(nameof(SelectedProduct));
+                    OnPropertyChanged(nameof(SelectedProductUnit));
+                }
+
+                // 3. Perform the search
+                SearchProducts();
+
+                // 4. Open dropdown if there are results and they are typing
+                if (!string.IsNullOrWhiteSpace(value) && SelectedProduct == null)
+                    IsProductDropdownOpen = true;
+                else
+                    IsProductDropdownOpen = false;
+            }
         }
 
         private Product? _selectedProduct;
@@ -67,11 +97,19 @@ namespace InventorySystem.UI.ViewModels
                 _selectedProduct = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(SelectedProductUnit));
+
                 if (value != null)
                 {
+                    // Temporarily disable the search so updating the text box doesn't destroy the selection
+                    _isSelectingProduct = true;
+                    ProductSearchText = value.Name;
+                    _isSelectingProduct = false;
+
                     BuyingPrice = value.BuyingPrice;
                     SellingPrice = value.SellingPrice;
                     MaxDiscount = value.DiscountLimit;
+
+                    IsProductDropdownOpen = false; // Close the menu when item is picked
                 }
             }
         }
@@ -85,15 +123,26 @@ namespace InventorySystem.UI.ViewModels
         public decimal BuyingPrice { get => _buyingPrice; set { _buyingPrice = value; OnPropertyChanged(); } }
 
         private decimal _sellingPrice;
-        public decimal SellingPrice { get => _sellingPrice; set { _sellingPrice = value; OnPropertyChanged(); } }
+        public decimal SellingPrice
+        {
+            get => _sellingPrice;
+            set { _sellingPrice = value; OnPropertyChanged(); OnPropertyChanged(nameof(CalculatedDiscountPrice)); }
+        }
 
         private decimal _maxDiscount;
-        public decimal MaxDiscount { get => _maxDiscount; set { _maxDiscount = value; OnPropertyChanged(); } }
+        public decimal MaxDiscount
+        {
+            get => _maxDiscount;
+            set { _maxDiscount = value; OnPropertyChanged(); OnPropertyChanged(nameof(CalculatedDiscountPrice)); }
+        }
+
+        // --- LIVE PREVIEW MATH ---
+        public decimal CalculatedDiscountPrice => SellingPrice - (SellingPrice * (MaxDiscount / 100m));
 
         public decimal TotalBillAmount => CurrentBatches.Sum(b => b.TotalLineCost);
 
         public ICommand AddItemCommand { get; }
-        public ICommand RemoveItemCommand { get; } // NEW
+        public ICommand RemoveItemCommand { get; }
         public ICommand PostInvoiceCommand { get; }
         public ICommand BackToPage1Command { get; }
         public ICommand SelectCategoryCommand { get; }
@@ -190,7 +239,6 @@ namespace InventorySystem.UI.ViewModels
             IsPage1Visible = false;
         }
 
-        // --- NEW: Delete Draft Logic ---
         private async Task DeleteDraftAsync(PurchaseInvoice invoice)
         {
             if (invoice == null) return;
@@ -246,6 +294,13 @@ namespace InventorySystem.UI.ViewModels
             foreach (var p in results) DisplayProducts.Add(p);
         }
 
+        // --- NEW: Generate Code Utility ---
+        private string GenerateDiscountCode(decimal discount)
+        {
+            var rnd = new Random();
+            return $"{rnd.Next(0, 9)}{(int)discount:000}{rnd.Next(0, 9)}";
+        }
+
         private async Task AddItemToBillAsync()
         {
             if (CurrentInvoice == null) return;
@@ -259,6 +314,9 @@ namespace InventorySystem.UI.ViewModels
                 if (MessageBox.Show("Warning: Selling Price is lower than Buying Cost. Do you want to proceed?", "Pricing Warning", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.No) return;
             }
 
+            // --- Generate a code if discount is > 0 ---
+            string newCode = MaxDiscount > 0 ? GenerateDiscountCode(MaxDiscount) : "";
+
             // Duplicate Check
             var existingBatch = CurrentBatches.FirstOrDefault(b => b.ProductId == SelectedProduct.Id);
             if (existingBatch != null)
@@ -270,6 +328,8 @@ namespace InventorySystem.UI.ViewModels
                     existingBatch.CostPrice = BuyingPrice;
                     existingBatch.SellingPrice = SellingPrice;
                     existingBatch.Discount = MaxDiscount;
+                    existingBatch.DiscountCode = newCode;
+
                     _context.StockBatches.Update(existingBatch);
                     await _context.SaveChangesAsync();
                     await LoadDraftAsync(CurrentInvoice);
@@ -287,6 +347,7 @@ namespace InventorySystem.UI.ViewModels
                 CostPrice = BuyingPrice,
                 SellingPrice = SellingPrice,
                 Discount = MaxDiscount,
+                DiscountCode = newCode,
                 ReceivedDate = CurrentInvoice.Date
             };
 
@@ -297,7 +358,6 @@ namespace InventorySystem.UI.ViewModels
             ClearInputs();
         }
 
-        // --- NEW: Remove Item Logic ---
         private async Task RemoveItemAsync(StockBatch batch)
         {
             if (batch == null || CurrentInvoice == null) return;
@@ -306,14 +366,17 @@ namespace InventorySystem.UI.ViewModels
             {
                 _context.StockBatches.Remove(batch);
                 await _context.SaveChangesAsync();
-                await LoadDraftAsync(CurrentInvoice); // This auto-refreshes the grid and the Grand Total math
+                await LoadDraftAsync(CurrentInvoice);
             }
         }
 
         private void ClearInputs()
         {
             Quantity = 0;
+            // Temporarily flag so clearing search doesn't trigger a new search
+            _isSelectingProduct = true;
             ProductSearchText = "";
+            _isSelectingProduct = false;
             SelectedProduct = null;
         }
 

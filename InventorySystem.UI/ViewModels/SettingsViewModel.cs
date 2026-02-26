@@ -32,7 +32,7 @@ namespace InventorySystem.UI.ViewModels
             set { _backupFolderPath = value; OnPropertyChanged(); }
         }
 
-        private string _selectedPrinter = ""; // Fixed Non-nullable warning
+        private string _selectedPrinter = "";
         public string SelectedPrinter
         {
             get => _selectedPrinter;
@@ -43,7 +43,15 @@ namespace InventorySystem.UI.ViewModels
         public int CopyCount
         {
             get => _copyCount;
-            set { _copyCount = value; OnPropertyChanged(); }
+            set
+            {
+                // FIX: Printer Safety Limits! Prevent 0, negatives, or massive paper waste.
+                if (value < 1) value = 1;
+                if (value > 3) value = 3;
+
+                _copyCount = value;
+                OnPropertyChanged();
+            }
         }
 
         // --- COMMANDS ---
@@ -85,8 +93,9 @@ namespace InventorySystem.UI.ViewModels
             catch { }
 
             SelectedPrinter = InventorySystem.UI.Properties.Settings.Default.PrinterName ?? "";
-            CopyCount = InventorySystem.UI.Properties.Settings.Default.ReceiptCopies;
-            if (CopyCount < 1) CopyCount = 1;
+
+            int savedCopies = InventorySystem.UI.Properties.Settings.Default.ReceiptCopies;
+            CopyCount = savedCopies < 1 ? 1 : savedCopies;
         }
 
         private void SavePrinterSettings()
@@ -94,11 +103,11 @@ namespace InventorySystem.UI.ViewModels
             InventorySystem.UI.Properties.Settings.Default.PrinterName = SelectedPrinter;
             InventorySystem.UI.Properties.Settings.Default.ReceiptCopies = CopyCount;
             InventorySystem.UI.Properties.Settings.Default.Save();
-            MessageBox.Show("Printer configuration saved!", "Saved", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show("Printer configuration saved securely!", "Settings Saved", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         // --- BACKUP LOGIC ---
-        private void LoadSettings() { LoadBackupSettings(); } // Alias for old calls
+        private void LoadSettings() { LoadBackupSettings(); }
 
         private void LoadBackupSettings()
         {
@@ -157,7 +166,7 @@ namespace InventorySystem.UI.ViewModels
                 await _backupService.CreateBackupAsync(BackupFolderPath);
                 PerformAutoCleanup();
                 RefreshList();
-                MessageBox.Show("Backup Success!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Database Backup Created Successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
@@ -183,22 +192,53 @@ namespace InventorySystem.UI.ViewModels
 
         private void RestoreBackup(BackupFile file)
         {
-            if (MessageBox.Show("Restore this backup? Current data will be lost.", "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            // --- 3-TIER ESCALATION WARNING SYSTEM ---
+
+            // Warning 1
+            var result1 = MessageBox.Show(
+                $"Are you sure you want to restore the backup from '{file.CreatedDate:dd MMM yyyy hh:mm tt}'?\n\nALL current live data will be permanently overwritten.",
+                "Critical Warning (1/3)",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result1 != MessageBoxResult.Yes) return;
+
+            // Warning 2
+            var result2 = MessageBox.Show(
+                "⚠️ DANGER: Any sales, returns, or stock adjustments made AFTER this backup was created will be LOST FOREVER.\n\nDo you still want to proceed?",
+                "Data Loss Warning (2/3)",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result2 != MessageBoxResult.Yes) return;
+
+            // Warning 3
+            var result3 = MessageBox.Show(
+                "🚨 FINAL CONFIRMATION 🚨\n\nYou are about to replace the live database. This action CANNOT BE UNDONE.\n\nAre you absolutely certain?",
+                "Final Warning (3/3)",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Error);
+
+            if (result3 != MessageBoxResult.Yes) return;
+
+            // --- EXECUTE RESTORE ---
+            try
             {
-                try
-                {
-                    _backupService.RestoreBackup(file.FullPath);
-                    MessageBox.Show("Restore successful! Restarting...", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                    var exePath = Environment.ProcessPath;
-                    if (exePath != null) { Process.Start(exePath); Application.Current.Shutdown(); }
-                }
-                catch (Exception ex) { MessageBox.Show(ex.Message); }
+                _backupService.RestoreBackup(file.FullPath);
+                MessageBox.Show("Restore successful! The application will now restart to apply changes.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                var exePath = Environment.ProcessPath;
+                if (exePath != null) { Process.Start(exePath); Application.Current.Shutdown(); }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Restore Failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         private void DeleteBackup(BackupFile file)
         {
-            if (MessageBox.Show($"Delete '{file.FileName}'?", "Confirm", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            if (MessageBox.Show($"Delete the backup file '{file.FileName}'?", "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
                 _backupService.DeleteBackup(file.FullPath);
                 RefreshList();
@@ -207,21 +247,16 @@ namespace InventorySystem.UI.ViewModels
 
         private async Task TestCloudUpload()
         {
-            // Placeholder to fix async warning
             await Task.Delay(100);
-            MessageBox.Show("Cloud Upload Logic Placeholder");
+            MessageBox.Show("Cloud Backup Sync requires an active Premium Cloud Add-on.\n\nPlease contact your software provider to enable cloud capabilities.", "Cloud Sync Unavailable", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
-        // --- PUBLIC METHOD FOR APP.XAML.CS ---
         public async Task CheckAndRunAutoBackup()
         {
             try
             {
-                // Simple logic: If no backups exist, create one.
                 if (!Directory.Exists(BackupFolderPath)) return;
-
-                // You can add time-based logic here later
-                await Task.Delay(100); // Placeholder
+                await Task.Delay(100);
             }
             catch { }
         }

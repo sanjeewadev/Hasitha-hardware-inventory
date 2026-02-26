@@ -35,10 +35,11 @@ namespace InventorySystem.UI.ViewModels
         public RelayCommand NavigateToSettingsCommand { get; }
         public RelayCommand NavigateToUsersCommand { get; }
         public RelayCommand NavigateToCreditsCommand { get; }
-
-        // --- NEW COMMANDS ---
         public RelayCommand NavigateToSuppliersCommand { get; }
         public RelayCommand NavigateToStockInCommand { get; }
+
+        // NEW: Audit Log Command
+        public RelayCommand NavigateToAuditLogCommand { get; }
 
         public MainViewModel()
         {
@@ -80,7 +81,6 @@ namespace InventorySystem.UI.ViewModels
                 CurrentView = new AdjustmentViewModel(productRepo, categoryRepo, stockRepo);
             });
 
-            // --- FIX IS HERE: POSViewModel is now parameterless ---
             NavigateToPOSCommand = new RelayCommand(() =>
             {
                 CurrentView = new POSViewModel();
@@ -118,17 +118,20 @@ namespace InventorySystem.UI.ViewModels
                 CurrentView = new CreditManagerViewModel(creditService);
             });
 
-            // --- NEW NAVIGATION LOGIC ---
             NavigateToSuppliersCommand = new RelayCommand(() =>
             {
-                // Supplier View handles its own repository inside the VM for now
                 CurrentView = new SupplierViewModel();
             });
 
             NavigateToStockInCommand = new RelayCommand(() =>
             {
-                // Stock In handles its own logic
                 CurrentView = new StockInViewModel();
+            });
+
+            // NEW: Wire up the Audit Log ViewModel
+            NavigateToAuditLogCommand = new RelayCommand(() =>
+            {
+                CurrentView = new AuditLogViewModel(stockRepo);
             });
 
             // Default Startup

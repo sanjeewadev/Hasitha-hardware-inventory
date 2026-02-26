@@ -4,23 +4,23 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignHeight="700" d:DesignWidth="1100"
-             Background="Transparent">
+             Background="{StaticResource BackgroundBrush}">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
     </UserControl.Resources>
 
     <Grid>
-        <Grid Margin="15">
+        <Grid Margin="20">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
-            <Grid Grid.Row="0" Margin="0,0,0,20">
+            <Grid Grid.Row="0" Margin="0,0,0,25">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="400"/>
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0">
@@ -29,23 +29,22 @@
                 </StackPanel>
 
                 <Border Grid.Column="1" Background="White" CornerRadius="6" BorderBrush="#E2E8F0" BorderThickness="1" 
-                        Width="300" Height="40" Padding="10,0">
+                         Padding="5">
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="🔍" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#94A3B8"/>
                         <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" 
                                  Tag="Search by Customer or Receipt..."
                                  BorderThickness="0" Background="Transparent" VerticalContentAlignment="Center"
-                                 FontSize="13"/>
+                                 FontSize="14"/>
                     </Grid>
                 </Border>
             </Grid>
 
             <DataGrid Grid.Row="1" ItemsSource="{Binding UnpaidTransactions}" AutoGenerateColumns="False" 
-                      IsReadOnly="True" BorderThickness="0" Background="White"
+                      IsReadOnly="True" BorderThickness="1" Background="White"
                       GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9"
                       HeadersVisibility="Column" RowHeight="50">
 

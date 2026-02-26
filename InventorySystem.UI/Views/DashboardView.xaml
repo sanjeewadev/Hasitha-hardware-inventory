@@ -39,8 +39,7 @@
                 <Button Command="{Binding RefreshCommand}" 
                         Background="#3B82F6" BorderThickness="0" Padding="15,8" Cursor="Hand" ToolTip="Refresh Data">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock Text="↻" Foreground="White" FontSize="16" Margin="0,0,8,0" FontWeight="Bold"/>
-                        <TextBlock Text="Refresh" Foreground="White" FontWeight="Bold" FontSize="13"/>
+                        <TextBlock Text="Clear" Foreground="White" FontWeight="Bold" FontSize="13"/>
                     </StackPanel>
                     <Button.Resources>
                         <Style TargetType="Border">

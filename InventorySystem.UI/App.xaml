@@ -17,26 +17,33 @@
         <Geometry x:Key="Icon_Today">M12,2A10,10 0 1,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 1,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 1,0 18,12A6,6 0 0,0 12,6M12,8A4,4 0 1,1 8,12A4,4 0 0,1 12,8Z</Geometry>
         <Geometry x:Key="Icon_History">M13.5,8H12V13L16.28,15.54L17,14.33L13.5,12.25V8M13,3A9,9 0 1,1 4,12A9,9 0 0,1 13,3M13,21A10,10 0 1,0 3,12A10,10 0 0,0 13,21Z</Geometry>
         <Geometry x:Key="Icon_Settings">M19.14,12.94C19.16,12.78 19.16,12.61 19.16,12.44C19.16,12.27 19.16,12.11 19.14,11.94L21.41,10.18C21.61,10.02 21.67,9.73 21.54,9.5L19.38,5.77C19.26,5.54 18.97,5.45 18.73,5.55L16.06,6.62C15.5,6.18 14.9,5.83 14.25,5.56L13.84,2.71C13.8,2.46 13.59,2.27 13.33,2.27H9.04C8.79,2.27 8.57,2.46 8.53,2.71L8.12,5.56C7.47,5.83 6.87,6.18 6.31,6.62L3.64,5.55C3.4,5.45 3.11,5.54 2.99,5.77L0.83,9.5C0.7,9.73 0.76,10.02 0.96,10.18L3.23,11.94C3.21,12.11 3.2,12.27 3.2,12.44C3.2,12.61 3.21,12.78 3.23,12.94L0.96,14.71C0.76,14.86 0.7,15.15 0.83,15.38L2.99,19.12C3.11,19.35 3.4,19.43 3.64,19.34L6.31,18.26C6.87,18.7 7.47,19.05 8.12,19.32L8.53,22.17C8.57,22.42 8.79,22.61 9.04,22.61H13.33C13.58,22.61 13.8,22.42 13.84,22.17L14.25,19.32C14.9,19.05 15.5,18.7 16.06,18.26L18.73,19.34C18.97,19.43 19.26,19.35 19.38,19.12L21.54,15.38C21.67,15.15 21.61,14.86 21.41,14.71L19.14,12.94M12.4,15.67C10.61,15.67 9.17,14.22 9.17,12.44C9.17,10.65 10.61,9.21 12.4,9.21C14.19,9.21 15.63,10.65 15.63,12.44C15.63,14.22 14.19,15.67 12.4,15.67Z</Geometry>
-
+        <Geometry x:Key="Icon_Credit">M20,4H4C2.89,4 2,4.89 2,6V18C2,19.11 2.89,20 4,20H20C21.11,20 22,19.11 22,18V6C22,4.89 21.11,4 20,4M20,18H4V12H20V18M20,8H4V6H20V8Z</Geometry>
+        <Geometry x:Key="Icon_Return">M12.5,8C9.85,8 7.45,9 5.6,10.6L2,7V16H11L7.38,12.38C8.77,11.22 10.54,10.5 12.5,10.5C16.04,10.5 19.05,12.81 20.1,16L22.47,14.8C21.08,10.45 17.15,8 12.5,8Z</Geometry>
+        <Geometry x:Key="Icon_Users">M16,11C17.66,11 18.99,9.66 18.99,8C18.99,6.34 17.66,5 16,5C14.34,5 13,6.34 13,8C13,9.66 14.34,11 16,11M8,11C9.66,11 10.99,9.66 10.99,8C10.99,6.34 9.66,5 8,5C6.34,5 5,6.34 5,8C5,9.66 6.34,11 8,11M8,13C5.67,13 1,14.17 1,16.5V19H15V16.5C15,14.17 10.33,13 8,13M16,13C15.71,13 15.38,13.04 15.03,13.08C16.19,13.96 17,15.11 17,16.5V19H23V16.5C23,14.17 18.33,13 16,13Z</Geometry>
+        <Geometry x:Key="Icon_Report">M14,2L20,8V20A2,2 0 0,1 18,22H6A2,2 0 0,1 4,20V4A2,2 0 0,1 6,2H14M18,20V9H13V4H6V20H18M9,13H11V19H9V13M13,15H15V19H13V15M7,15H5V19H7V15Z</Geometry>
+        <Geometry x:Key="Icon_CreateProduct">M17,13H13V17H11V13H7V11H11V7H13V11H17M19,3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3Z</Geometry>
+        <Geometry x:Key="Icon_StockIn">M4,4H20V6H4V4M4,8H20V20H4V8M15,13H13V11H11V13H9L12,16L15,13Z</Geometry>
         <Geometry x:Key="Icon_Truck">M18,18.5A1.5,1.5 0 0,1 16.5,20A1.5,1.5 0 0,1 15,18.5A1.5,1.5 0 0,1 16.5,17A1.5,1.5 0 0,1 18,18.5M19.5,9.5L21.46,12H17V9.5H19.5M6,18.5A1.5,1.5 0 0,1 4.5,20A1.5,1.5 0 0,1 3,18.5A1.5,1.5 0 0,1 4.5,17A1.5,1.5 0 0,1 6,18.5M20,8H17V4H3C1.89,4 1,4.89 1,6V17H3A3,3 0 0,0 6,20A3,3 0 0,0 9,17H15A3,3 0 0,0 18,20A3,3 0 0,0 21,17H23V12L20,8Z</Geometry>
         <Geometry x:Key="Icon_Input">M11,9H13V6H16V4H13V1H11V4H8V6H11M7,20H17V18H7M7,16H17V14H7M7,12H17V10H7M19,23H5A2,2 0 0,1 3,21V7A2,2 0 0,1 5,5H9V7H5V21H19V7H15V5H19A2,2 0 0,1 21,7V21A2,2 0 0,1 19,23Z</Geometry>
 
         <SolidColorBrush x:Key="SidebarBrush" Color="#0F172A"/>
         <SolidColorBrush x:Key="SidebarHoverBrush" Color="#1E293B"/>
-        <SolidColorBrush x:Key="PrimaryBrush" Color="#10B981"/>
-        <SolidColorBrush x:Key="PrimaryDarkBrush" Color="#059669"/>
-        <SolidColorBrush x:Key="BackgroundBrush" Color="#F1F5F9"/>
-        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#334155"/>
-        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#64748B"/>
-        <SolidColorBrush x:Key="TextLightBrush" Color="#FFFFFF"/>
-        <SolidColorBrush x:Key="DangerBrush" Color="#EF4444"/>
+        <SolidColorBrush x:Key="PrimaryBrush" Color="#059669"/>
+        <SolidColorBrush x:Key="PrimaryDarkBrush" Color="#006FAB"/>
+        <SolidColorBrush x:Key="PrimaryLightBrush" Color="#E4E4F5"/>
+        <SolidColorBrush x:Key="BackgroundBrush" Color="#f2f7fc"/>
 
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#0F172A"/>
+        <SolidColorBrush x:Key="TextSecondaryBrush" Color="#475569"/>
+
+        <SolidColorBrush x:Key="TextLightBrush" Color="#FFFFFF"/>
+        <SolidColorBrush x:Key="DangerBrush" Color="#DC2626"/>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
 
         <Style TargetType="Button">
             <Setter Property="Background" Value="{StaticResource PrimaryBrush}"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="Padding" Value="15,10"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="FontSize" Value="14"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
@@ -45,11 +52,17 @@
                 <Setter.Value>
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6" Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <ContentPresenter x:Name="content" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0, -2, 0, 0"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter TargetName="border" Property="Opacity" Value="0.6"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="{StaticResource PrimaryDarkBrush}"/>
+
+                                <Setter TargetName="content" Property="TextElement.Foreground" Value="White"/>
+
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -62,8 +75,9 @@
             <Setter Property="Padding" Value="10"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="BorderBrush" Value="#E2E8F0"/>
+            <Setter Property="BorderThickness" Value="1.5"/>
+            <Setter Property="BorderBrush" Value="#94A3B8"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="TextBox">
@@ -76,9 +90,9 @@
                                     <ScrollViewer x:Name="PART_ContentHost" Margin="0, -5, 0, 0" />
                                     <TextBlock x:Name="Placeholder" 
                                                Text="{TemplateBinding Tag}" 
-                                               Foreground="#94A3B8" 
+                                               Foreground="#64748B" 
                                                VerticalAlignment="Center" 
-                                               Margin="12,0,0,0"
+                                               Margin="16,0,0,0"
                                                IsHitTestVisible="False"
                                                Visibility="Collapsed"/>
                                 </Grid>
@@ -90,7 +104,7 @@
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter Property="BorderBrush" Value="{StaticResource PrimaryBrush}"/>
-                                <Setter Property="BorderThickness" Value="1.5"/>
+                                <Setter Property="BorderThickness" Value="2"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -100,34 +114,49 @@
 
         <Style TargetType="DataGrid">
             <Setter Property="Background" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#CBD5E1"/>
             <Setter Property="RowHeight" Value="50"/>
-            <Setter Property="GridLinesVisibility" Value="None"/>
+            <Setter Property="GridLinesVisibility" Value="Horizontal"/>
+            <Setter Property="HorizontalGridLinesBrush" Value="#E2E8F0"/>
             <Setter Property="HeadersVisibility" Value="Column"/>
             <Setter Property="AutoGenerateColumns" Value="False"/>
             <Setter Property="CanUserAddRows" Value="False"/>
+
+            <Setter Property="SelectionUnit" Value="FullRow"/>
+            <Setter Property="SelectionMode" Value="Single"/>
+
             <Setter Property="ColumnHeaderStyle">
                 <Setter.Value>
                     <Style TargetType="DataGridColumnHeader">
-                        <Setter Property="Background" Value="White"/>
-                        <Setter Property="Foreground" Value="#64748B"/>
+                        <Setter Property="Background" Value="#F1F5F9"/>
+                        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
                         <Setter Property="FontWeight" Value="Bold"/>
                         <Setter Property="Padding" Value="15,0"/>
                         <Setter Property="Height" Value="50"/>
-                        <Setter Property="BorderThickness" Value="0,0,0,1"/>
-                        <Setter Property="BorderBrush" Value="#F1F5F9"/>
+                        <Setter Property="BorderThickness" Value="0,0,0,2"/>
+                        <Setter Property="BorderBrush" Value="#CBD5E1"/>
                     </Style>
                 </Setter.Value>
             </Setter>
             <Setter Property="CellStyle">
                 <Setter.Value>
                     <Style TargetType="DataGridCell">
+                        <Setter Property="Background" Value="Transparent"/>
+
                         <Setter Property="Padding" Value="15,0"/>
-                        <Setter Property="VerticalAlignment" Value="Center"/>
+
+                        <Setter Property="VerticalAlignment" Value="Stretch"/>
+                        <Setter Property="HorizontalAlignment" Value="Stretch"/>
+
+                        <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}"/>
+
+                        <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="DataGridCell">
-                                    <Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}" BorderThickness="0,0,0,1" BorderBrush="#F8FAFC">
+                                    <Border Padding="{TemplateBinding Padding}" Background="{TemplateBinding Background}" BorderThickness="0">
                                         <ContentPresenter VerticalAlignment="Center"/>
                                     </Border>
                                 </ControlTemplate>
@@ -135,8 +164,8 @@
                         </Setter>
                         <Style.Triggers>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#F1F5F9"/>
-                                <Setter Property="Foreground" Value="#0F172A"/>
+                                <Setter Property="Background" Value="#F1F0FF"/>
+                                <Setter Property="Foreground" Value="black"/>
                                 <Setter Property="BorderThickness" Value="0"/>
                             </Trigger>
                         </Style.Triggers>
@@ -146,9 +175,9 @@
         </Style>
 
         <Style x:Key="NavButtonStyle" TargetType="RadioButton">
-            <Setter Property="Foreground" Value="#94A3B8"/>
+            <Setter Property="Foreground" Value="#E2E8F0"/>
             <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="15"/>
             <Setter Property="Padding" Value="25,16"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="BorderThickness" Value="0"/>
@@ -157,19 +186,19 @@
                     <ControlTemplate TargetType="RadioButton">
                         <Grid>
                             <Border x:Name="back" Background="{TemplateBinding Background}"/>
-                            <Border x:Name="indicator" Width="4" HorizontalAlignment="Left" Background="Transparent" CornerRadius="0,4,4,0"/>
-                            <ContentPresenter VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                            <Border x:Name="indicator" Width="5" HorizontalAlignment="Left" Background="Transparent" CornerRadius="0,4,4,0"/>
+                            <ContentPresenter VerticalAlignment="Center" Margin="{TemplateBinding Padding}" TextElement.Foreground="{TemplateBinding Foreground}"/>
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Foreground" Value="White"/>
+                                <Setter Property="Foreground" Value="#FFFFFF"/>
                                 <Setter TargetName="back" Property="Background" Value="{StaticResource SidebarHoverBrush}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter Property="Foreground" Value="{StaticResource PrimaryBrush}"/>
+                                <Setter Property="Foreground" Value="#10B981"/>
                                 <Setter Property="FontWeight" Value="Bold"/>
                                 <Setter TargetName="back" Property="Background" Value="#020617"/>
-                                <Setter TargetName="indicator" Property="Background" Value="{StaticResource PrimaryBrush}"/>
+                                <Setter TargetName="indicator" Property="Background" Value="#10B981"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -195,7 +224,6 @@
         <DataTemplate DataType="{x:Type vm:SalesHistoryViewModel}">
             <views:SalesHistoryView />
         </DataTemplate>
-
         <DataTemplate DataType="{x:Type vm:SalesReturnViewModel}">
             <views:SalesReturnView />
         </DataTemplate>
@@ -211,7 +239,6 @@
         <DataTemplate DataType="{x:Type vm:SettingsViewModel}">
             <views:SettingsView />
         </DataTemplate>
-
         <DataTemplate DataType="{x:Type vm:SupplierViewModel}">
             <views:SupplierView />
         </DataTemplate>

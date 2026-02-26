@@ -1,7 +1,6 @@
 ﻿using InventorySystem.Core.Entities;
 using InventorySystem.Data.Repositories;
 using InventorySystem.UI.Commands;
-using InventorySystem.UI.Views;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
@@ -24,7 +23,6 @@ namespace InventorySystem.UI.ViewModels
         private List<Product> _allProductsCache = new();
         public ObservableCollection<Product> Products { get; } = new();
         public ObservableCollection<StockBatch> ProductBatches { get; } = new();
-        // REMOVED: ProductHistory
 
         // --- SEARCH ---
         private string _searchText = "";
@@ -89,28 +87,43 @@ namespace InventorySystem.UI.ViewModels
 
             if (p.Quantity > 0)
             {
-                MessageBox.Show($"You cannot delete '{p.Name}' because it still has stock ({p.Quantity}).", "Deletion Blocked", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"You cannot delete '{p.Name}' because it still has stock ({p.Quantity}).\n\nPlease remove the stock first.", "Deletion Blocked", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
             var allHistory = await _stockRepo.GetHistoryAsync();
             if (allHistory.Any(x => x.ProductId == p.Id))
             {
-                MessageBox.Show($"The product '{p.Name}' has linked sales records. Deletion restricted.", "Restricted", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show($"The product '{p.Name}' has linked financial sales records. To protect your accounting history, this product cannot be deleted.", "System Protected", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            if (MessageBox.Show($"Permanently delete '{p.Name}'?", "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            if (MessageBox.Show($"Permanently delete the catalog entry for '{p.Name}'?", "Confirm Delete", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
                 await _productRepo.DeleteAsync(p.Id);
                 await LoadData();
-                MessageBox.Show("Product deleted.");
+                MessageBox.Show("Product successfully deleted.", "Deleted", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
         private async Task LoadData()
         {
+            // 1. Fetch all categories first
+            var allCategories = await _categoryRepo.GetAllAsync();
+            var categoryDict = allCategories.ToDictionary(c => c.Id);
+
+            // 2. Fetch all products
             var list = await _productRepo.GetAllAsync();
+
+            // 3. Map the categories in-memory (No GetByIdAsync needed! Much faster.)
+            foreach (var p in list)
+            {
+                if (p.CategoryId > 0 && p.Category == null && categoryDict.ContainsKey(p.CategoryId))
+                {
+                    p.Category = categoryDict[p.CategoryId];
+                }
+            }
+
             _allProductsCache = list.ToList();
             FilterProducts();
         }
@@ -139,7 +152,6 @@ namespace InventorySystem.UI.ViewModels
         {
             if (ViewingProduct == null) return;
 
-            // LOAD BATCHES (With Supplier Info)
             var allBatches = await _dbContext.StockBatches
                 .Include(b => b.PurchaseInvoice)
                 .ThenInclude(i => i.Supplier)
@@ -155,21 +167,30 @@ namespace InventorySystem.UI.ViewModels
 
             ProductBatches.Clear();
             foreach (var b in visibleBatches) ProductBatches.Add(b);
-
-            // REMOVED HISTORY LOAD
         }
 
         private async Task DeleteBatchAsync(StockBatch batch)
         {
-            if (MessageBox.Show("Delete this batch record? Stock will be reduced.", "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            // FIX: VULNERABILITY PREVENTION
+            if (batch.InitialQuantity != batch.RemainingQuantity)
+            {
+                MessageBox.Show("This batch cannot be deleted because items from it have already been sold.\n\nDeleting it would corrupt your financial and sales history.\nIf the stock is damaged, please use the 'Remove Stock' page instead.", "Action Blocked", MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            if (MessageBox.Show($"Are you sure you want to completely erase this batch of {batch.RemainingQuantity} items?\nThis will permanently remove it from your inventory.", "Confirm Deletion", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
                 await _stockRepo.DeleteBatchAsync(batch);
+
                 if (ViewingProduct != null)
                 {
                     ViewingProduct.Quantity -= batch.RemainingQuantity;
                     if (ViewingProduct.Quantity < 0) ViewingProduct.Quantity = 0;
-                    await _productRepo.UpdateAsync(ViewingProduct);
+
+                    _dbContext.Products.Update(ViewingProduct);
+                    await _dbContext.SaveChangesAsync();
                 }
+
                 await LoadBatchesForViewingProduct();
                 await LoadData();
             }

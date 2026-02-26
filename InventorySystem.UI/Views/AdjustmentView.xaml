@@ -3,7 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignHeight="700" d:DesignWidth="1100">
+             mc:Ignorable="d" d:DesignHeight="700" d:DesignWidth="1100" Margin="20">
 
     <UserControl.Resources>
         <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#E0F2F1"/>
@@ -109,7 +109,7 @@
                             <TextBlock Text="🔍" Margin="5,0,8,0" VerticalAlignment="Center" Foreground="#94A3B8"/>
                             <TextBox Grid.Column="1" Text="{Binding ProductSearchText, UpdateSourceTrigger=PropertyChanged}" 
                                      Background="Transparent" BorderThickness="0" VerticalAlignment="Center" FontSize="13" 
-                                     Tag="Search Products..."/>
+                                     Tag="Search All Products..."/>
                         </Grid>
                     </Border>
                 </StackPanel>
@@ -155,7 +155,7 @@
                 </Grid.Style>
                 <StackPanel HorizontalAlignment="Center">
                     <TextBlock Text="👈" FontSize="40" HorizontalAlignment="Center" Margin="0,0,0,10"/>
-                    <TextBlock Text="Select a Product" FontSize="24" FontWeight="Bold" Foreground="#CBD5E1" HorizontalAlignment="Center"/>
+                    <TextBlock Text="Select or Search a Product" FontSize="24" FontWeight="Bold" Foreground="#CBD5E1" HorizontalAlignment="Center"/>
                     <TextBlock Text="Adjust stock for breakage, loss, or corrections." FontSize="14" Foreground="#94A3B8" HorizontalAlignment="Center" Margin="0,5,0,0"/>
                 </StackPanel>
             </Grid>
@@ -225,7 +225,7 @@
                                     <TextBlock Text="2. Qty to Remove" Foreground="#1E293B" FontWeight="Bold" FontSize="13"/>
                                     <TextBlock Text="{Binding CurrentUnit, StringFormat=' ({0})'}" Foreground="#94A3B8" FontSize="11" VerticalAlignment="Center"/>
                                 </StackPanel>
-                                <TextBox Text="{Binding StockOutQty}" Padding="10,8" FontSize="14" FontWeight="Bold" BorderBrush="#E2E8F0" Background="#FEF2F2" Foreground="#EF4444"/>
+                                <TextBox Text="{Binding StockOutQty}" Padding="10,8" FontSize="14" FontWeight="Bold" BorderBrush="#CBD5E1" Background="#F8FAFC" Foreground="#1E293B" TextAlignment="Center"/>
                             </StackPanel>
 
                             <StackPanel Grid.Column="2">

@@ -1,4 +1,5 @@
 ﻿using InventorySystem.Core.Entities;
+using InventorySystem.Core.Enums;
 using InventorySystem.Data.Repositories;
 using InventorySystem.Infrastructure.Services;
 using InventorySystem.UI.Commands;
@@ -50,7 +51,7 @@ namespace InventorySystem.UI.ViewModels
         public ICommand ViewDetailsCommand { get; }
         public ICommand CloseDetailsCommand { get; }
         public ICommand PrintReceiptCommand { get; }
-        public ICommand CopyIdCommand { get; } // <--- NEW
+        public ICommand CopyIdCommand { get; }
 
         public TodaySalesViewModel(IStockRepository stockRepo)
         {
@@ -67,7 +68,6 @@ namespace InventorySystem.UI.ViewModels
             CloseDetailsCommand = new RelayCommand(() => IsDetailsVisible = false);
             PrintReceiptCommand = new RelayCommand(PrintCurrentReceipt);
 
-            // NEW: Copy to Clipboard Logic
             CopyIdCommand = new RelayCommand<string>((id) =>
             {
                 if (!string.IsNullOrEmpty(id))
@@ -88,17 +88,31 @@ namespace InventorySystem.UI.ViewModels
                 var end = DateTime.Today.AddDays(1).AddTicks(-1);
 
                 var allMoves = await _stockRepo.GetSalesByDateRangeAsync(start, end);
-                var activeSales = allMoves.Where(m => m.Type == Core.Enums.StockMovementType.Out && !m.IsVoided);
 
-                // 1. STATS
-                DailyRevenue = activeSales.Sum(s => s.Quantity * s.UnitPrice);
-                decimal totalCost = activeSales.Sum(s => s.Quantity * s.UnitCost);
-                DailyProfit = DailyRevenue - totalCost;
+                var validSales = allMoves.Where(m => m.Type == StockMovementType.Out && !m.IsVoided).ToList();
+                var validReturns = allMoves.Where(m => m.Type == StockMovementType.SalesReturn && !m.IsVoided).ToList();
 
-                // 2. GROUPING
-                var grouped = activeSales
+                // STATS
+                decimal grossRevenue = validSales.Sum(s => s.Quantity * s.UnitPrice);
+                decimal returnRevenue = validReturns.Sum(r => r.Quantity * r.UnitPrice);
+                DailyRevenue = grossRevenue - returnRevenue;
+
+                decimal grossCost = validSales.Sum(s => s.Quantity * s.UnitCost);
+                decimal returnCost = validReturns.Sum(r => r.Quantity * r.UnitCost);
+                DailyProfit = DailyRevenue - (grossCost - returnCost);
+
+                // Fetch Financial Statuses
+                var receiptIds = validSales.Select(s => s.ReceiptId).Distinct().ToList();
+                var transactions = await _stockRepo.GetTransactionsByReceiptIdsAsync(receiptIds);
+
+                // GROUPING
+                var grouped = validSales
                     .GroupBy(s => s.ReceiptId)
-                    .Select(g => new TodaySaleGroup(g.First().Date, g.ToList()))
+                    .Select(g =>
+                    {
+                        var tx = transactions.FirstOrDefault(t => t.ReceiptId == g.Key);
+                        return new TodaySaleGroup(g.First().Date, g.ToList(), tx);
+                    })
                     .OrderByDescending(g => g.Date)
                     .ToList();
 
@@ -131,24 +145,30 @@ namespace InventorySystem.UI.ViewModels
         {
             if (sale == null) return;
 
-            string warningMsg = $"⚠ SECURITY WARNING: VOID TRANSACTION\n\n" +
-                                $"Receipt: {sale.ReferenceId}\n" +
-                                $"Amount: Rs {sale.TotalAmount:N2}\n\n" +
-                                $"This will remove revenue and restore items to stock.\n" +
-                                $"Are you sure?";
+            // CONFIRMATION 1
+            string msg1 = $"⚠ SECURITY WARNING: VOID TRANSACTION\n\n" +
+                          $"Receipt: {sale.ReferenceId}\nAmount: Rs {sale.TotalAmount:N2}\n\n" +
+                          $"Are you sure you want to void this sale?";
 
-            if (MessageBox.Show(warningMsg, "Confirm Void", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
+            if (MessageBox.Show(msg1, "Confirm Void (1/2)", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
-                try
+                // CONFIRMATION 2
+                string msg2 = $"🚨 FINAL WARNING 🚨\n\nAre you REALLY sure you want to delete this sale?\n" +
+                              $"This will reverse the revenue and restore the items to stock. This cannot be undone.";
+
+                if (MessageBox.Show(msg2, "Confirm Void (2/2)", MessageBoxButton.YesNo, MessageBoxImage.Error) == MessageBoxResult.Yes)
                 {
-                    await _stockRepo.VoidReceiptAsync(sale.ReferenceId);
-                    await LoadData();
-                    IsDetailsVisible = false;
-                    MessageBox.Show("Transaction Voided Successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Void Failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    try
+                    {
+                        await _stockRepo.VoidReceiptAsync(sale.ReferenceId);
+                        await LoadData();
+                        IsDetailsVisible = false;
+                        MessageBox.Show("Transaction Voided Successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Void Failed: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
                 }
             }
         }
@@ -186,14 +206,19 @@ namespace InventorySystem.UI.ViewModels
         public string SummaryText => Items.Count == 1 ? Items.First().ProductName : $"{Items.Count} Items";
         public decimal TotalItems => Items.Sum(i => i.Quantity);
         public decimal TotalAmount => Items.Sum(i => i.Total);
-        public string CustomerDisplay { get; }
 
-        public TodaySaleGroup(DateTime date, List<StockMovement> raw)
+        public string StatusDisplay { get; } // NEW!
+
+        public TodaySaleGroup(DateTime date, List<StockMovement> raw, SalesTransaction? tx)
         {
             Date = date;
             ReferenceId = raw.First().ReceiptId;
-            string note = raw.First().Note;
-            CustomerDisplay = string.IsNullOrWhiteSpace(note) ? "Walk-in" : note;
+
+            // Generate precise status
+            if (tx == null) StatusDisplay = "Unknown / Voided";
+            else if (!tx.IsCredit) StatusDisplay = "💰 CASH - PAID";
+            else if (tx.Status == PaymentStatus.Paid) StatusDisplay = "💳 CREDIT - SETTLED";
+            else StatusDisplay = $"⏳ CREDIT - DUE (Rs {tx.RemainingBalance:N0})";
 
             Items = raw.Select(m => new TodayItemDetail
             {

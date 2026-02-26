@@ -4,9 +4,9 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              mc:Ignorable="d" d:DesignHeight="700" d:DesignWidth="1000"
-             Background="Transparent">
+             Background="{StaticResource BackgroundBrush}">
 
-    <Grid Margin="15">
+    <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -15,11 +15,11 @@
         <Grid Grid.Row="0" Margin="0,0,0,25">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="300"/>
+                <ColumnDefinition Width="400"/>
             </Grid.ColumnDefinitions>
 
             <StackPanel>
-                <TextBlock Text="Today's Live Transactions" FontSize="26" FontWeight="Bold" Foreground="#1E293B"/>
+                <TextBlock Text="Today's Live Transactions" FontSize="24" FontWeight="Bold" Foreground="#1E293B"/>
                 <TextBlock Text="Manage sales made during the current shift." Foreground="#94A3B8" Margin="0,5,0,0"/>
             </StackPanel>
 
@@ -29,7 +29,6 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="🔍" Foreground="#94A3B8" VerticalAlignment="Center" Margin="8,0,8,0"/>
                     <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}" 
                              Tag="Search Receipt ID..." BorderThickness="0" Background="Transparent"
                              VerticalAlignment="Center" FontSize="14"/>
@@ -38,7 +37,7 @@
         </Grid>
 
         <DataGrid Grid.Row="1" ItemsSource="{Binding TodayTransactions}" AutoGenerateColumns="False" 
-                  IsReadOnly="True" Background="White" BorderThickness="0" RowHeight="55"
+                  IsReadOnly="True" Background="White" BorderThickness="1" RowHeight="55"
                   GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9">
 
             <DataGrid.RowStyle>
@@ -72,11 +71,11 @@
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
 
-                <DataGridTextColumn Header="Details" Binding="{Binding CustomerDisplay}" Width="150" Foreground="#64748B"/>
+                <DataGridTextColumn Header="Payment Status" Binding="{Binding StatusDisplay}" Width="190" FontWeight="SemiBold" Foreground="#334155"/>
 
                 <DataGridTextColumn Header="Items" Binding="{Binding SummaryText}" Width="*" FontWeight="SemiBold" Foreground="#334155"/>
 
-                <DataGridTextColumn Binding="{Binding TotalAmount, StringFormat='Rs {0:N2}'}" Width="140" FontWeight="Bold" Foreground="#009688">
+                <DataGridTextColumn Header="Total Amount" Binding="{Binding TotalAmount, StringFormat='Rs {0:N2}'}" Width="130" FontWeight="Bold" Foreground="#009688">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
                             <Setter Property="TextAlignment" Value="Right"/>
@@ -85,7 +84,7 @@
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
 
-                <DataGridTemplateColumn Width="120">
+                <DataGridTemplateColumn Header="Actions" Width="120">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
@@ -139,8 +138,8 @@
 
                         <Border Background="#F8FAFC" Padding="15" CornerRadius="6" Margin="0,0,0,20">
                             <StackPanel>
-                                <TextBlock Text="Customer / Type" FontSize="11" Foreground="#94A3B8"/>
-                                <TextBlock Text="{Binding SelectedSale.CustomerDisplay}" FontSize="14" FontWeight="SemiBold" Foreground="#334155"/>
+                                <TextBlock Text="Status / Date" FontSize="11" Foreground="#94A3B8"/>
+                                <TextBlock Text="{Binding SelectedSale.StatusDisplay}" FontSize="14" FontWeight="SemiBold" Foreground="#334155"/>
                                 <TextBlock Text="{Binding SelectedSale.Date, StringFormat='dd MMM yyyy - hh:mm tt'}" FontSize="12" Foreground="#64748B" Margin="0,5,0,0"/>
                             </StackPanel>
                         </Border>

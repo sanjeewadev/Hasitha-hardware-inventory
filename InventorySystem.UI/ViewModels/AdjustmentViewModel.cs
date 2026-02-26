@@ -2,7 +2,7 @@
 using InventorySystem.Core.Enums;
 using InventorySystem.Data.Repositories;
 using InventorySystem.UI.Commands;
-using Microsoft.EntityFrameworkCore; // Needed for Include
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -18,10 +18,9 @@ namespace InventorySystem.UI.ViewModels
         private readonly IProductRepository _productRepo;
         private readonly ICategoryRepository _categoryRepo;
         private readonly IStockRepository _stockRepo;
-        // Direct DB access for custom history filtering
         private readonly Data.Context.InventoryDbContext _dbContext;
 
-        // --- NAVIGATION ---
+        // --- CACHES FOR INSTANT SEARCH ---
         private List<Category> _allCategoriesCache = new();
         private List<Product> _allProductsCache = new();
 
@@ -36,8 +35,7 @@ namespace InventorySystem.UI.ViewModels
             {
                 _selectedCategory = value;
                 OnPropertyChanged();
-                ProductSearchText = "";
-                LoadProductsForCategory();
+                FilterProducts(); // Re-filter based on the new category
             }
         }
 
@@ -103,8 +101,6 @@ namespace InventorySystem.UI.ViewModels
         }
 
         public ObservableCollection<StockBatch> ActiveBatches { get; } = new();
-
-        // REPLACED: BatchHistory -> AdjustmentHistory
         public ObservableCollection<StockMovement> AdjustmentHistory { get; } = new();
 
         public ICommand StockOutCommand { get; }
@@ -118,14 +114,21 @@ namespace InventorySystem.UI.ViewModels
 
             StockOutCommand = new RelayCommand(async () => await ExecuteStockOut());
 
-            LoadTree();
+            // FIX: Load everything upfront so global search works instantly
+            LoadInitialData();
         }
 
-        private async void LoadTree()
+        private async void LoadInitialData()
         {
-            var all = await _categoryRepo.GetAllAsync();
-            _allCategoriesCache = all.ToList();
+            // Load Categories
+            var cats = await _categoryRepo.GetAllAsync();
+            _allCategoriesCache = cats.ToList();
             FilterCategoryTree();
+
+            // Load ALL Products
+            var prods = await _productRepo.GetAllAsync();
+            _allProductsCache = prods.ToList();
+            FilterProducts();
         }
 
         private void FilterCategoryTree()
@@ -143,42 +146,40 @@ namespace InventorySystem.UI.ViewModels
                 if (c.ParentId != null)
                 {
                     var parent = _allCategoriesCache.FirstOrDefault(p => p.Id == c.ParentId);
-                    if (parent != null && (cats.Contains(parent) || string.IsNullOrWhiteSpace(CategorySearchText))) parent.SubCategories.Add(c);
+                    if (parent != null && (cats.Contains(parent) || string.IsNullOrWhiteSpace(CategorySearchText)))
+                        parent.SubCategories.Add(c);
                 }
             }
             foreach (var c in cats.Where(x => x.ParentId == null)) CategoryTree.Add(c);
         }
 
-        private async void LoadProductsForCategory()
-        {
-            _allProductsCache.Clear();
-            ProductsInSelectedCategory.Clear();
-            if (SelectedCategory == null) return;
-            var all = await _productRepo.GetAllAsync();
-            _allProductsCache = all.Where(p => p.CategoryId == SelectedCategory.Id).ToList();
-            FilterProducts();
-        }
-
         private void FilterProducts()
         {
             ProductsInSelectedCategory.Clear();
-            if (string.IsNullOrWhiteSpace(ProductSearchText))
+            var query = _allProductsCache.AsEnumerable();
+
+            // Filter by Category (if one is selected)
+            if (SelectedCategory != null)
             {
-                foreach (var p in _allProductsCache) ProductsInSelectedCategory.Add(p);
+                query = query.Where(p => p.CategoryId == SelectedCategory.Id);
             }
-            else
+
+            // Filter by Search Text (Global if no category selected)
+            if (!string.IsNullOrWhiteSpace(ProductSearchText))
             {
                 var lower = ProductSearchText.ToLower();
-                var filtered = _allProductsCache.Where(p => p.Name.ToLower().Contains(lower) || p.Barcode.ToLower().Contains(lower));
-                foreach (var p in filtered) ProductsInSelectedCategory.Add(p);
+
+                // If they are typing a search, ignore the folder click so they can find anything globally
+                query = _allProductsCache.Where(p => p.Name.ToLower().Contains(lower) || p.Barcode.ToLower().Contains(lower));
             }
+
+            foreach (var p in query) ProductsInSelectedCategory.Add(p);
         }
 
         private async void LoadDataForSelectedProduct()
         {
             if (SelectedProduct == null) return;
 
-            // 1. Load Active Batches (For Dropdown)
             ActiveBatches.Clear();
             var batches = await _stockRepo.GetAllBatchesAsync();
             var relevantBatches = batches
@@ -188,7 +189,6 @@ namespace InventorySystem.UI.ViewModels
             foreach (var b in relevantBatches) ActiveBatches.Add(b);
             SelectedAdjustmentBatch = ActiveBatches.FirstOrDefault();
 
-            // 2. Load Adjustment History (NEW FEATURE)
             AdjustmentHistory.Clear();
             var history = await _dbContext.StockMovements
                 .Where(m => m.ProductId == SelectedProduct.Id && m.Type == StockMovementType.Adjustment)
@@ -215,8 +215,15 @@ namespace InventorySystem.UI.ViewModels
                 return;
             }
 
-            var msg = $"Confirm Adjustment?\n\nRemoving: {StockOutQty} {SelectedProduct.Unit}\nReason: {StockOutReason}\n\nThis cannot be undone.";
-            if (MessageBox.Show(msg, "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            // FIX: Add Financial Loss calculation to the Warning
+            decimal financialLoss = StockOutReason == AdjustmentReason.Correction ? 0 : (StockOutQty * SelectedAdjustmentBatch.CostPrice);
+            string lossWarning = financialLoss > 0
+                ? $"\n\n⚠️ FINANCIAL LOSS: Rs {financialLoss:N2}"
+                : "\n\n(No financial loss recorded for Correction)";
+
+            var msg = $"Confirm Adjustment?\n\nRemoving: {StockOutQty} {SelectedProduct.Unit}\nReason: {StockOutReason}{lossWarning}\n\nThis cannot be undone.";
+
+            if (MessageBox.Show(msg, "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
                 var movement = new StockMovement
                 {
@@ -227,18 +234,17 @@ namespace InventorySystem.UI.ViewModels
                     Reason = StockOutReason,
                     StockBatchId = SelectedAdjustmentBatch.Id,
                     Note = $"Manual Adjustment: {StockOutReason}",
-                    // Carry over costs for accounting
                     UnitCost = SelectedAdjustmentBatch.CostPrice,
                     UnitPrice = SelectedAdjustmentBatch.SellingPrice
                 };
 
                 await _stockRepo.AdjustStockAsync(movement);
 
-                // Update Local UI Cache immediately
                 SelectedProduct.Quantity -= StockOutQty;
                 OnPropertyChanged(nameof(SelectedProduct));
 
                 MessageBox.Show("Stock Adjusted Successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+
                 LoadDataForSelectedProduct(); // Refresh lists
                 StockOutQty = 0; // Reset input
             }

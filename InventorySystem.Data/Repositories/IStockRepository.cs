@@ -33,5 +33,9 @@ namespace InventorySystem.Data.Repositories
         // Voiding
         Task VoidReceiptAsync(string receiptId);
         Task VoidSaleAsync(int movementId, string reason);
+
+        Task<List<SalesTransaction>> GetTransactionsByReceiptIdsAsync(IEnumerable<string> receiptIds);
+
+        Task<IEnumerable<StockMovement>> GetVoidsAndReturnsAsync(DateTime start, DateTime end);
     }
 }

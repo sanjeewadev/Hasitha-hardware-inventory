@@ -12,10 +12,9 @@ using System.Windows.Input;
 
 namespace InventorySystem.UI.ViewModels
 {
-    // Helper class for the Checkboxes
     public class PermissionItem : ViewModelBase
     {
-        public string Name { get; set; } // "Dashboard", "POS", etc.
+        public string Name { get; set; }
         public string DisplayName { get; set; }
         private bool _isChecked;
         public bool IsChecked { get => _isChecked; set { _isChecked = value; OnPropertyChanged(); } }
@@ -62,7 +61,7 @@ namespace InventorySystem.UI.ViewModels
             {
                 _selectedRole = value;
                 OnPropertyChanged();
-                OnPropertyChanged(nameof(IsEmployeeSelected)); // Show/Hide checkboxes
+                OnPropertyChanged(nameof(IsEmployeeSelected));
             }
         }
 
@@ -90,13 +89,15 @@ namespace InventorySystem.UI.ViewModels
 
         private void InitializePermissions()
         {
-            // Define all the pages you want to control
-            AvailablePermissions.Add(new PermissionItem { Name = "Dashboard", DisplayName = "📊 Dashboard / Analytics" });
+            // FIX: Expanded to match your actual Left Navigation Bar
             AvailablePermissions.Add(new PermissionItem { Name = "POS", DisplayName = "🛒 Point of Sale" });
-            AvailablePermissions.Add(new PermissionItem { Name = "Catalog", DisplayName = "📦 Inventory Catalog" });
-            AvailablePermissions.Add(new PermissionItem { Name = "Stock", DisplayName = "⚖️ Stock Adjustments" });
-            AvailablePermissions.Add(new PermissionItem { Name = "Suppliers", DisplayName = "🚛 Supplier Management" });
-            AvailablePermissions.Add(new PermissionItem { Name = "Settings", DisplayName = "⚙️ Settings & Backups" });
+            AvailablePermissions.Add(new PermissionItem { Name = "TodaySales", DisplayName = "🎯 Today's Sales" });
+            AvailablePermissions.Add(new PermissionItem { Name = "Credit", DisplayName = "💳 Credit / Debtors" });
+            AvailablePermissions.Add(new PermissionItem { Name = "Returns", DisplayName = "↩️ Sales Returns" });
+            AvailablePermissions.Add(new PermissionItem { Name = "Suppliers", DisplayName = "🚛 Suppliers & Stock In" });
+            AvailablePermissions.Add(new PermissionItem { Name = "StockAdjust", DisplayName = "⚖️ Adjust (Remove) Stock" });
+            AvailablePermissions.Add(new PermissionItem { Name = "Products", DisplayName = "📦 View/Create Products" });
+            AvailablePermissions.Add(new PermissionItem { Name = "Reports", DisplayName = "📊 My Report & History" });
         }
 
         private async void LoadUsers()
@@ -114,7 +115,6 @@ namespace InventorySystem.UI.ViewModels
             Password = "";
             SelectedRole = UserRole.Employee;
 
-            // Reset Checkboxes
             foreach (var p in AvailablePermissions) p.IsChecked = false;
 
             EditorTitle = "Create New User";
@@ -131,7 +131,6 @@ namespace InventorySystem.UI.ViewModels
             SelectedRole = user.Role;
             Password = "";
 
-            // Load Permissions from DB string (e.g. "POS,Stock")
             var userPerms = (user.Permissions ?? "").Split(',');
             foreach (var p in AvailablePermissions)
             {
@@ -154,11 +153,10 @@ namespace InventorySystem.UI.ViewModels
                 return;
             }
 
-            // Build Permission String
             string permString = "";
             if (SelectedRole == UserRole.Admin)
             {
-                permString = "ALL"; // Admins get everything
+                permString = "ALL";
             }
             else
             {
@@ -168,7 +166,7 @@ namespace InventorySystem.UI.ViewModels
 
             try
             {
-                if (_editingId == 0) // NEW
+                if (_editingId == 0) // CREATE
                 {
                     if (Users.Any(u => u.Username.Equals(Username, StringComparison.OrdinalIgnoreCase)))
                     {
@@ -191,7 +189,7 @@ namespace InventorySystem.UI.ViewModels
                         FullName = FullName,
                         Role = SelectedRole,
                         IsActive = true,
-                        Permissions = permString, // <--- SAVE PERMISSIONS
+                        Permissions = permString,
                         CreatedAt = DateTime.Now
                     };
 
@@ -209,13 +207,18 @@ namespace InventorySystem.UI.ViewModels
                         userToUpdate.FullName = FullName;
                         userToUpdate.Role = SelectedRole;
                         userToUpdate.Username = Username;
-                        userToUpdate.Permissions = permString; // <--- UPDATE PERMISSIONS
+                        userToUpdate.Permissions = permString;
 
                         if (!string.IsNullOrWhiteSpace(Password))
                             userToUpdate.PasswordHash = _authService.HashPassword(Password);
 
                         await _userRepo.UpdateAsync(userToUpdate);
+
+                        // FIX: Ensure form resets and grid updates after edit
                         StatusMessage = "✅ User updated!";
+                        await Task.Delay(1000);
+                        ResetForm();
+                        LoadUsers();
                     }
                 }
             }
@@ -229,9 +232,17 @@ namespace InventorySystem.UI.ViewModels
         private async Task ToggleActive(User user)
         {
             if (user == null) return;
+
+            // Prevent the Admin from blocking themselves
+            if (user.Role == UserRole.Admin && user.Id == _editingId)
+            {
+                MessageBox.Show("You cannot block your own admin account.", "Security Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
             user.IsActive = !user.IsActive;
             await _userRepo.UpdateAsync(user);
-            LoadUsers();
+            LoadUsers(); // Refresh grid to show status change
         }
     }
 }

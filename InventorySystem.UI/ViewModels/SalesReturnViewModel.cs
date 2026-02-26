@@ -16,6 +16,7 @@ namespace InventorySystem.UI.ViewModels
 
     public class ReturnItemModel : ViewModelBase
     {
+        private readonly Action _recalculateCallback;
         public StockMovement OriginalMovement { get; }
 
         public decimal MaxReturnable => OriginalMovement.Quantity - OriginalMovement.ReturnedQuantity;
@@ -33,6 +34,7 @@ namespace InventorySystem.UI.ViewModels
                 _returnQty = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(RefundValue));
+                _recalculateCallback?.Invoke(); // Trigger dynamic UI update
             }
         }
 
@@ -47,9 +49,10 @@ namespace InventorySystem.UI.ViewModels
 
         public IEnumerable<ReturnReason> ReasonOptions => Enum.GetValues(typeof(ReturnReason)).Cast<ReturnReason>();
 
-        public ReturnItemModel(StockMovement movement)
+        public ReturnItemModel(StockMovement movement, Action recalculateCallback)
         {
             OriginalMovement = movement;
+            _recalculateCallback = recalculateCallback;
             ReturnQty = 0;
         }
     }
@@ -68,6 +71,19 @@ namespace InventorySystem.UI.ViewModels
 
         public decimal TotalRefundAmount => ReturnItems.Sum(x => x.RefundValue);
 
+        // --- CASHIER GUIDANCE UI PROPERTIES ---
+        private decimal _cashToRefund;
+        public decimal CashToRefund { get => _cashToRefund; set { _cashToRefund = value; OnPropertyChanged(); } }
+
+        private decimal _debtReduced;
+        public decimal DebtReduced { get => _debtReduced; set { _debtReduced = value; OnPropertyChanged(); } }
+
+        private string _refundActionText = "Select items to return";
+        public string RefundActionText { get => _refundActionText; set { _refundActionText = value; OnPropertyChanged(); } }
+
+        private string _refundActionColor = "#1E293B"; // Dark Slate
+        public string RefundActionColor { get => _refundActionColor; set { _refundActionColor = value; OnPropertyChanged(); } }
+
         public ICommand SearchCommand { get; }
         public ICommand ProcessReturnCommand { get; }
         public ICommand ClearCommand { get; }
@@ -78,36 +94,22 @@ namespace InventorySystem.UI.ViewModels
 
             SearchCommand = new RelayCommand(async () => await SearchReceiptAsync());
             ProcessReturnCommand = new RelayCommand(async () => await ProcessReturnAsync());
-            ClearCommand = new RelayCommand(ResetEntireForm); // Changed to ResetAll
-
-            ReturnItems.CollectionChanged += (s, e) => OnPropertyChanged(nameof(TotalRefundAmount));
+            ClearCommand = new RelayCommand(ResetEntireForm);
         }
 
         private async Task SearchReceiptAsync()
         {
-            // 1. Validate Input
             if (string.IsNullOrWhiteSpace(SearchReceiptId)) return;
 
-            // 2. Capture the input BEFORE clearing anything
             string query = SearchReceiptId.Trim();
-
-            // 3. Clear only the previous results (Keep the search text visible!)
             ResetResultsOnly();
 
-            // 4. Try Exact Match First
             var receipt = await _context.SalesTransactions.FirstOrDefaultAsync(t => t.ReceiptId == query);
 
-            // 5. If not found, try Partial Match
             if (receipt == null)
             {
-                var candidates = await _context.SalesTransactions
-                    .Where(t => t.ReceiptId.Contains(query))
-                    .ToListAsync();
-
-                if (candidates.Count == 1)
-                {
-                    receipt = candidates.First();
-                }
+                var candidates = await _context.SalesTransactions.Where(t => t.ReceiptId.Contains(query)).ToListAsync();
+                if (candidates.Count == 1) receipt = candidates.First();
                 else if (candidates.Count > 1)
                 {
                     MessageBox.Show($"Multiple receipts found matching '{query}'. Please enter the full ID.", "Multiple Matches", MessageBoxButton.OK, MessageBoxImage.Information);
@@ -121,10 +123,8 @@ namespace InventorySystem.UI.ViewModels
                 return;
             }
 
-            // Update UI with the Full ID found
             SearchReceiptId = receipt.ReceiptId;
 
-            // Load Items
             var movements = await _context.StockMovements
                 .Include(m => m.Product)
                 .Where(m => m.ReceiptId == receipt.ReceiptId && m.Type == StockMovementType.Out && !m.IsVoided)
@@ -140,13 +140,53 @@ namespace InventorySystem.UI.ViewModels
 
             foreach (var move in movements)
             {
-                var item = new ReturnItemModel(move);
-                item.PropertyChanged += (s, e) =>
+                ReturnItems.Add(new ReturnItemModel(move, RecalculateRefundAction));
+            }
+            RecalculateRefundAction();
+        }
+
+        // --- THE DYNAMIC MATH ENGINE ---
+        private void RecalculateRefundAction()
+        {
+            OnPropertyChanged(nameof(TotalRefundAmount));
+
+            if (CurrentReceipt == null || TotalRefundAmount == 0)
+            {
+                CashToRefund = 0; DebtReduced = 0;
+                RefundActionText = "Select items to return";
+                RefundActionColor = "#1E293B"; // Neutral
+                return;
+            }
+
+            if (!CurrentReceipt.IsCredit)
+            {
+                // CASH SALE: Hand cash back instantly
+                CashToRefund = TotalRefundAmount;
+                DebtReduced = 0;
+                RefundActionText = $"HAND CASH TO CUSTOMER: Rs {CashToRefund:N2}";
+                RefundActionColor = "#10B981"; // Green
+            }
+            else
+            {
+                // CREDIT SALE: Complex Math
+                decimal currentDebt = CurrentReceipt.TotalAmount - CurrentReceipt.PaidAmount;
+
+                if (TotalRefundAmount <= currentDebt)
                 {
-                    if (e.PropertyName == nameof(ReturnItemModel.RefundValue))
-                        OnPropertyChanged(nameof(TotalRefundAmount));
-                };
-                ReturnItems.Add(item);
+                    // Return value is less than what they owe. Just shrink debt.
+                    CashToRefund = 0;
+                    DebtReduced = TotalRefundAmount;
+                    RefundActionText = $"DEBT REDUCED BY Rs {DebtReduced:N2} (DO NOT GIVE CASH)";
+                    RefundActionColor = "#F59E0B"; // Orange
+                }
+                else
+                {
+                    // Return value is MORE than what they owe. Clear debt, hand remainder as cash.
+                    DebtReduced = currentDebt;
+                    CashToRefund = TotalRefundAmount - currentDebt;
+                    RefundActionText = $"DEBT CLEARED. HAND CASH: Rs {CashToRefund:N2}";
+                    RefundActionColor = "#3B82F6"; // Blue
+                }
             }
         }
 
@@ -158,24 +198,17 @@ namespace InventorySystem.UI.ViewModels
                 return;
             }
 
-            var itemsToReturn = ReturnItems.Where(x => x.ReturnQty > 0).ToList();
+            string confirmMsg = $"{RefundActionText}\n\nProceed with processing this return?";
 
-            string message = $"Total Refund: Rs {TotalRefundAmount:N2}\n";
-            if (CurrentReceipt.IsCredit && CurrentReceipt.Status == PaymentStatus.Unpaid)
-            {
-                message += "\n⚠ WARNING: This was a CREDIT SALE.\nDo NOT give cash. This will reduce their debt balance.";
-            }
-            else
-            {
-                message += "\nRefund Cash to Customer?";
-            }
-
-            if (MessageBox.Show(message, "Confirm Return", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+            if (MessageBox.Show(confirmMsg, "Confirm Return", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
                 using var dbTrans = await _context.Database.BeginTransactionAsync();
 
                 try
                 {
+                    var transaction = await _context.SalesTransactions.FirstOrDefaultAsync(t => t.ReceiptId == CurrentReceipt.ReceiptId);
+
+                    var itemsToReturn = ReturnItems.Where(x => x.ReturnQty > 0).ToList();
                     foreach (var item in itemsToReturn)
                     {
                         var originalMove = item.OriginalMovement;
@@ -210,11 +243,37 @@ namespace InventorySystem.UI.ViewModels
                         }
                     }
 
+                    // --- THE LEDGER FIX ---
+                    if (transaction != null)
+                    {
+                        transaction.TotalAmount -= TotalRefundAmount;
+
+                        if (CashToRefund > 0)
+                        {
+                            // If we handed them cash, we must reduce the 'PaidAmount' pool so the ledger balances
+                            transaction.PaidAmount -= CashToRefund;
+                        }
+
+                        // Sanity Check Bounds
+                        if (transaction.TotalAmount < 0) transaction.TotalAmount = 0;
+                        if (transaction.PaidAmount < 0) transaction.PaidAmount = 0;
+
+                        // Re-evaluate Payment Status
+                        if (transaction.TotalAmount <= transaction.PaidAmount)
+                            transaction.Status = PaymentStatus.Paid;
+                        else if (transaction.PaidAmount > 0)
+                            transaction.Status = PaymentStatus.PartiallyPaid;
+                        else
+                            transaction.Status = PaymentStatus.Unpaid;
+
+                        _context.SalesTransactions.Update(transaction);
+                    }
+
                     await _context.SaveChangesAsync();
                     await dbTrans.CommitAsync();
 
-                    MessageBox.Show("Return processed successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
-                    ResetEntireForm(); // Clear everything on success
+                    MessageBox.Show("Return processed successfully.\nFinancials and Inventory have been updated.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                    ResetEntireForm();
                 }
                 catch (Exception ex)
                 {
@@ -224,15 +283,13 @@ namespace InventorySystem.UI.ViewModels
             }
         }
 
-        // Helper: Clear only the grid (Used when searching new ID)
         private void ResetResultsOnly()
         {
             CurrentReceipt = null;
             ReturnItems.Clear();
-            OnPropertyChanged(nameof(TotalRefundAmount));
+            RecalculateRefundAction();
         }
 
-        // Helper: Clear everything (Used by Cancel Button)
         private void ResetEntireForm()
         {
             SearchReceiptId = "";

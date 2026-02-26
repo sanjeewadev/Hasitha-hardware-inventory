@@ -4,7 +4,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              mc:Ignorable="d" d:DesignHeight="768" d:DesignWidth="1100"
-             Background="Transparent">
+             Background="{StaticResource BackgroundBrush}">
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
@@ -16,7 +16,7 @@
     </UserControl.Resources>
 
     <Grid>
-        <Grid Visibility="{Binding IsPage1Visible, Converter={StaticResource BoolToVis}}" Margin="0">
+        <Grid Visibility="{Binding IsPage1Visible, Converter={StaticResource BoolToVis}}" Margin="20">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="350"/>
                 <ColumnDefinition Width="*"/>
@@ -81,7 +81,7 @@
                 </Grid>
 
                 <DataGrid Grid.Row="1" ItemsSource="{Binding Suppliers}" SelectedItem="{Binding SelectedSupplier}" 
-                          AutoGenerateColumns="False" IsReadOnly="True" Background="White" BorderThickness="0"
+                          AutoGenerateColumns="False" IsReadOnly="True" Background="White" BorderThickness="1"
                           GridLinesVisibility="Horizontal" HorizontalGridLinesBrush="#F1F5F9" RowHeight="55" HeadersVisibility="Column">
                     <DataGrid.ColumnHeaderStyle>
                         <Style TargetType="DataGridColumnHeader">
