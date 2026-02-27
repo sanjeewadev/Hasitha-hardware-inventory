@@ -17,23 +17,14 @@ namespace InventorySystem.UI.ViewModels
 
         public Product EditingProduct { get; set; }
 
-        // Keep Unit options, this is a static product property
-        // Inside AddProductViewModel class
-
+        // Standardized Unit Options
         public ObservableCollection<string> UnitOptions { get; } = new ObservableCollection<string>
-            {
-                // Count
-                "Pcs", "Box", "Set", "Pair",
-    
-                // Weight
-                "Kg", "g", "mg", 
-    
-                // Length
-                "M", "Ft", "cm", "mm",
-    
-                // Volume/Liquid
-                "L", "ml"
-            };
+        {
+            "Pcs", "Box", "Set", "Pair", // Count
+            "Kg", "g", "mg",             // Weight
+            "M", "Ft", "cm", "mm",       // Length
+            "L", "ml"                    // Volume
+        };
 
         private ObservableCollection<Category> _allCategories = new();
 
@@ -43,8 +34,6 @@ namespace InventorySystem.UI.ViewModels
             get => _categoryDisplayPath;
             set { _categoryDisplayPath = value; OnPropertyChanged(); }
         }
-
-        // --- REMOVED PRICE/DISCOUNT WRAPPERS & CALCULATOR HERE ---
 
         public Action? CloseAction { get; set; }
 
@@ -57,13 +46,13 @@ namespace InventorySystem.UI.ViewModels
             _productRepo = pRepo;
             _categoryRepo = cRepo;
 
-            SaveCommand = new RelayCommand(Save);
+            SaveCommand = new RelayCommand(async () => await SaveAsync());
             CancelCommand = new RelayCommand(Cancel);
-            GenerateCodeCommand = new RelayCommand(() => EditingProduct.Barcode = GenerateSimpleCode());
+            GenerateCodeCommand = new RelayCommand(async () => await GenerateUniqueCodeAsync());
 
             if (productToEdit != null)
             {
-                // EDIT MODE - Only copy static definition data
+                // EDIT MODE - Safe Copy (Protecting existing financials)
                 EditingProduct = new Product
                 {
                     Id = productToEdit.Id,
@@ -73,8 +62,6 @@ namespace InventorySystem.UI.ViewModels
                     CategoryId = productToEdit.CategoryId,
                     Quantity = productToEdit.Quantity,
                     Unit = productToEdit.Unit,
-                    // IMPORTANT: Do NOT copy existing prices/discounts here. 
-                    // We leave them alone so they don't get accidentally wiped on save.
                     BuyingPrice = productToEdit.BuyingPrice,
                     SellingPrice = productToEdit.SellingPrice,
                     DiscountLimit = productToEdit.DiscountLimit
@@ -83,15 +70,15 @@ namespace InventorySystem.UI.ViewModels
             else
             {
                 // NEW MODE
-                EditingProduct = new Product();
-                EditingProduct.Barcode = GenerateSimpleCode();
-                EditingProduct.Unit = "Pcs";
-                // Prices/Discounts default to 0 in the entity model
+                EditingProduct = new Product { Unit = "Pcs" };
 
                 if (preSelectedCategoryId.HasValue)
                 {
                     EditingProduct.CategoryId = preSelectedCategoryId.Value;
                 }
+
+                // Auto-generate a guaranteed unique code on startup
+                _ = GenerateUniqueCodeAsync();
             }
 
             LoadCategoryPath();
@@ -119,15 +106,33 @@ namespace InventorySystem.UI.ViewModels
             }
         }
 
-        private string GenerateSimpleCode()
+        // FIX 2: Guaranteed Unique Barcode Generator
+        private async Task GenerateUniqueCodeAsync()
         {
             var random = new Random();
-            return random.Next(10000000, 99999999).ToString();
+            string newCode = "";
+            bool isUnique = false;
+
+            var allProducts = await _productRepo.GetAllAsync();
+
+            while (!isUnique)
+            {
+                newCode = random.Next(10000000, 99999999).ToString();
+
+                // Check if this random number already exists in the database
+                if (!allProducts.Any(p => p.Barcode == newCode))
+                {
+                    isUnique = true;
+                }
+            }
+
+            EditingProduct.Barcode = newCode;
+            OnPropertyChanged(nameof(EditingProduct));
         }
 
-        private async void Save()
+        // FIX 1: Proactive Validation instead of Exception-Catching
+        private async Task SaveAsync()
         {
-            // 1. Validation
             if (string.IsNullOrWhiteSpace(EditingProduct.Name))
             {
                 MessageBox.Show("Please enter a Product Name.", "Missing Info", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -142,15 +147,25 @@ namespace InventorySystem.UI.ViewModels
 
             try
             {
-                // 2. Database Action
+                // Proactive Duplicate Barcode Check
+                var allProducts = await _productRepo.GetAllAsync();
+                var duplicate = allProducts.FirstOrDefault(p =>
+                    p.Barcode.Equals(EditingProduct.Barcode, StringComparison.OrdinalIgnoreCase) &&
+                    p.Id != EditingProduct.Id); // Ignore ourselves if we are editing
+
+                if (duplicate != null)
+                {
+                    MessageBox.Show($"The Barcode '{EditingProduct.Barcode}' is already assigned to '{duplicate.Name}'.\n\nPlease click 'Auto' to generate a new one, or type a unique code.", "Duplicate Barcode", MessageBoxButton.OK, MessageBoxImage.Error);
+                    return;
+                }
+
+                // Database Action
                 if (EditingProduct.Id == 0)
                 {
                     await _productRepo.AddAsync(EditingProduct);
                 }
                 else
                 {
-                    // This update will only change the fields we bound to (Name, Barcode, Unit, Description)
-                    // Existing prices in the DB will remain untouched.
                     await _productRepo.UpdateAsync(EditingProduct);
                 }
 
@@ -158,15 +173,7 @@ namespace InventorySystem.UI.ViewModels
             }
             catch (Exception ex)
             {
-                if (ex.InnerException != null && ex.InnerException.Message.Contains("UNIQUE"))
-                {
-                    MessageBox.Show($"The Barcode '{EditingProduct.Barcode}' is already taken!\n\nPlease click 'Auto' (⚡) to generate a new one.",
-                                    "Duplicate Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-                else
-                {
-                    MessageBox.Show($"Error saving product: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                MessageBox.Show($"An unexpected error occurred while saving: {ex.Message}", "System Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

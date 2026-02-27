@@ -3,6 +3,7 @@ using InventorySystem.Core.Enums;
 using InventorySystem.Data.Repositories;
 using InventorySystem.Infrastructure.Services;
 using InventorySystem.UI.Commands;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -16,6 +17,7 @@ namespace InventorySystem.UI.ViewModels
     public class TodaySalesViewModel : ViewModelBase
     {
         private readonly IStockRepository _stockRepo;
+        private readonly Data.Context.InventoryDbContext _dbContext;
         private List<TodaySaleGroup> _allSalesCache = new();
 
         public ObservableCollection<TodaySaleGroup> TodayTransactions { get; } = new();
@@ -24,8 +26,16 @@ namespace InventorySystem.UI.ViewModels
         private decimal _dailyRevenue;
         public decimal DailyRevenue { get => _dailyRevenue; set { _dailyRevenue = value; OnPropertyChanged(); } }
 
+        // FIX: Added DailyProfit back!
         private decimal _dailyProfit;
         public decimal DailyProfit { get => _dailyProfit; set { _dailyProfit = value; OnPropertyChanged(); } }
+
+        // Real physical cash tracking
+        private decimal _actualCashInDrawer;
+        public decimal ActualCashInDrawer { get => _actualCashInDrawer; set { _actualCashInDrawer = value; OnPropertyChanged(); } }
+
+        private decimal _debtCollectedToday;
+        public decimal DebtCollectedToday { get => _debtCollectedToday; set { _debtCollectedToday = value; OnPropertyChanged(); } }
 
         private int _saleCount;
         public int SaleCount { get => _saleCount; set { _saleCount = value; OnPropertyChanged(); } }
@@ -55,7 +65,9 @@ namespace InventorySystem.UI.ViewModels
 
         public TodaySalesViewModel(IStockRepository stockRepo)
         {
-            _stockRepo = stockRepo;
+            // CRITICAL FIX: Ignore the global repo! Create a fresh private channel to the DB.
+            _dbContext = Infrastructure.Services.DatabaseService.CreateDbContext();
+            _stockRepo = new StockRepository(_dbContext);
 
             RefreshCommand = new RelayCommand(async () => await LoadData());
             DeleteSaleCommand = new RelayCommand<TodaySaleGroup>(async (sale) => await ExecuteDeleteSale(sale));
@@ -89,29 +101,54 @@ namespace InventorySystem.UI.ViewModels
 
                 var allMoves = await _stockRepo.GetSalesByDateRangeAsync(start, end);
 
-                var validSales = allMoves.Where(m => m.Type == StockMovementType.Out && !m.IsVoided).ToList();
-                var validReturns = allMoves.Where(m => m.Type == StockMovementType.SalesReturn && !m.IsVoided).ToList();
+                var validMoves = allMoves.Where(m => !m.IsVoided &&
+                    (m.Type == StockMovementType.Out || m.Type == StockMovementType.SalesReturn || m.Type == StockMovementType.Adjustment)).ToList();
 
-                // STATS
+                var validSales = validMoves.Where(m => m.Type == StockMovementType.Out).ToList();
+                var validReturns = validMoves.Where(m => m.Type == StockMovementType.SalesReturn).ToList();
+                var validAdjustments = validMoves.Where(m => m.Type == StockMovementType.Adjustment).ToList();
+
+                var receiptIds = validSales.Concat(validReturns).Select(s => s.ReceiptId).Distinct().ToList();
+                var transactions = await _stockRepo.GetTransactionsByReceiptIdsAsync(receiptIds);
+
+                // --- 1. REVENUE CALCULATION ---
                 decimal grossRevenue = validSales.Sum(s => s.Quantity * s.UnitPrice);
                 decimal returnRevenue = validReturns.Sum(r => r.Quantity * r.UnitPrice);
                 DailyRevenue = grossRevenue - returnRevenue;
 
+                // --- 2. PROFIT CALCULATION (Including Losses) ---
                 decimal grossCost = validSales.Sum(s => s.Quantity * s.UnitCost);
                 decimal returnCost = validReturns.Sum(r => r.Quantity * r.UnitCost);
-                DailyProfit = DailyRevenue - (grossCost - returnCost);
+                decimal lossCost = validAdjustments.Sum(a => a.Quantity * a.UnitCost); // Lost items cost
 
-                // Fetch Financial Statuses
-                var receiptIds = validSales.Select(s => s.ReceiptId).Distinct().ToList();
-                var transactions = await _stockRepo.GetTransactionsByReceiptIdsAsync(receiptIds);
+                DailyProfit = DailyRevenue - (grossCost - returnCost) - lossCost;
 
-                // GROUPING
-                var grouped = validSales
+                // --- 3. EXACT CASH DRAWER CALCULATION ---
+                decimal cashSalesToday = validSales
+                    .Where(m => transactions.Any(t => t.ReceiptId == m.ReceiptId && !t.IsCredit))
+                    .Sum(m => m.Quantity * m.UnitPrice);
+
+                decimal cashRefundsToday = validReturns
+                    .Where(m => transactions.Any(t => t.ReceiptId == m.ReceiptId && !t.IsCredit))
+                    .Sum(m => m.Quantity * m.UnitPrice);
+
+                DebtCollectedToday = await _dbContext.CreditPaymentLogs
+                    .Where(log => log.PaymentDate >= start && log.PaymentDate <= end)
+                    .SumAsync(log => log.AmountPaid);
+
+                ActualCashInDrawer = cashSalesToday + DebtCollectedToday - cashRefundsToday;
+
+                // --- 4. GROUPING (Exclude adjustments from the visual list) ---
+                var grouped = validMoves
+                    .Where(m => m.Type != StockMovementType.Adjustment)
                     .GroupBy(s => s.ReceiptId)
                     .Select(g =>
                     {
+                        var outs = g.Where(x => x.Type == StockMovementType.Out).ToList();
+                        var returns = g.Where(x => x.Type == StockMovementType.SalesReturn).ToList();
                         var tx = transactions.FirstOrDefault(t => t.ReceiptId == g.Key);
-                        return new TodaySaleGroup(g.First().Date, g.ToList(), tx);
+
+                        return new TodaySaleGroup(g.First().Date, outs, returns, tx);
                     })
                     .OrderByDescending(g => g.Date)
                     .ToList();
@@ -145,14 +182,12 @@ namespace InventorySystem.UI.ViewModels
         {
             if (sale == null) return;
 
-            // CONFIRMATION 1
             string msg1 = $"⚠ SECURITY WARNING: VOID TRANSACTION\n\n" +
                           $"Receipt: {sale.ReferenceId}\nAmount: Rs {sale.TotalAmount:N2}\n\n" +
                           $"Are you sure you want to void this sale?";
 
             if (MessageBox.Show(msg1, "Confirm Void (1/2)", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
             {
-                // CONFIRMATION 2
                 string msg2 = $"🚨 FINAL WARNING 🚨\n\nAre you REALLY sure you want to delete this sale?\n" +
                               $"This will reverse the revenue and restore the items to stock. This cannot be undone.";
 
@@ -188,12 +223,8 @@ namespace InventorySystem.UI.ViewModels
 
                 var printService = new PrintService();
                 printService.PrintReceipt(SelectedSale.ReferenceId, receiptText, printerName, 1);
-                MessageBox.Show("Sent to printer.");
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Print Failed: {ex.Message}");
-            }
+            catch (Exception ex) { MessageBox.Show($"Print Failed: {ex.Message}"); }
         }
     }
 
@@ -202,25 +233,30 @@ namespace InventorySystem.UI.ViewModels
         public DateTime Date { get; }
         public List<TodayItemDetail> Items { get; }
         public string ReferenceId { get; }
-
         public string SummaryText => Items.Count == 1 ? Items.First().ProductName : $"{Items.Count} Items";
-        public decimal TotalItems => Items.Sum(i => i.Quantity);
-        public decimal TotalAmount => Items.Sum(i => i.Total);
+        public decimal TotalItems { get; }
+        public decimal TotalAmount { get; }
+        public string CustomerDisplay { get; }
+        public string StatusDisplay { get; }
 
-        public string StatusDisplay { get; } // NEW!
-
-        public TodaySaleGroup(DateTime date, List<StockMovement> raw, SalesTransaction? tx)
+        public TodaySaleGroup(DateTime date, List<StockMovement> outs, List<StockMovement> returns, SalesTransaction? tx)
         {
             Date = date;
-            ReferenceId = raw.First().ReceiptId;
+            var firstMove = outs.FirstOrDefault() ?? returns.FirstOrDefault();
+            ReferenceId = firstMove?.ReceiptId ?? "Unknown";
+            CustomerDisplay = string.IsNullOrWhiteSpace(firstMove?.Note) ? "Walk-in" : firstMove.Note;
 
-            // Generate precise status
-            if (tx == null) StatusDisplay = "Unknown / Voided";
+            TotalItems = outs.Sum(i => i.Quantity) - returns.Sum(i => i.Quantity);
+            TotalAmount = outs.Sum(i => i.Quantity * i.UnitPrice) - returns.Sum(i => i.Quantity * i.UnitPrice);
+
+            if (TotalItems <= 0 && returns.Any()) StatusDisplay = "🔄 FULLY RETURNED";
+            else if (returns.Any()) StatusDisplay = $"🔄 PARTIAL RETURN";
+            else if (tx == null) StatusDisplay = "Unknown / Voided";
             else if (!tx.IsCredit) StatusDisplay = "💰 CASH - PAID";
             else if (tx.Status == PaymentStatus.Paid) StatusDisplay = "💳 CREDIT - SETTLED";
             else StatusDisplay = $"⏳ CREDIT - DUE (Rs {tx.RemainingBalance:N0})";
 
-            Items = raw.Select(m => new TodayItemDetail
+            Items = outs.Select(m => new TodayItemDetail
             {
                 ProductName = m.Product?.Name ?? "?",
                 Barcode = m.Product?.Barcode ?? "-",

@@ -30,18 +30,26 @@ namespace InventorySystem.Data.Repositories
                     move.ReceiptId = transaction.ReceiptId;
 
                     var batch = await _context.StockBatches.FindAsync(move.StockBatchId);
-                    if (batch != null)
-                    {
-                        batch.RemainingQuantity -= move.Quantity;
-                        _context.StockBatches.Update(batch);
-                    }
+                    if (batch == null) throw new InvalidOperationException("Fatal Error: Source stock batch not found.");
+
+                    await _context.Entry(batch).ReloadAsync(); // FORCE FETCH LIVE DB VALUE
+
+                    if (batch.RemainingQuantity < move.Quantity)
+                        throw new InvalidOperationException($"Cart out of sync! Only {batch.RemainingQuantity} left in batch, but you tried to sell {move.Quantity}. Please clear cart and try again.");
+
+                    batch.RemainingQuantity -= move.Quantity;
+                    _context.StockBatches.Update(batch);
 
                     var product = await _context.Products.FindAsync(move.ProductId);
-                    if (product != null)
-                    {
-                        product.Quantity -= move.Quantity;
-                        _context.Products.Update(product);
-                    }
+                    if (product == null) throw new InvalidOperationException("Fatal Error: Product catalog entry not found.");
+
+                    await _context.Entry(product).ReloadAsync(); // FORCE FETCH LIVE DB VALUE
+
+                    if (product.Quantity < move.Quantity)
+                        throw new InvalidOperationException($"Cart out of sync! Total product stock is only {product.Quantity}. Please clear cart and try again.");
+
+                    product.Quantity -= move.Quantity;
+                    _context.Products.Update(product);
 
                     await _context.StockMovements.AddAsync(move);
                 }
@@ -60,6 +68,8 @@ namespace InventorySystem.Data.Repositories
         {
             var product = await _context.Products.FindAsync(movement.ProductId);
             if (product == null) return;
+
+            await _context.Entry(product).ReloadAsync();
 
             product.Quantity += movement.Quantity;
             _context.StockMovements.Add(movement);
@@ -86,6 +96,8 @@ namespace InventorySystem.Data.Repositories
             var product = await _context.Products.FindAsync(sale.ProductId);
             if (product == null) return;
 
+            await _context.Entry(product).ReloadAsync();
+
             if (product.Quantity < sale.Quantity)
                 throw new InvalidOperationException($"Insufficient stock. Available: {product.Quantity}");
 
@@ -106,6 +118,9 @@ namespace InventorySystem.Data.Repositories
 
             var batch = await _context.StockBatches.FindAsync(adjustment.StockBatchId);
             if (batch == null) throw new InvalidOperationException("Selected batch not found.");
+
+            await _context.Entry(batch).ReloadAsync();
+            await _context.Entry(product).ReloadAsync();
 
             if (adjustment.Quantity > batch.RemainingQuantity)
                 throw new InvalidOperationException($"Cannot remove {adjustment.Quantity} items. Batch only has {batch.RemainingQuantity}.");
@@ -133,7 +148,7 @@ namespace InventorySystem.Data.Repositories
                 .Include(b => b.Product)
                 .Include(b => b.PurchaseInvoice)
                 .Where(b => b.RemainingQuantity > 0 &&
-                           (b.PurchaseInvoiceId == null || b.PurchaseInvoice!.Status == InvoiceStatus.Posted))
+                            (b.PurchaseInvoiceId == null || b.PurchaseInvoice!.Status == InvoiceStatus.Posted))
                 .ToListAsync();
 
         public async Task<IEnumerable<StockMovement>> GetHistoryAsync() =>
@@ -150,7 +165,6 @@ namespace InventorySystem.Data.Repositories
                 .OrderByDescending(m => m.Date)
                 .ToListAsync();
 
-        // FIX: Now includes SalesReturns so Dashboards can calculate accurate Revenue
         public async Task<IEnumerable<StockMovement>> GetSalesByDateRangeAsync(DateTime start, DateTime end) =>
             await _context.StockMovements
                 .Include(m => m.Product)
@@ -168,21 +182,28 @@ namespace InventorySystem.Data.Repositories
             using var dbTrans = await _context.Database.BeginTransactionAsync();
             try
             {
-                // 1. FINANCIAL CHECK & CLEANUP
                 var transaction = await _context.SalesTransactions.FirstOrDefaultAsync(t => t.ReceiptId == receiptId);
                 if (transaction != null)
                 {
-                    // VULNERABILITY FIX: Prevent voiding a credit sale that has active payments
                     if (transaction.IsCredit && transaction.PaidAmount > 0)
                     {
                         throw new InvalidOperationException("Cannot void a credit sale that already has partial payments recorded. You must use the Customer Return page.");
                     }
+                }
 
-                    // Remove the financial footprint so it disappears from Credit Debtors
+                // 🚨 NEW SECURITY LOCK: Prevent Voiding a Returned Receipt 🚨
+                var hasReturns = await _context.StockMovements.AnyAsync(m => m.ReceiptId == receiptId && m.Type == StockMovementType.SalesReturn);
+                if (hasReturns)
+                {
+                    throw new InvalidOperationException("Action Blocked: This receipt contains Returned items.\n\nThe inventory has already been balanced via the Returns process. Voiding it now would corrupt the database.");
+                }
+
+                // Proceed with Void
+                if (transaction != null)
+                {
                     _context.SalesTransactions.Remove(transaction);
                 }
 
-                // 2. INVENTORY RESTORATION
                 var movements = await _context.StockMovements
                     .Where(m => m.ReceiptId == receiptId && !m.IsVoided && m.Type == StockMovementType.Out)
                     .ToListAsync();
@@ -197,6 +218,7 @@ namespace InventorySystem.Data.Repositories
                     var product = await _context.Products.FindAsync(move.ProductId);
                     if (product != null)
                     {
+                        await _context.Entry(product).ReloadAsync();
                         product.Quantity += move.Quantity;
                         _context.Products.Update(product);
                     }
@@ -206,6 +228,7 @@ namespace InventorySystem.Data.Repositories
                         var batch = await _context.StockBatches.FindAsync(move.StockBatchId.Value);
                         if (batch != null)
                         {
+                            await _context.Entry(batch).ReloadAsync();
                             batch.RemainingQuantity += move.Quantity;
                             _context.StockBatches.Update(batch);
                         }

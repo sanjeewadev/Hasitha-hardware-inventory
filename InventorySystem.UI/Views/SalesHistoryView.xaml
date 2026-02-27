@@ -80,7 +80,7 @@
             <DataGrid.Columns>
                 <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat='dd MMM yyyy HH:mm'}" Width="150" Foreground="#64748B"/>
 
-                <DataGridTemplateColumn Header="Receipt #" Width="140">
+                <DataGridTemplateColumn Header="Receipt #" Width="200">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Button Content="{Binding ReferenceId}" 
@@ -112,7 +112,7 @@
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Button Command="{Binding DataContext.ViewDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 
-                                    CommandParameter="{Binding}"
+                                    CommandParameter="{Binding}" Padding="0"
                                     Content="👁" Background="#E0F2FE" Foreground="#0284C7" BorderThickness="0" 
                                     Width="35" Height="35" Cursor="Hand" ToolTip="View Details">
                                 <Button.Resources>

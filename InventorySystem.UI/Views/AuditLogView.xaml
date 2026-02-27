@@ -71,11 +71,11 @@
             </DataGrid.ColumnHeaderStyle>
 
             <DataGrid.Columns>
-                <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat='dd MMM yyyy HH:mm'}" Width="150" Foreground="#475569"/>
+                <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat='dd MMM yyyy HH:mm'}" Width="180" Foreground="#475569"/>
 
-                <DataGridTextColumn Header="Receipt #" Binding="{Binding ReceiptId}" Width="160" FontWeight="Bold" Foreground="#334155"/>
+                <DataGridTextColumn Header="Receipt #" Binding="{Binding ReceiptId}" Width="190" FontWeight="Bold" Foreground="#334155"/>
 
-                <DataGridTemplateColumn Header="Action Type" Width="120">
+                <DataGridTemplateColumn Header="Action Type" Width="150">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Border Background="{Binding ActionBgColor}" Padding="10,4" CornerRadius="4" HorizontalAlignment="Left" VerticalAlignment="Center">
@@ -85,11 +85,11 @@
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
 
-                <DataGridTextColumn Header="Items Affected" Binding="{Binding TotalItems}" Width="120"/>
+                <DataGridTextColumn Header="Items Affected" Binding="{Binding TotalItems}" Width="150"/>
 
-                <DataGridTextColumn Header="Impact Value" Binding="{Binding TotalValue, StringFormat='Rs {0:N2}'}" Width="140" FontWeight="Bold" Foreground="#1E293B"/>
+                <DataGridTextColumn Header="Impact Value" Binding="{Binding TotalValue, StringFormat='Rs {0:N2}'}" Width="170" FontWeight="Bold" Foreground="#1E293B"/>
 
-                <DataGridTemplateColumn Header="Details" Width="120">
+                <DataGridTemplateColumn Header="Details" Width="150">
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Button Command="{Binding DataContext.ViewDetailsCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" 

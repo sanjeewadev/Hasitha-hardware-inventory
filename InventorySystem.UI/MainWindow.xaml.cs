@@ -8,7 +8,6 @@ namespace InventorySystem.UI
         public MainWindow()
         {
             InitializeComponent();
-
             // Connect the View to the ViewModel
             this.DataContext = new MainViewModel();
         }

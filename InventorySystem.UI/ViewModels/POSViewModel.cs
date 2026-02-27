@@ -318,13 +318,15 @@ namespace InventorySystem.UI.ViewModels
             var allBatches = await _dbContext.StockBatches
                 .Include(b => b.PurchaseInvoice)
                 .ThenInclude(i => i.Supplier)
-                .Where(b => b.ProductId == p.Id && b.RemainingQuantity > 0)
+                // CRITICAL FIX: Ensure the Invoice is Posted before selling!
+                .Where(b => b.ProductId == p.Id && b.RemainingQuantity > 0 &&
+                            (b.PurchaseInvoiceId == null || b.PurchaseInvoice.Status == InvoiceStatus.Posted))
                 .OrderBy(b => b.ReceivedDate)
                 .ToListAsync();
 
             if (!allBatches.Any())
             {
-                ShowNotification("Stock Error", "Stock exists globally but no active batches found.", NotificationType.Error);
+                ShowNotification("Stock Error", "Stock exists globally but no active, posted batches found.", NotificationType.Error);
                 return;
             }
 

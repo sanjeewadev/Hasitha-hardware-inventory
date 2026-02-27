@@ -34,7 +34,7 @@ namespace InventorySystem.UI.ViewModels
                 _returnQty = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(RefundValue));
-                _recalculateCallback?.Invoke(); // Trigger dynamic UI update
+                _recalculateCallback?.Invoke();
             }
         }
 
@@ -71,7 +71,6 @@ namespace InventorySystem.UI.ViewModels
 
         public decimal TotalRefundAmount => ReturnItems.Sum(x => x.RefundValue);
 
-        // --- CASHIER GUIDANCE UI PROPERTIES ---
         private decimal _cashToRefund;
         public decimal CashToRefund { get => _cashToRefund; set { _cashToRefund = value; OnPropertyChanged(); } }
 
@@ -81,7 +80,7 @@ namespace InventorySystem.UI.ViewModels
         private string _refundActionText = "Select items to return";
         public string RefundActionText { get => _refundActionText; set { _refundActionText = value; OnPropertyChanged(); } }
 
-        private string _refundActionColor = "#1E293B"; // Dark Slate
+        private string _refundActionColor = "#1E293B";
         public string RefundActionColor { get => _refundActionColor; set { _refundActionColor = value; OnPropertyChanged(); } }
 
         public ICommand SearchCommand { get; }
@@ -145,7 +144,6 @@ namespace InventorySystem.UI.ViewModels
             RecalculateRefundAction();
         }
 
-        // --- THE DYNAMIC MATH ENGINE ---
         private void RecalculateRefundAction()
         {
             OnPropertyChanged(nameof(TotalRefundAmount));
@@ -154,38 +152,34 @@ namespace InventorySystem.UI.ViewModels
             {
                 CashToRefund = 0; DebtReduced = 0;
                 RefundActionText = "Select items to return";
-                RefundActionColor = "#1E293B"; // Neutral
+                RefundActionColor = "#1E293B";
                 return;
             }
 
             if (!CurrentReceipt.IsCredit)
             {
-                // CASH SALE: Hand cash back instantly
                 CashToRefund = TotalRefundAmount;
                 DebtReduced = 0;
                 RefundActionText = $"HAND CASH TO CUSTOMER: Rs {CashToRefund:N2}";
-                RefundActionColor = "#10B981"; // Green
+                RefundActionColor = "#10B981";
             }
             else
             {
-                // CREDIT SALE: Complex Math
                 decimal currentDebt = CurrentReceipt.TotalAmount - CurrentReceipt.PaidAmount;
 
                 if (TotalRefundAmount <= currentDebt)
                 {
-                    // Return value is less than what they owe. Just shrink debt.
                     CashToRefund = 0;
                     DebtReduced = TotalRefundAmount;
                     RefundActionText = $"DEBT REDUCED BY Rs {DebtReduced:N2} (DO NOT GIVE CASH)";
-                    RefundActionColor = "#F59E0B"; // Orange
+                    RefundActionColor = "#F59E0B";
                 }
                 else
                 {
-                    // Return value is MORE than what they owe. Clear debt, hand remainder as cash.
                     DebtReduced = currentDebt;
                     CashToRefund = TotalRefundAmount - currentDebt;
                     RefundActionText = $"DEBT CLEARED. HAND CASH: Rs {CashToRefund:N2}";
-                    RefundActionColor = "#3B82F6"; // Blue
+                    RefundActionColor = "#3B82F6";
                 }
             }
         }
@@ -250,15 +244,27 @@ namespace InventorySystem.UI.ViewModels
 
                         if (CashToRefund > 0)
                         {
-                            // If we handed them cash, we must reduce the 'PaidAmount' pool so the ledger balances
+                            // Reduce the 'PaidAmount' pool so the transaction balances
                             transaction.PaidAmount -= CashToRefund;
+
+                            // NEW FIX: If we hand cash back on a credit sale, log it as a negative payment!
+                            // This guarantees the Cash Drawer math on the Today's Sales page drops accurately.
+                            if (transaction.IsCredit)
+                            {
+                                var refundLog = new CreditPaymentLog
+                                {
+                                    ReceiptId = transaction.ReceiptId,
+                                    AmountPaid = -CashToRefund, // Negative value because cash is LEAVING
+                                    PaymentDate = DateTime.Now,
+                                    Note = "Cash Refund (Sales Return)"
+                                };
+                                _context.CreditPaymentLogs.Add(refundLog);
+                            }
                         }
 
-                        // Sanity Check Bounds
                         if (transaction.TotalAmount < 0) transaction.TotalAmount = 0;
                         if (transaction.PaidAmount < 0) transaction.PaidAmount = 0;
 
-                        // Re-evaluate Payment Status
                         if (transaction.TotalAmount <= transaction.PaidAmount)
                             transaction.Status = PaymentStatus.Paid;
                         else if (transaction.PaidAmount > 0)

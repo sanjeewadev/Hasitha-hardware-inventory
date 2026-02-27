@@ -1,4 +1,5 @@
 ﻿using InventorySystem.Core.Entities;
+using InventorySystem.Core.Enums;
 using InventorySystem.Data.Repositories;
 using InventorySystem.UI.Commands;
 using Microsoft.EntityFrameworkCore;
@@ -19,12 +20,10 @@ namespace InventorySystem.UI.ViewModels
         private readonly IStockRepository _stockRepo;
         private readonly Data.Context.InventoryDbContext _dbContext;
 
-        // --- COLLECTIONS ---
         private List<Product> _allProductsCache = new();
         public ObservableCollection<Product> Products { get; } = new();
         public ObservableCollection<StockBatch> ProductBatches { get; } = new();
 
-        // --- SEARCH ---
         private string _searchText = "";
         public string SearchText
         {
@@ -32,7 +31,6 @@ namespace InventorySystem.UI.ViewModels
             set { _searchText = value; OnPropertyChanged(); FilterProducts(); }
         }
 
-        // --- POPUP STATE ---
         private bool _isDetailVisible;
         public bool IsDetailVisible
         {
@@ -54,7 +52,6 @@ namespace InventorySystem.UI.ViewModels
 
         public string CurrentUnit => ViewingProduct?.Unit ?? "";
 
-        // --- COMMANDS ---
         public ICommand LoadCommand { get; }
         public ICommand ClearFilterCommand { get; }
         public ICommand DeleteProductCommand { get; }
@@ -64,10 +61,11 @@ namespace InventorySystem.UI.ViewModels
 
         public ProductViewModel(IProductRepository productRepo, ICategoryRepository categoryRepo, IStockRepository stockRepo)
         {
-            _productRepo = productRepo;
-            _categoryRepo = categoryRepo;
-            _stockRepo = stockRepo;
+            // CRITICAL FIX: Override injected repos to destroy the Stale Cache bug!
             _dbContext = Infrastructure.Services.DatabaseService.CreateDbContext();
+            _productRepo = new ProductRepository(_dbContext);
+            _categoryRepo = new CategoryRepository(_dbContext);
+            _stockRepo = new StockRepository(_dbContext);
 
             LoadCommand = new RelayCommand(async () => await LoadData());
             ClearFilterCommand = new RelayCommand(() => SearchText = "");
@@ -108,14 +106,11 @@ namespace InventorySystem.UI.ViewModels
 
         private async Task LoadData()
         {
-            // 1. Fetch all categories first
             var allCategories = await _categoryRepo.GetAllAsync();
             var categoryDict = allCategories.ToDictionary(c => c.Id);
 
-            // 2. Fetch all products
             var list = await _productRepo.GetAllAsync();
 
-            // 3. Map the categories in-memory (No GetByIdAsync needed! Much faster.)
             foreach (var p in list)
             {
                 if (p.CategoryId > 0 && p.Category == null && categoryDict.ContainsKey(p.CategoryId))
@@ -155,11 +150,12 @@ namespace InventorySystem.UI.ViewModels
             var allBatches = await _dbContext.StockBatches
                 .Include(b => b.PurchaseInvoice)
                 .ThenInclude(i => i.Supplier)
-                .Where(b => b.ProductId == ViewingProduct.Id)
+                // CRITICAL FIX: Hide unposted drafts from the catalog
+                .Where(b => b.ProductId == ViewingProduct.Id &&
+                            (b.PurchaseInvoiceId == null || b.PurchaseInvoice.Status == InvoiceStatus.Posted))
                 .OrderByDescending(b => b.ReceivedDate)
                 .ToListAsync();
 
-            // Filter: Keep if Quantity > 0 OR if created within last 7 days
             var cutoffDate = DateTime.Now.AddDays(-7);
             var visibleBatches = allBatches
                 .Where(b => b.RemainingQuantity > 0 || b.ReceivedDate >= cutoffDate)
@@ -171,7 +167,6 @@ namespace InventorySystem.UI.ViewModels
 
         private async Task DeleteBatchAsync(StockBatch batch)
         {
-            // FIX: VULNERABILITY PREVENTION
             if (batch.InitialQuantity != batch.RemainingQuantity)
             {
                 MessageBox.Show("This batch cannot be deleted because items from it have already been sold.\n\nDeleting it would corrupt your financial and sales history.\nIf the stock is damaged, please use the 'Remove Stock' page instead.", "Action Blocked", MessageBoxButton.OK, MessageBoxImage.Error);

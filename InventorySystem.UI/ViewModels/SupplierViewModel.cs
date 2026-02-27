@@ -3,6 +3,7 @@ using InventorySystem.Data.Repositories;
 using InventorySystem.Infrastructure.Services;
 using InventorySystem.UI.Commands;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -125,21 +126,47 @@ namespace InventorySystem.UI.ViewModels
                 return;
             }
 
-            if (IsEditMode && SelectedSupplier != null)
+            try
             {
-                SelectedSupplier.Name = Name;
-                SelectedSupplier.Phone = Phone;
-                SelectedSupplier.Note = Note;
-                await _supplierRepo.UpdateAsync(SelectedSupplier);
-            }
-            else
-            {
-                var newSupplier = new Supplier { Name = Name, Phone = Phone, Note = Note };
-                await _supplierRepo.AddAsync(newSupplier);
-            }
+                // FIX: Proactive Duplicate Check
+                var allSuppliers = await _supplierRepo.GetAllAsync();
+                var duplicate = allSuppliers.FirstOrDefault(s => s.Name.Equals(Name.Trim(), StringComparison.OrdinalIgnoreCase));
 
-            ClearForm();
-            LoadData();
+                if (IsEditMode && SelectedSupplier != null)
+                {
+                    // If editing, make sure the name isn't taken by a DIFFERENT supplier
+                    if (duplicate != null && duplicate.Id != SelectedSupplier.Id)
+                    {
+                        MessageBox.Show($"A supplier named '{Name.Trim()}' already exists.", "Duplicate Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+
+                    SelectedSupplier.Name = Name.Trim();
+                    SelectedSupplier.Phone = Phone?.Trim() ?? "";
+                    SelectedSupplier.Note = Note?.Trim() ?? "";
+                    await _supplierRepo.UpdateAsync(SelectedSupplier);
+                }
+                else
+                {
+                    // If adding new, ANY duplicate is a block
+                    if (duplicate != null)
+                    {
+                        MessageBox.Show($"A supplier named '{Name.Trim()}' already exists.", "Duplicate Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
+
+                    var newSupplier = new Supplier { Name = Name.Trim(), Phone = Phone?.Trim() ?? "", Note = Note?.Trim() ?? "" };
+                    await _supplierRepo.AddAsync(newSupplier);
+                }
+
+                ClearForm();
+                LoadData();
+            }
+            catch (Exception ex)
+            {
+                // Safety net: Catch any other DB errors so the app never crashes
+                MessageBox.Show($"An error occurred while saving: {ex.Message}", "System Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private async Task DeleteSupplier(Supplier s)
@@ -156,9 +183,16 @@ namespace InventorySystem.UI.ViewModels
 
             if (MessageBox.Show($"Delete supplier '{s.Name}'?", "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
             {
-                await _supplierRepo.DeleteAsync(s.Id);
-                LoadData();
-                ClearForm();
+                try
+                {
+                    await _supplierRepo.DeleteAsync(s.Id);
+                    LoadData();
+                    ClearForm();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Failed to delete: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
         }
 

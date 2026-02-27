@@ -1,4 +1,5 @@
 ﻿using InventorySystem.Core.Entities;
+using InventorySystem.Core.Enums;
 using InventorySystem.Data.Repositories;
 using InventorySystem.UI.Commands;
 using System;
@@ -14,10 +15,10 @@ namespace InventorySystem.UI.ViewModels
     public class DashboardViewModel : ViewModelBase
     {
         private readonly IStockRepository _stockRepo;
-        // Removed ProductRepo as it was only needed for low stock
 
         // --- KPIS ---
         private decimal _periodRevenue;
+        // FIX: Added the missing "decimal" keyword here!
         public decimal PeriodRevenue { get => _periodRevenue; set { _periodRevenue = value; OnPropertyChanged(); } }
 
         private decimal _periodProfit;
@@ -30,7 +31,6 @@ namespace InventorySystem.UI.ViewModels
         public ObservableCollection<ChartBar> WeeklySalesData { get; } = new();
 
         // --- FILTERS ---
-        // Default: Last 7 Days
         private DateTime _startDate = DateTime.Today.AddDays(-6);
         public DateTime StartDate
         {
@@ -76,21 +76,38 @@ namespace InventorySystem.UI.ViewModels
                 DateTime actualStart = StartDate.Date;
                 DateTime actualEnd = EndDate.Date.AddDays(1).AddTicks(-1);
 
-                // 1. SALES DATA
-                // Fetch context for chart history (padding start date if needed)
+                // Fetch context for chart history
                 var rawMoves = await _stockRepo.GetSalesByDateRangeAsync(actualStart.AddDays(-1), actualEnd);
                 var activeMoves = rawMoves.Where(m => !m.IsVoided).ToList();
 
                 // Filter strictly for KPI calculation
                 var rangeMoves = activeMoves.Where(m => m.Date >= actualStart && m.Date <= actualEnd).ToList();
 
-                // 2. CALCULATE KPIS
-                PeriodRevenue = rangeMoves.Sum(m => m.Quantity * m.UnitPrice);
-                decimal totalCost = rangeMoves.Sum(m => m.Quantity * m.UnitCost);
-                PeriodProfit = PeriodRevenue - totalCost;
-                TransactionCount = rangeMoves.Select(m => m.ReceiptId).Distinct().Count();
+                var sales = rangeMoves.Where(m => m.Type == StockMovementType.Out).ToList();
+                var returns = rangeMoves.Where(m => m.Type == StockMovementType.SalesReturn).ToList();
 
-                // 3. BUILD CHART
+                // Grab the adjustments to calculate lost stock
+                var adjustments = rangeMoves.Where(m => m.Type == StockMovementType.Adjustment).ToList();
+
+                // ACCURATE REVENUE MATH (Sales - Returns)
+                decimal grossRevenue = sales.Sum(m => m.Quantity * m.UnitPrice);
+                decimal returnRevenue = returns.Sum(m => m.Quantity * m.UnitPrice);
+                PeriodRevenue = grossRevenue - returnRevenue;
+
+                // ACCURATE PROFIT MATH (Cost of Goods Sold + Financial Losses)
+                decimal grossCost = sales.Sum(m => m.Quantity * m.UnitCost);
+                decimal returnCost = returns.Sum(m => m.Quantity * m.UnitCost);
+
+                // Corrections cost 0, but "Lost" items have a >0 cost!
+                decimal financialLosses = adjustments.Sum(m => m.Quantity * m.UnitCost);
+
+                // Final Profit = Revenue - (Cost of Goods Sold) - Lost Items
+                PeriodProfit = PeriodRevenue - (grossCost - returnCost) - financialLosses;
+
+                // Distinct Receipts
+                TransactionCount = rangeMoves.Where(m => m.Type == StockMovementType.Out).Select(m => m.ReceiptId).Distinct().Count();
+
+                // BUILD CHART
                 BuildChartData(activeMoves);
             }
             catch (Exception ex)
@@ -102,23 +119,29 @@ namespace InventorySystem.UI.ViewModels
         private void BuildChartData(List<StockMovement> moves)
         {
             WeeklySalesData.Clear();
-
             var chartEndDate = EndDate.Date;
-            // Generate chart bars for the selected duration (or max 7 days for readability)
-            // Here we stick to the last 7 days ending at EndDate
 
             var relevantMoves = moves.Where(m => m.Date.Date <= chartEndDate).ToList();
-            var grouped = relevantMoves.GroupBy(m => m.Date.Date).ToDictionary(g => g.Key, g => g.Sum(x => x.Quantity * x.UnitPrice));
+
+            var grouped = relevantMoves.GroupBy(m => m.Date.Date).ToDictionary(
+                g => g.Key,
+                g =>
+                {
+                    decimal daySales = g.Where(x => x.Type == StockMovementType.Out).Sum(x => x.Quantity * x.UnitPrice);
+                    decimal dayReturns = g.Where(x => x.Type == StockMovementType.SalesReturn).Sum(x => x.Quantity * x.UnitPrice);
+                    return daySales - dayReturns;
+                });
 
             decimal maxVal = grouped.Values.DefaultIfEmpty(0).Max();
-            if (maxVal == 0) maxVal = 1000;
+            if (maxVal <= 0) maxVal = 1000;
 
             for (int i = 6; i >= 0; i--)
             {
                 var day = chartEndDate.AddDays(-i);
                 decimal val = grouped.ContainsKey(day) ? grouped[day] : 0;
 
-                // Dynamic Bar Height (Max 250px now since we have more vertical space)
+                if (val < 0) val = 0;
+
                 double pixelHeight = (double)((val / maxVal) * 200);
                 if (pixelHeight < 5) pixelHeight = 5;
 

@@ -20,7 +20,6 @@ namespace InventorySystem.UI.ViewModels
         private readonly IStockRepository _stockRepo;
         private readonly Data.Context.InventoryDbContext _dbContext;
 
-        // --- CACHES FOR INSTANT SEARCH ---
         private List<Category> _allCategoriesCache = new();
         private List<Product> _allProductsCache = new();
 
@@ -35,7 +34,7 @@ namespace InventorySystem.UI.ViewModels
             {
                 _selectedCategory = value;
                 OnPropertyChanged();
-                FilterProducts(); // Re-filter based on the new category
+                FilterProducts();
             }
         }
 
@@ -53,7 +52,6 @@ namespace InventorySystem.UI.ViewModels
             set { _productSearchText = value; OnPropertyChanged(); FilterProducts(); }
         }
 
-        // --- SELECTION STATE ---
         private Product? _selectedProduct;
         public Product? SelectedProduct
         {
@@ -82,7 +80,6 @@ namespace InventorySystem.UI.ViewModels
         public bool IsProductSelected => SelectedProduct != null;
         public string CurrentUnit => SelectedProduct?.Unit ?? "";
 
-        // --- ADJUSTMENT PROPERTIES ---
         public DateTime StockOutDate { get; set; } = DateTime.Now;
 
         private decimal _stockOutQty;
@@ -107,25 +104,23 @@ namespace InventorySystem.UI.ViewModels
 
         public AdjustmentViewModel(IProductRepository pRepo, ICategoryRepository cRepo, IStockRepository sRepo)
         {
-            _productRepo = pRepo;
-            _categoryRepo = cRepo;
-            _stockRepo = sRepo;
+            // CRITICAL FIX 1: Override injected repos with fresh ones to destroy the Stale Cache bug!
             _dbContext = Infrastructure.Services.DatabaseService.CreateDbContext();
+            _productRepo = new ProductRepository(_dbContext);
+            _categoryRepo = new CategoryRepository(_dbContext);
+            _stockRepo = new StockRepository(_dbContext);
 
             StockOutCommand = new RelayCommand(async () => await ExecuteStockOut());
 
-            // FIX: Load everything upfront so global search works instantly
             LoadInitialData();
         }
 
         private async void LoadInitialData()
         {
-            // Load Categories
             var cats = await _categoryRepo.GetAllAsync();
             _allCategoriesCache = cats.ToList();
             FilterCategoryTree();
 
-            // Load ALL Products
             var prods = await _productRepo.GetAllAsync();
             _allProductsCache = prods.ToList();
             FilterProducts();
@@ -158,18 +153,11 @@ namespace InventorySystem.UI.ViewModels
             ProductsInSelectedCategory.Clear();
             var query = _allProductsCache.AsEnumerable();
 
-            // Filter by Category (if one is selected)
-            if (SelectedCategory != null)
-            {
-                query = query.Where(p => p.CategoryId == SelectedCategory.Id);
-            }
+            if (SelectedCategory != null) query = query.Where(p => p.CategoryId == SelectedCategory.Id);
 
-            // Filter by Search Text (Global if no category selected)
             if (!string.IsNullOrWhiteSpace(ProductSearchText))
             {
                 var lower = ProductSearchText.ToLower();
-
-                // If they are typing a search, ignore the folder click so they can find anything globally
                 query = _allProductsCache.Where(p => p.Name.ToLower().Contains(lower) || p.Barcode.ToLower().Contains(lower));
             }
 
@@ -181,9 +169,11 @@ namespace InventorySystem.UI.ViewModels
             if (SelectedProduct == null) return;
 
             ActiveBatches.Clear();
-            var batches = await _stockRepo.GetAllBatchesAsync();
+
+            // CRITICAL FIX 2: Only load batches that belong to POSTED invoices (No Draft Leaks!)
+            var batches = await _stockRepo.GetActiveBatchesAsync();
             var relevantBatches = batches
-                .Where(b => b.ProductId == SelectedProduct.Id && b.RemainingQuantity > 0)
+                .Where(b => b.ProductId == SelectedProduct.Id)
                 .OrderByDescending(b => b.ReceivedDate);
 
             foreach (var b in relevantBatches) ActiveBatches.Add(b);
@@ -215,12 +205,8 @@ namespace InventorySystem.UI.ViewModels
                 return;
             }
 
-            // FIX: Add Financial Loss calculation to the Warning
             decimal financialLoss = StockOutReason == AdjustmentReason.Correction ? 0 : (StockOutQty * SelectedAdjustmentBatch.CostPrice);
-            string lossWarning = financialLoss > 0
-                ? $"\n\n⚠️ FINANCIAL LOSS: Rs {financialLoss:N2}"
-                : "\n\n(No financial loss recorded for Correction)";
-
+            string lossWarning = financialLoss > 0 ? $"\n\n⚠️ FINANCIAL LOSS: Rs {financialLoss:N2}" : "\n\n(No financial loss recorded for Correction)";
             var msg = $"Confirm Adjustment?\n\nRemoving: {StockOutQty} {SelectedProduct.Unit}\nReason: {StockOutReason}{lossWarning}\n\nThis cannot be undone.";
 
             if (MessageBox.Show(msg, "Confirm", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes)
@@ -240,13 +226,18 @@ namespace InventorySystem.UI.ViewModels
 
                 await _stockRepo.AdjustStockAsync(movement);
 
-                SelectedProduct.Quantity -= StockOutQty;
-                OnPropertyChanged(nameof(SelectedProduct));
+                // CRITICAL FIX 3: Pull the exact live quantity from DB so the UI updates correctly
+                var freshProduct = await _dbContext.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Id == SelectedProduct.Id);
+                if (freshProduct != null)
+                {
+                    SelectedProduct.Quantity = freshProduct.Quantity;
+                    OnPropertyChanged(nameof(SelectedProduct));
+                }
 
                 MessageBox.Show("Stock Adjusted Successfully.", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                LoadDataForSelectedProduct(); // Refresh lists
-                StockOutQty = 0; // Reset input
+                LoadDataForSelectedProduct();
+                StockOutQty = 0;
             }
         }
 

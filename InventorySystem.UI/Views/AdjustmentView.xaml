@@ -21,7 +21,7 @@
                         <Border Background="Transparent" Width="16" Height="16">
                             <Path x:Name="ExpandPath" Data="M0,0 L0,6 L6,0 z" Fill="#94A3B8" Margin="1,1,1,1" HorizontalAlignment="Center" VerticalAlignment="Center" RenderTransformOrigin="0.5,0.5">
                                 <Path.RenderTransform>
-                                    <RotateTransform Angle="225"/>
+                                    <RotateTransform Angle="135"/>
                                 </Path.RenderTransform>
                             </Path>
                         </Border>
@@ -29,7 +29,7 @@
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="ExpandPath" Property="RenderTransform">
                                     <Setter.Value>
-                                        <RotateTransform Angle="135"/>
+                                        <RotateTransform Angle="225"/>
                                     </Setter.Value>
                                 </Setter>
                                 <Setter TargetName="ExpandPath" Property="Fill" Value="#334155"/>
@@ -80,7 +80,8 @@
                     </Border>
 
                     <TreeView Grid.Row="1" ItemsSource="{Binding CategoryTree}" BorderThickness="0" Background="Transparent" 
-                              SelectedItemChanged="TreeView_SelectedItemChanged" ClipToBounds="True">
+          SelectedItemChanged="TreeView_SelectedItemChanged" ClipToBounds="True"
+          HorizontalContentAlignment="Stretch">
                         <TreeView.ItemTemplate>
                             <HierarchicalDataTemplate ItemsSource="{Binding SubCategories}">
                                 <StackPanel Orientation="Horizontal" Margin="0,5">
@@ -89,11 +90,52 @@
                                 </StackPanel>
                             </HierarchicalDataTemplate>
                         </TreeView.ItemTemplate>
+
                         <TreeView.ItemContainerStyle>
                             <Style TargetType="TreeViewItem">
                                 <Setter Property="IsExpanded" Value="True"/>
                                 <Setter Property="Background" Value="Transparent"/>
                                 <Setter Property="Padding" Value="5"/>
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="TreeViewItem">
+                                            <Grid>
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="*"/>
+                                                </Grid.RowDefinitions>
+
+                                                <Border x:Name="Bd" Grid.Row="0" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="true" CornerRadius="4">
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="19"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <ToggleButton x:Name="Expander" Style="{StaticResource StandardExpanderStyle}" ClickMode="Press" IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}}"/>
+
+                                                        <ContentPresenter x:Name="PART_Header" Grid.Column="1" ContentSource="Header" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"/>
+                                                    </Grid>
+                                                </Border>
+
+                                                <ItemsPresenter x:Name="ItemsHost" Grid.Row="1" Margin="15,0,0,0"/>
+                                            </Grid>
+
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsExpanded" Value="false">
+                                                    <Setter TargetName="ItemsHost" Property="Visibility" Value="Collapsed"/>
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="true">
+                                                    <Setter TargetName="Bd" Property="Background" Value="#E0F2F1"/>
+                                                    <Setter Property="Foreground" Value="#009688"/>
+                                                </Trigger>
+                                                <Trigger Property="IsMouseOver" Value="true">
+                                                    <Setter TargetName="Bd" Property="Background" Value="#F8FAFC"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
                             </Style>
                         </TreeView.ItemContainerStyle>
                     </TreeView>

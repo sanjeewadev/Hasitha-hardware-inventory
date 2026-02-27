@@ -193,32 +193,19 @@ namespace InventorySystem.UI.ViewModels
         private void RestoreBackup(BackupFile file)
         {
             // --- 3-TIER ESCALATION WARNING SYSTEM ---
-
-            // Warning 1
             var result1 = MessageBox.Show(
                 $"Are you sure you want to restore the backup from '{file.CreatedDate:dd MMM yyyy hh:mm tt}'?\n\nALL current live data will be permanently overwritten.",
-                "Critical Warning (1/3)",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
-
+                "Critical Warning (1/3)", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (result1 != MessageBoxResult.Yes) return;
 
-            // Warning 2
             var result2 = MessageBox.Show(
                 "⚠️ DANGER: Any sales, returns, or stock adjustments made AFTER this backup was created will be LOST FOREVER.\n\nDo you still want to proceed?",
-                "Data Loss Warning (2/3)",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Warning);
-
+                "Data Loss Warning (2/3)", MessageBoxButton.YesNo, MessageBoxImage.Warning);
             if (result2 != MessageBoxResult.Yes) return;
 
-            // Warning 3
             var result3 = MessageBox.Show(
                 "🚨 FINAL CONFIRMATION 🚨\n\nYou are about to replace the live database. This action CANNOT BE UNDONE.\n\nAre you absolutely certain?",
-                "Final Warning (3/3)",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Error);
-
+                "Final Warning (3/3)", MessageBoxButton.YesNo, MessageBoxImage.Error);
             if (result3 != MessageBoxResult.Yes) return;
 
             // --- EXECUTE RESTORE ---
@@ -245,10 +232,38 @@ namespace InventorySystem.UI.ViewModels
             }
         }
 
+        // --- NEW: REAL CLOUD UPLOAD LOGIC ---
         private async Task TestCloudUpload()
         {
-            await Task.Delay(100);
-            MessageBox.Show("Cloud Backup Sync requires an active Premium Cloud Add-on.\n\nPlease contact your software provider to enable cloud capabilities.", "Cloud Sync Unavailable", MessageBoxButton.OK, MessageBoxImage.Information);
+            if (Backups.Count == 0)
+            {
+                MessageBox.Show("There are no local backups to upload. Please click 'BACKUP DATABASE NOW' first.", "No Backups", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            // Get the absolute newest backup file from your local list
+            var latestBackup = Backups.OrderByDescending(b => b.CreatedDate).FirstOrDefault();
+            if (latestBackup == null) return;
+
+            var result = MessageBox.Show($"Ready to sync your latest data to Google Drive?\n\nA browser window will open if you need to log in.", "Sync to Cloud", MessageBoxButton.YesNo, MessageBoxImage.Question);
+            if (result != MessageBoxResult.Yes) return;
+
+            try
+            {
+                // Show a simple waiting cursor while it talks to Google
+                Mouse.OverrideCursor = Cursors.Wait;
+
+                // Call your exact static method
+                await GoogleDriveService.UploadBackupAsync(latestBackup.FullPath);
+
+                Mouse.OverrideCursor = null;
+                MessageBox.Show($"Success! The backup was securely uploaded and overwritten on Google Drive.", "Cloud Sync Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                Mouse.OverrideCursor = null;
+                MessageBox.Show($"Cloud sync failed.\n\nError: {ex.Message}\n\nPlease check your internet connection and ensure credentials.json is configured properly.", "Sync Failed", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         public async Task CheckAndRunAutoBackup()
